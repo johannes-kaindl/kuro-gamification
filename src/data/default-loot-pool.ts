@@ -1,0 +1,153 @@
+/* ==========================================================
+   Kuro Default Loot Pool — small-self-care rewards.
+   Tone: low-stakes, no obligations, reachable in ≤ 30 min.
+   Bundled in German (Küche/Body/Mind/Outdoor/Social/Reset) and
+   English (Kitchen/…) — the active pool follows the UI language.
+   Override entirely via Settings → Custom Loot Pool.
+   ========================================================== */
+import type { KuroLootDrop, KuroLootTier, Lang } from '../types';
+
+export const DEFAULT_LOOT_POOL: Record<KuroLootTier, KuroLootDrop[]> = {
+  common: [
+    { name: 'Lieblings-Tee aufsetzen',           cat: 'Küche'   },
+    { name: '3 Atemzüge bewusst',                cat: 'Body'    },
+    { name: 'Fenster auf, frische Luft 2 Min',   cat: 'Reset'   },
+    { name: 'Eine Lieblings-Stelle wieder lesen',cat: 'Mind'    },
+    { name: 'Pflanze gießen',                    cat: 'Reset'   },
+    { name: 'Schreibtisch kurz freiräumen',      cat: 'Reset'   },
+    { name: 'Strecken: Schultern 30 Sek',        cat: 'Body'    },
+    { name: 'Lieblings-Song hören',              cat: 'Mind'    },
+    { name: 'Glas Wasser trinken',               cat: 'Body'    },
+    { name: 'Eine Notiz freundlich umformulieren',cat: 'Mind'   },
+    { name: 'Zwei Minuten ohne Bildschirm',      cat: 'Reset'   },
+    { name: 'Kerze anzünden',                    cat: 'Reset'   },
+    { name: 'Foto vom Tag machen',               cat: 'Mind'    },
+    { name: 'Eine Sprachnachricht hören',        cat: 'Social'  },
+    { name: 'Tag-Wrangler durchgehen, ein Tag fixen',cat: 'Mind'},
+  ],
+  rare: [
+    { name: 'Lange Dusche, eine Lieblings-Playlist', cat: 'Reset' },
+    { name: 'Spaziergang zum Block-Ende',         cat: 'Outdoor' },
+    { name: 'Ein Kapitel im aktuellen Buch',      cat: 'Mind'    },
+    { name: '15 Min freies Schreiben',            cat: 'Mind'    },
+    { name: 'Ein Stück Schokolade — bewusst',     cat: 'Küche'   },
+    { name: 'Kurzer Power-Nap (20 Min)',          cat: 'Body'    },
+    { name: 'Yoga-Flow 10 Min',                   cat: 'Body'    },
+    { name: 'Eine alte Email löschen',            cat: 'Reset'   },
+    { name: 'Lieblings-Person eine SMS schreiben',cat: 'Social'  },
+    { name: 'Eine Quote in den Zettelkasten',     cat: 'Mind'    },
+    { name: 'Pflanzen umtopfen oder beschneiden', cat: 'Reset'   },
+    { name: 'Episode einer Lieblings-Serie',      cat: 'Mind'    },
+    { name: '20 Min Hörbuch im Liegen',           cat: 'Mind'    },
+    { name: 'Tee + 1 Kapitel + Decke',            cat: 'Reset'   },
+    { name: 'Schreibtisch komplett leer machen',  cat: 'Reset'   },
+  ],
+  epic: [
+    { name: 'Spaziergang 45 Min, Kopfhörer drin',  cat: 'Outdoor' },
+    { name: 'Komplettes Frühstück selbst machen',  cat: 'Küche'   },
+    { name: 'Ein neues Rezept ausprobieren',       cat: 'Küche'   },
+    { name: 'Ein Mood-Board zu einem Thema',       cat: 'Mind'    },
+    { name: 'Lange Wanne, eine Stunde lang',       cat: 'Reset'   },
+    { name: 'Freundin/Freund anrufen — länger',    cat: 'Social'  },
+    { name: 'Ein Spiel-Abend (1 Spiel)',           cat: 'Social'  },
+    { name: 'Eine alte Notiz refactoren',          cat: 'Mind'    },
+    { name: 'Ein neues Kapitel in einem Lieblings-Tool lernen',cat: 'Mind'},
+    { name: '60 Min Yoga oder Pilates',            cat: 'Body'    },
+    { name: 'Ein Rezept aus dem Lieblings-Kochbuch',cat: 'Küche'  },
+    { name: 'Cafe-Trip allein',                    cat: 'Outdoor' },
+    { name: 'Park-Bank, Hörbuch, 30 Min',          cat: 'Outdoor' },
+  ],
+  legendary: [
+    { name: 'Ganzer Nachmittag — kein Plan',       cat: 'Reset'   },
+    { name: 'Tagestrip in eine Nachbarstadt',      cat: 'Outdoor' },
+    { name: 'Ein neues Hobby probieren',           cat: 'Mind'    },
+    { name: 'Komplettes Wochenende offline',       cat: 'Reset'   },
+    { name: 'Wellness-Tag zuhause (Maske, Bad, Tee, Buch)', cat: 'Reset' },
+    { name: 'Freundes-Brunch organisieren',        cat: 'Social'  },
+    { name: 'Lieblings-Konzert besuchen',          cat: 'Mind'    },
+    { name: 'Massage / Sauna / Spa',               cat: 'Body'    },
+    { name: 'Lange Wanderung (≥ 2 h)',             cat: 'Outdoor' },
+  ],
+  mythic: [
+    { name: '24 h Vault-Detox — gar nicht öffnen', cat: 'Reset'   },
+    { name: 'Spontaner Tagestrip irgendwohin',     cat: 'Outdoor' },
+    { name: 'Großes Projekt anfangen, das du immer aufschiebst', cat: 'Mind' },
+    { name: 'Etwas verschenken, was du behalten wolltest', cat: 'Social' },
+    { name: 'Eine Kindheits-Tradition wieder einführen', cat: 'Mind' },
+  ],
+};
+
+export const DEFAULT_LOOT_POOL_EN: Record<KuroLootTier, KuroLootDrop[]> = {
+  common: [
+    { name: 'Make your favourite tea',              cat: 'Kitchen' },
+    { name: 'Three conscious breaths',              cat: 'Body'    },
+    { name: 'Open a window, 2 min of fresh air',    cat: 'Reset'   },
+    { name: 'Reread a favourite passage',           cat: 'Mind'    },
+    { name: 'Water a plant',                        cat: 'Reset'   },
+    { name: 'Quickly tidy your desk',               cat: 'Reset'   },
+    { name: 'Stretch your shoulders for 30 sec',    cat: 'Body'    },
+    { name: 'Play your favourite song',             cat: 'Mind'    },
+    { name: 'Drink a glass of water',               cat: 'Body'    },
+    { name: 'Rewrite one note more kindly',         cat: 'Mind'    },
+    { name: 'Two minutes away from screens',        cat: 'Reset'   },
+    { name: 'Light a candle',                       cat: 'Reset'   },
+    { name: 'Take a photo of your day',             cat: 'Mind'    },
+    { name: 'Listen to a voice message',            cat: 'Social'  },
+    { name: 'Fix one tag in your tag wrangler',     cat: 'Mind'    },
+  ],
+  rare: [
+    { name: 'Long shower with a favourite playlist', cat: 'Reset'   },
+    { name: 'Walk to the end of the block',          cat: 'Outdoor' },
+    { name: 'One chapter of your current book',      cat: 'Mind'    },
+    { name: '15 min of free writing',                cat: 'Mind'    },
+    { name: 'A piece of chocolate — mindfully',      cat: 'Kitchen' },
+    { name: 'A short power nap (20 min)',            cat: 'Body'    },
+    { name: 'A 10-min yoga flow',                    cat: 'Body'    },
+    { name: 'Delete one old email',                  cat: 'Reset'   },
+    { name: 'Text someone you love',                 cat: 'Social'  },
+    { name: 'Add a quote to your zettelkasten',      cat: 'Mind'    },
+    { name: 'Repot or prune a plant',                cat: 'Reset'   },
+    { name: 'An episode of a favourite show',        cat: 'Mind'    },
+    { name: '20 min of audiobook, lying down',       cat: 'Mind'    },
+    { name: 'Tea + one chapter + a blanket',         cat: 'Reset'   },
+    { name: 'Clear your desk completely',            cat: 'Reset'   },
+  ],
+  epic: [
+    { name: 'A 45-min walk, headphones in',          cat: 'Outdoor' },
+    { name: 'Make a full breakfast from scratch',    cat: 'Kitchen' },
+    { name: 'Try a new recipe',                      cat: 'Kitchen' },
+    { name: 'A mood board for one theme',            cat: 'Mind'    },
+    { name: 'A long bath, a whole hour',             cat: 'Reset'   },
+    { name: 'Call a friend — a longer one',          cat: 'Social'  },
+    { name: 'A game night (one game)',               cat: 'Social'  },
+    { name: 'Refactor an old note',                  cat: 'Mind'    },
+    { name: 'Learn a new feature in a favourite tool', cat: 'Mind'  },
+    { name: '60 min of yoga or pilates',             cat: 'Body'    },
+    { name: 'A recipe from your favourite cookbook', cat: 'Kitchen' },
+    { name: 'A solo cafe trip',                      cat: 'Outdoor' },
+    { name: 'Park bench, audiobook, 30 min',         cat: 'Outdoor' },
+  ],
+  legendary: [
+    { name: 'A whole afternoon — no plan',           cat: 'Reset'   },
+    { name: 'A day trip to a neighbouring town',     cat: 'Outdoor' },
+    { name: 'Try a new hobby',                       cat: 'Mind'    },
+    { name: 'A whole weekend offline',               cat: 'Reset'   },
+    { name: 'A home spa day (mask, bath, tea, book)', cat: 'Reset'  },
+    { name: 'Organise a brunch with friends',        cat: 'Social'  },
+    { name: 'Go to a favourite concert',             cat: 'Mind'    },
+    { name: 'Massage / sauna / spa',                 cat: 'Body'    },
+    { name: 'A long hike (≥ 2 h)',                   cat: 'Outdoor' },
+  ],
+  mythic: [
+    { name: "A 24-h vault detox — don't open it at all", cat: 'Reset'   },
+    { name: 'A spontaneous day trip somewhere',      cat: 'Outdoor' },
+    { name: 'Start the big project you keep postponing', cat: 'Mind' },
+    { name: 'Give away something you meant to keep', cat: 'Social'  },
+    { name: 'Revive a childhood tradition',          cat: 'Mind'    },
+  ],
+};
+
+/** Bundled default loot pool for the given UI language. */
+export function defaultLootPool(lang: Lang): Record<KuroLootTier, KuroLootDrop[]> {
+  return lang === 'en' ? DEFAULT_LOOT_POOL_EN : DEFAULT_LOOT_POOL;
+}

@@ -1,0 +1,128 @@
+/* ==========================================================
+   Kuro Gamification — Plugin Structural Styles
+   ──────────────────────────────────────────────────────────
+   These are structural (layout, buttons, modals).
+   The aesthetic CRT/phosphor look lives in the optional CSS
+   snippet `kuro-gamification.css`. This file works without
+   that snippet — just less beautiful.
+   ========================================================== */
+
+/* ── Sidebar root ─────────────────────────────────────── */
+.kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; }
+.kuro-view-body { display: flex; flex-direction: column; gap: 10px; }
+.kuro-toolbar   { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.kuro-empty     { padding: 12px; opacity: 0.85; }
+
+/* ── Buttons ──────────────────────────────────────────── */
+.kuro-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; cursor: pointer;
+  background: var(--background-secondary, #2a2a2a);
+  border: 1px solid var(--background-modifier-border, #444);
+  border-radius: 6px;
+  color: var(--text-normal, #dcddde); font-size: 0.85em;
+}
+.kuro-btn:hover    { background: var(--background-modifier-hover, rgba(255,255,255,0.05)); }
+.kuro-btn-primary  { background: var(--interactive-accent, #7f6df2); color: var(--text-on-accent, #ffffff); border-color: var(--interactive-accent, #7f6df2); }
+.kuro-btn-warning  { background: var(--background-modifier-error, #5a2020); color: var(--text-on-accent, #ffffff); }
+.kuro-btn-danger   { background: var(--text-error, #e06c75); color: var(--text-on-accent, #ffffff); border-color: var(--text-error, #e06c75); }
+
+/* ── Status-bar item ──────────────────────────────────── */
+.kuro-status-bar-item { cursor: pointer; opacity: 0.85; }
+.kuro-status-bar-item:hover { opacity: 1; }
+
+/* ── Fallback styles for kuro-status / kuro-loot ──────── */
+/* (when CSS snippet kuro-gamification.css is NOT installed) */
+.kuro-view-body pre.kuro-status,
+.kuro-view-body pre.kuro-loot {
+  font-family: var(--font-monospace, ui-monospace, monospace);
+  font-size: 0.78em; line-height: 1.55;
+  background: var(--background-secondary, #2a2a2a);
+  border: 1px solid var(--background-modifier-border, #444);
+  border-left: 3px solid var(--interactive-accent, #7f6df2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0;
+  white-space: pre;
+  overflow-x: auto;
+}
+.kuro-view-body pre.kuro-loot {
+  border-left-color: var(--color-accent, var(--interactive-accent, #7f6df2));
+  margin-top: 6px;
+}
+
+/* ── Reduced animations (a11y) ─────────────────────────── */
+.kuro-no-animation pre.kuro-status,
+.kuro-no-animation pre.kuro-loot,
+.kuro-no-animation .callout[data-callout="kuro"],
+.kuro-no-animation .callout[data-callout="levelup"] .callout-title-inner::after {
+  animation: none !important;
+}
+
+/* ── XP breakdown table ───────────────────────────────── */
+.kuro-xp-breakdown { font-size: 0.78em; opacity: 0.95; }
+.kuro-xp-breakdown table { border-collapse: collapse; width: 100%; }
+.kuro-xp-breakdown td   { padding: 2px 6px; vertical-align: top; }
+.kuro-xp-breakdown .kuro-pos    { color: var(--text-success, #98c379); }
+.kuro-xp-breakdown .kuro-neg    { color: var(--text-error, #e06c75); }
+.kuro-xp-breakdown .kuro-reason { opacity: 0.7; font-style: italic; }
+
+/* ── Loot Modal ───────────────────────────────────────── */
+.kuro-loot-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.kuro-loot-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; }
+.kuro-loot-option:hover { background: var(--background-modifier-hover, rgba(255,255,255,0.05)); }
+.kuro-loot-option-label { cursor: pointer; flex: 1; }
+.kuro-loot-emoji  { font-size: 1.1em; }
+.kuro-loot-name   { font-weight: 500; }
+.kuro-loot-cat    { opacity: 0.65; font-size: 0.85em; }
+
+/* ── Modal layout ─────────────────────────────────────── */
+.kuro-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.kuro-form         { display: flex; flex-direction: column; gap: 10px; }
+.kuro-form-row     { display: flex; flex-direction: column; gap: 4px; }
+.kuro-form-row label { font-weight: 500; opacity: 0.9; }
+.kuro-form-row input,
+.kuro-form-row textarea { width: 100%; }
+
+/* ── Lore modal ──────────────────────────────────────── */
+.kuro-lore-modal .kuro-lore-body { font-style: italic; line-height: 1.6; max-width: 60ch; }
+
+/* ── Habits row ──────────────────────────────────────── */
+.kuro-habit-row    { display: flex; gap: 4px; flex-wrap: wrap; }
+.kuro-habit-row input { min-width: 80px; }
+
+/* ── Packs section ─────────────────────────────────────── */
+.kuro-packs-desc   { color: var(--text-muted); margin: 0 0 var(--size-4-2); }
+.kuro-packs-active { font-size: var(--font-ui-small); color: var(--text-muted); margin: 0 0 var(--size-4-2); }
+.kuro-packs-empty  { color: var(--text-muted); font-style: italic; }
+
+/* ── Data IO ─────────────────────────────────────────── */
+.kuro-data-io {
+  width: 100%; font-family: var(--font-monospace, monospace);
+  font-size: 0.78em; min-height: 280px;
+}
+
+/* ── Codeblock error ─────────────────────────────────── */
+.kuro-codeblock-error {
+  padding: 6px 10px; border-radius: 4px;
+  background: var(--background-modifier-error, #5a2020);
+  color: var(--text-error, #e06c75);
+  font-size: 0.85em;
+}
+
+/* ── Collapsible section (Kit) ────────────────────────── */
+.okit-collapsible-header {
+  display: flex; align-items: center; gap: var(--size-4-2);
+  cursor: pointer; padding: var(--size-4-2) 0;
+  font-weight: var(--font-semibold); color: var(--text-normal);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.okit-collapsible-header:hover { color: var(--text-accent); }
+.okit-collapsible-header:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+.okit-collapsible-chevron { display: inline-flex; color: var(--text-muted); }
+.okit-collapsible-body { padding-top: var(--size-4-2); }
+.okit-collapsible-body.is-collapsed { display: none; }

@@ -1,0 +1,56 @@
+{
+  "kuroPack": 1,
+  "name": "Cozy",
+  "lore": [
+    {
+      "level": 1,
+      "title": "THE KETTLE",
+      "text": "You put the kettle on. The day can start gently."
+    },
+    {
+      "level": 2,
+      "title": "OPEN WINDOW",
+      "text": "A little fresh air, a little light. Good."
+    },
+    {
+      "level": 3,
+      "title": "WARM CORNER",
+      "text": "You've found your warm corner. Settle in."
+    },
+    {
+      "level": 4,
+      "title": "SLOW MORNING",
+      "text": "No hurry. The tea is still warm."
+    },
+    {
+      "level": 5,
+      "title": "BLANKET FORT",
+      "text": "Halfway, wrapped in something soft."
+    },
+    {
+      "level": 6,
+      "title": "GARDEN",
+      "text": "Small things are growing because you tended them."
+    },
+    {
+      "level": 7,
+      "title": "LANTERN LIGHT",
+      "text": "The evenings feel kinder now."
+    },
+    {
+      "level": 8,
+      "title": "BREAD RISING",
+      "text": "Patience is doing its quiet work."
+    },
+    {
+      "level": 9,
+      "title": "LAST CHAPTER",
+      "text": "Almost at the end of this cozy book."
+    },
+    {
+      "level": 10,
+      "title": "HEARTH",
+      "text": "Home. You made a warm place out of ordinary days."
+    }
+  ]
+}

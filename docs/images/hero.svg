@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Kuro Gamification — gothic-cyberpunk CRT terminal banner">
+  <title>Kuro Gamification</title>
+  <desc>Hero banner in gothic-cyberpunk CRT terminal style: phosphor-green monospace text on a near-black screen with subtle scanlines.</desc>
+  <defs>
+    <!-- Subtle CRT scanlines: one faint phosphor line every 4px -->
+    <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="4" height="1" fill="#33ff66" opacity="0.05"/>
+    </pattern>
+    <!-- Faint phosphor bloom behind the screen center -->
+    <radialGradient id="phosphor-bloom" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#33ff66" stop-opacity="0.07"/>
+      <stop offset="60%" stop-color="#33ff66" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#33ff66" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Soft glow for the title -->
+    <filter id="glow" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+
+  <!-- Screen: near-black, rounded corners -->
+  <rect x="0" y="0" width="1200" height="300" rx="16" fill="#0a0a0a"/>
+  <rect x="0" y="0" width="1200" height="300" rx="16" fill="url(#phosphor-bloom)"/>
+
+  <!-- Bezel frame -->
+  <rect x="6" y="6" width="1188" height="288" rx="12" fill="none" stroke="#33ff66" stroke-opacity="0.30" stroke-width="1.5"/>
+
+  <!-- Terminal prompt line -->
+  <text x="64" y="78" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" fill="#33ff66" fill-opacity="0.85" xml:space="preserve">kuro@obsidian:~$ ./kuro --awaken</text>
+
+  <!-- Title: glow layer + crisp layer -->
+  <text x="60" y="172" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="64" font-weight="700" letter-spacing="6" fill="#33ff66" fill-opacity="0.55" filter="url(#glow)">KURO GAMIFICATION</text>
+  <text x="60" y="172" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="64" font-weight="700" letter-spacing="6" fill="#33ff66">KURO GAMIFICATION</text>
+
+  <!-- Block cursor ▮ after the title -->
+  <rect x="846" y="120" width="34" height="58" fill="#33ff66"/>
+
+  <!-- Tagline -->
+  <text x="64" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="23" fill="#33ff66" fill-opacity="0.80">XP · Levels · Streaks · Loot — built for neurodivergent brains</text>
+
+  <!-- Dim status footer -->
+  <text x="64" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#33ff66" fill-opacity="0.40" xml:space="preserve">[ LVL 04 · XP 1337 · STREAK 07d · FREEZE x2 ]  ::  SIGNAL FOUND — DATASTREAM STABLE</text>
+
+  <!-- Scanline overlay -->
+  <rect x="0" y="0" width="1200" height="300" rx="16" fill="url(#scanlines)"/>
+</svg>

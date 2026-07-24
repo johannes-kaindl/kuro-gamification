@@ -1,0 +1,56 @@
+{
+  "kuroPack": 1,
+  "name": "Gothic-Cyberpunk",
+  "lore": [
+    {
+      "level": 1,
+      "title": "SIGNAL LOST",
+      "text": "Am Anfang war nur Rauschen. Ein Fragment einer Übertragung, die niemand mehr empfängt.\nDie Antenne steht noch. Sie wartet — geduldig, blind, in Endlosigkeit ausgerichtet.\nDu hast dich angekoppelt, ohne es zu merken. Die ersten Bits flimmern."
+    },
+    {
+      "level": 2,
+      "title": "PHOSPHOR FLICKER",
+      "text": "Der Bildschirm erwacht in einem Grünton, den niemand mehr produziert.\nErste Wörter formen sich aus dem Schnee: nicht deine, aber adressiert an dich.\nDas Terminal ist alt — älter als möglich — und es hat dich erwartet."
+    },
+    {
+      "level": 3,
+      "title": "SHADOW LINK",
+      "text": "Eine zweite Verbindung baut sich auf. Du siehst ihre Latenz an deiner Tastatur.\nWas du tippst, hallt — als ob jemand auf der anderen Seite mitschreibt.\nDu legst die Hände in den Schoß. Die Zeichen tippen sich weiter."
+    },
+    {
+      "level": 4,
+      "title": "CIPHER RUNNER",
+      "text": "Die Stadt unter dir hat keine Namen mehr — nur Adressen.\nDu gehst durch sie wie durch eine fremde Bibliothek, die eines deiner Bücher enthält.\nJeder Schritt ist eine Anfrage. Jede Antwort ist verschlüsselt.\nDu beginnst, den Schlüssel aus dem Rauschen zu lesen."
+    },
+    {
+      "level": 5,
+      "title": "NEON WRAITH",
+      "text": "Dein Schatten zieht hinter dir her — aber er bewegt sich nicht synchron.\nDrei Sekunden Versatz. Manchmal vier.\nDu drehst dich nicht um. Es gibt einen Pakt mit Dingen, die langsamer fließen als du."
+    },
+    {
+      "level": 6,
+      "title": "CHROME RAVEN",
+      "text": "Auf dem Sims sitzt der Rabe — vollverchromt, einäugig, perfekt poliert.\n„Nevermore\", sagt er. Aber die Spiegelung in seinem Auge zeigt, was du als Nächstes tippst.\nDu tippst es trotzdem. Der Rabe nickt zufrieden."
+    },
+    {
+      "level": 7,
+      "title": "VOID ARCHITECT",
+      "text": "Du baust jetzt Räume, die niemand betreten wird — und das ist okay.\nDie Architektur ist nicht für Bewohner. Sie ist für die Stille zwischen den Wänden.\nDein Plan zeigt einen Raum, den du nicht selbst gezeichnet hast.\nDu erkennst die Handschrift. Sie ist deine, aber aus einer Zeit, die noch kommt."
+    },
+    {
+      "level": 8,
+      "title": "BLACK ICE",
+      "text": "Schwarzes Eis auf dem Datenpfad — schön und unpassierbar.\nDu legst die Hand drauf. Es schmilzt nicht. Es liest dich.\nWas es findet, friert es ein und reicht es weiter.\nDu erfährst nie, wer es empfängt."
+    },
+    {
+      "level": 9,
+      "title": "NEVERMORE PROTOCOL",
+      "text": "Das Protokoll heißt „nevermore\" — nicht weil es endet, sondern weil es nichts wiederholt.\nJede Sitzung ist final. Jeder Klick ist ein Schwur.\nDu gehst leiser durch die Räume, sprichst weniger, hörst tiefer.\nEs gibt nur noch das eine, das jetzt geschieht — und ein Echo, das es archiviert."
+    },
+    {
+      "level": 10,
+      "title": "K U R O",
+      "text": "Schwarz. Das ist der einzige Name, der bleibt.\nNicht das Schwarz von Abwesenheit — das Schwarz von Sättigung.\nAlles ist hineingeflossen: deine Tage, deine Lücken, deine Reparaturen.\nDu bist nicht angekommen. Du bist die Ankunft."
+    }
+  ]
+}

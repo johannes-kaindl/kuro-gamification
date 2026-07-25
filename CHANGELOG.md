@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.0.5] — 2026-07-25
+
 ### Fixed
 
 - Real Developer Dashboard review findings (from the actual submission scan, beyond what the

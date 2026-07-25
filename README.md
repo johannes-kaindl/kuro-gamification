@@ -82,17 +82,17 @@ The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!lev
 
 | Section | What it controls |
 |---|---|
-| 🎮 Allgemein | Language (DE/EN), reduce-animations, status-bar item, action notices, verbose breakdown, sidebar enable/disable |
-| 📁 Pfade | Daily/weekly folder paths + date formats |
-| ⚡ XP-Quellen | XP per checkbox, completion bonuses, pomodoro key/threshold/bonus |
+| 🎮 General | Language (DE/EN), reduce-animations, status-bar item, action notices, verbose breakdown, sidebar enable/disable |
+| 📁 Paths | Daily/weekly folder paths + date formats |
+| ⚡ XP sources | XP per checkbox, completion bonuses, pomodoro key/threshold/bonus |
 | 🎯 Habits | Add/edit/remove your own habit list (frontmatter key + label + XP) |
 | 📅 Weekly | Review/planning frontmatter keys + XP |
 | 🔥 Streaks | Day-qualification threshold, monthly freeze tokens |
-| 📊 Level & Loot | Loot enable/disable, options per drop |
+| 📊 Levels & loot | Loot enable/disable, options per drop |
 | 📜 Lore | Lore reveal enable/disable |
 | 📚 Packs | Install/switch/delete loot·lore packs; per-unit export/copy/reset to factory |
-| 🛠 Erweitert | Log level; whole-state data export/import/reset (incl. XP) |
-| ℹ️ Über | Version, link to in-vault docs |
+| 🛠 Advanced | Log level; whole-state data export/import/reset (incl. XP) |
+| ℹ️ About | Version, link to in-vault docs |
 
 ## Status code block
 

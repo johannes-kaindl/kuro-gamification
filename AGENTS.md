@@ -73,14 +73,16 @@ Session-Handoff unter `.remember/` (gitignored).
 
 ## Offene Konventions-Punkte
 
-- [ ] CORE-GIT-01 (in Ausführung 2026-07-24) — Codeberg-`origin`
+- [x] CORE-GIT-01 (2026-07-25) — Codeberg-`origin`
       (`codeberg.org/jkaindl/kuro-gamification`) + GitHub-Mirror
-      (`github.com/johannes-kaindl/kuro-gamification`) + erster Release-Tag `1.0.0`.
-      Lokaler Umbau erledigt; Forge-Anlage + erster Push = Handover an Jay (Auth).
-- [ ] CORE-META-10 — Forge-Teil: Beschreibung + Topics auf der Forge setzen (lokaler Teil
-      erledigt: `package.json` hat `description`/`keywords`/`author` konsistent mit `manifest.json`).
+      (`github.com/johannes-kaindl/kuro-gamification`) eingerichtet; Release `1.0.0`
+      dual-gepusht, GitHub-`release.yml` grün (attestierte Assets), Store-Release live.
+- [x] CORE-META-10 — Forge-Beschreibung + Topics auf Codeberg **und** GitHub gesetzt.
 - [ ] CORE-META-02 — Release-Badge nach dem ersten Release von statisch auf dynamischen
       Forge-Badge umstellen.
+- [ ] CORE-META-01 (aufgetaucht 2026-07-25) — README fehlen 4 vom Workspace-README-Spec
+      geforderte Sektionen (Requirements / Usage / Configuration / How it works); erst
+      sichtbar, seit die README am Repo-Root gelintet wird. Kein Store-Blocker.
 
 Erledigt (Konventions-Sweep 2026-06-10 + Submission-Readiness 2026-07-24):
 CORE-META-01/02/05/07/08 (README EN+DE, Badges, LICENSE am Root, AGPL, LICENSE-DOCS),

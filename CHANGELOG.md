@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-07-25
+
 ## [1.0.2] — 2026-07-25
 
 ## [1.0.1] — 2026-07-25

@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.0.4] — 2026-07-25
+
 ### Fixed
 
 - `minAppVersion` raised from 1.5.0 to 1.8.7 — the actually-lowest floor that covers every API

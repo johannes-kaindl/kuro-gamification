@@ -5,6 +5,35 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- Real Developer Dashboard review findings (from the actual submission scan, beyond what the
+  local `eslint-plugin-obsidianmd@0.3.0` could catch): replaced the `builtin-modules` npm
+  dependency with Node's built-in `node:module` `builtinModules`; `document.createElement` /
+  `el.createEl('div', …)` replaced with `doc.body.createEl(...)` / `el.createDiv(...)` in
+  `fileIo.ts` and the codeblock processor; removed the `ui-monospace` CSS value (unsupported by
+  Obsidian's baseline).
+- The CRT/phosphor aesthetic CSS is no longer a tracked `.css` file in the repo (was
+  `assets/kuro-gamification.css`, never bundled with the plugin) — it's now a markdown doc
+  (`docs/aesthetic-css.{en,de}.md`) with the same CSS as a code block, so it no longer gets
+  swept into the store's CSS lint (`!important`/`clip-path` warnings) despite never shipping.
+
+- Settings tab now implements `getSettingDefinitions()` (Obsidian ≥ 1.13's declarative settings
+  API, required for entries to appear in Obsidian's global settings search) alongside the
+  existing `display()`, which now walks the same declarative definitions for Obsidian < 1.13 —
+  a single source of truth, no behavior change on the pre-1.13 path. `minAppVersion` stays 1.8.7
+  (no bump needed; only the TypeScript types moved to a newer `obsidian` devDependency). Known
+  trade-off: the native ≥ 1.13 renderer shows all sections flat and expanded — it has no concept
+  of the collapsible, collapsed-by-default sections used below 1.13 for overload reduction.
+
+### Internal
+
+- `eslint-plugin-obsidianmd` upgraded 0.3.0 → 0.4.1 — the older version doesn't even implement
+  several rules the real scanner enforces (`prefer-create-el`, `settings-tab/prefer-setting-definitions`).
+- `tsconfig.json` gained `skipLibCheck: true` — the newer `obsidian` type definitions (1.13.x)
+  have an internal inconsistency (`Menu`/`Modal`/`PopoverSuggest` vs. `HistoryHandler`) that only
+  surfaces without it; irrelevant to our own source, which is still fully checked.
+
 ## [1.0.4] — 2026-07-25
 
 ### Fixed

@@ -1,0 +1,456 @@
+# Ästhetik-CSS — Gothic-Cyberpunk-CRT-Terminal-Optik
+
+Das Plugin funktioniert auch ohne dieses Snippet — es liefert von Haus aus
+saubere strukturelle CSS mit (siehe `styles.css` im Repo-Root). Dieses Snippet
+ist eine **rein optionale**, separate visuelle Ebene: Phosphor-Grün,
+Scanlines, subtiles CRT-Flackern, ein eigener `[!kuro]`-Callout und
+Glow-Effekte für `[!levelup]`/`[!spoiler]`/`[!streak]`.
+
+Es liegt hier als Markdown-Codeblock — nicht als getrackte `.css`-Datei im
+Repo —, damit es nie vom CSS-Datei-Lint auf dem Plugin-Quellbaum erfasst
+wird; das Plugin selbst lädt oder bündelt es nie.
+
+## Installation
+
+1. Kopiere das CSS unten in eine neue Datei namens `kuro-gamification.css`
+   innerhalb von `<vault>/.obsidian/snippets/` (leg den Ordner `snippets`
+   an, falls er noch nicht existiert).
+2. Settings → Appearance → CSS Snippets → `kuro-gamification` aktivieren.
+
+## Das CSS
+
+```css
+/* ==========================================================
+   KURO GAMIFICATION — Terminal Aesthetic v1.0
+   Gothic Cyberpunk · Phosphor Green · 80s CRT Vibe
+   E.A. Poe meets William Gibson
+   ==========================================================
+
+   INHALTSVERZEICHNIS
+   0  Design Tokens
+   1  Terminal Pre-Blöcke (Kuro Status + Loot Drop)
+   2  [!kuro] — Neuer Callout-Typ
+   3  [!levelup] — Kuro-Enhancement mit Cursor-Blink
+   4  [!spoiler] — Grünes Reveal beim Hover
+   5  [!streak] — Flammen-Intensivierung
+   6  Keyframe-Bibliothek (Terminal-spezifisch)
+   7  Dark/Light Mode Anpassungen
+   8  Mobile
+
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   0. DESIGN TOKENS
+   ---------------------------------------------------------- */
+
+:root {
+  /* Phosphor-Grün Palette */
+  --kuro-green:         #00ff41;
+  --kuro-green-bright:  #39ff6e;
+  --kuro-green-dim:     #00cc33;
+  --kuro-green-ghost:   rgba(0, 255, 65, 0.12);
+  --kuro-green-glow:    rgba(0, 255, 65, 0.45);
+  --kuro-green-subtle:  rgba(0, 255, 65, 0.22);
+
+  /* Hintergrund-Töne */
+  --kuro-black:         #080808;
+  --kuro-dark:          #0d0d0d;
+  --kuro-dark-mid:      #111411;   /* leicht grün getönt */
+
+  /* Amber-Akzent (für Loot-Drops, Legendary) */
+  --kuro-amber:         #ffb300;
+  --kuro-amber-glow:    rgba(255, 179, 0, 0.35);
+
+  /* Monospace-Font-Stack */
+  --kuro-font: 'IBM Plex Mono', 'Fira Code', 'JetBrains Mono',
+               'Cascadia Code', 'Courier New', Courier, monospace;
+}
+
+
+/* ----------------------------------------------------------
+   1. TERMINAL PRE-BLÖCKE
+   Sidebar/Codeblock rendert .kuro-status und .kuro-loot als <pre>
+   ---------------------------------------------------------- */
+
+pre.kuro-status,
+pre.kuro-loot {
+  /* Typografie */
+  font-family:    var(--kuro-font) !important;
+  font-size:      0.82em !important;
+  line-height:    1.58 !important;
+  letter-spacing: 0.01em;
+  white-space:    pre !important;
+  word-break:     normal !important;
+
+  /* Farbe & Hintergrund */
+  color:      var(--kuro-green) !important;
+  background: var(--kuro-dark) !important;
+
+  /* Rahmen */
+  border:        1px solid rgba(0, 255, 65, 0.3) !important;
+  border-left:   3px solid var(--kuro-green) !important;
+  border-radius: 6px !important;
+
+  /* Abstand */
+  padding: 14px 18px !important;
+  margin:  0 0 0 0 !important;
+
+  /* Phosphor-Glow Effekt */
+  text-shadow:
+    0 0 4px rgba(0, 255, 65, 0.55),
+    0 0 8px rgba(0, 255, 65, 0.2);
+  box-shadow:
+    0 0 18px rgba(0, 255, 65, 0.07),
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px rgba(0, 0, 0, 0.25);
+
+  /* CRT-Flackern (sehr subtil) */
+  animation: phosphorFlicker 12s ease-in-out infinite;
+
+  /* Scanline-Overlay via ::before */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scanlines — leicht, für das CRT-Feeling */
+pre.kuro-status::before,
+pre.kuro-loot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.07) 3px,
+    rgba(0, 0, 0, 0.07) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 6px;
+}
+
+/* Unterer Phosphor-Schimmer */
+pre.kuro-status::after,
+pre.kuro-loot::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(
+    transparent,
+    rgba(0, 255, 65, 0.04)
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Loot-Block: intensiverer Glow + goldener Rand-Akzent */
+pre.kuro-loot {
+  border-color:  rgba(0, 255, 65, 0.5) !important;
+  border-left:   3px solid var(--kuro-green-bright) !important;
+  margin-top:    10px !important;
+  box-shadow:
+    0 0 28px rgba(0, 255, 65, 0.13),
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px rgba(0, 20, 0, 0.3) !important;
+}
+
+/* Hover: Terminal erwacht */
+pre.kuro-status:hover,
+pre.kuro-loot:hover {
+  border-color:  rgba(0, 255, 65, 0.6) !important;
+  box-shadow:
+    0 0 30px rgba(0, 255, 65, 0.18),
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px rgba(0, 0, 0, 0.2) !important;
+  text-shadow:
+    0 0 5px rgba(0, 255, 65, 0.7),
+    0 0 12px rgba(0, 255, 65, 0.3);
+  transition: all 0.4s ease;
+}
+
+
+/* ----------------------------------------------------------
+   2. [!kuro] — NEUER CALLOUT-TYP
+   Für beliebige Kuro-Lore und Terminal-Inhalte
+   ---------------------------------------------------------- */
+
+.callout[data-callout="kuro"] {
+  --callout-color:   0, 255, 65;
+  --callout-icon:    lucide-terminal;
+
+  font-family:       var(--kuro-font);
+  background:        rgba(0, 10, 2, 0.9) !important;
+  border:            1px solid rgba(0, 255, 65, 0.22) !important;
+  border-left:       3px solid var(--kuro-green) !important;
+  border-radius:     6px !important;
+  box-shadow:
+    0 0 20px rgba(0, 255, 65, 0.07),
+    inset 0 0 30px rgba(0, 0, 0, 0.2);
+  animation: phosphorFlicker 10s ease-in-out infinite;
+}
+
+.callout[data-callout="kuro"] .callout-title {
+  font-family:    var(--kuro-font) !important;
+  font-size:      0.78em;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color:          var(--kuro-green) !important;
+  text-shadow:    0 0 6px rgba(0, 255, 65, 0.5);
+}
+
+.callout[data-callout="kuro"] .callout-content {
+  font-family: var(--kuro-font);
+  font-size:   0.84em;
+  line-height: 1.65;
+  color:       var(--kuro-green-dim) !important;
+  text-shadow: 0 0 3px rgba(0, 255, 65, 0.25);
+}
+
+/* Neon-Pulsieren beim Hover des Icons */
+.callout[data-callout="kuro"]:hover .callout-icon svg {
+  animation: neonPulse 1.2s ease-in-out infinite;
+  color:     var(--kuro-green) !important;
+}
+
+
+/* ----------------------------------------------------------
+   3. [!levelup] — KURO-ENHANCEMENT
+   Cursor-Blink im Titel, Glow beim Hover
+   ---------------------------------------------------------- */
+
+/* Sanfter grüner Glow immer sichtbar */
+.callout[data-callout="levelup"] {
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(16, 185, 129, 0.1) !important;
+  transition: box-shadow 0.35s ease, background-color 0.35s ease !important;
+}
+
+.callout[data-callout="levelup"]:hover {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 0 24px rgba(16, 185, 129, 0.2),
+    0 0 0 1px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Blinkender Cursor nach dem Titel-Text */
+.callout[data-callout="levelup"] .callout-title-inner::after {
+  content:   '_';
+  font-family: var(--kuro-font);
+  font-weight: 400;
+  color:      rgb(16, 185, 129);  /* --co-emerald */
+  animation:  cursorBlink 1.1s step-end infinite;
+  margin-left: 1px;
+  opacity:    1;
+}
+
+/* LevelUp Icon: Pfeile mit Glow statt nur Hüpfen */
+.callout[data-callout="levelup"]:hover .callout-icon svg {
+  animation:  levelUpPop 0.7s ease-in-out infinite;
+  filter:     drop-shadow(0 0 5px rgba(16, 185, 129, 0.85));
+  color:      rgb(16, 185, 129) !important;
+}
+
+
+/* ----------------------------------------------------------
+   4. [!spoiler] — GRÜNES REVEAL BEIM HOVER
+   Im Kuro-Kontext leuchtet der Spoiler grün auf
+   ---------------------------------------------------------- */
+
+/* Sanfteres Blur (Original: 5px) */
+.callout[data-callout="spoiler"] .callout-content {
+  filter:     blur(6px);
+  transition: filter 0.45s ease;
+}
+
+/* Beim Hover: Blur weg + grüner Leuchtrahmen */
+.callout[data-callout="spoiler"]:hover {
+  border-left-color: var(--kuro-green) !important;
+  box-shadow:
+    0 0 16px rgba(0, 255, 65, 0.14),
+    0 0 0 1px rgba(0, 255, 65, 0.18) !important;
+  transition: border-left-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.callout[data-callout="spoiler"]:hover .callout-content {
+  filter: blur(0);
+}
+
+.callout[data-callout="spoiler"]:hover .callout-title {
+  color: var(--kuro-green-dim);
+  transition: color 0.3s ease;
+}
+
+/* Spoiler-Icon: Auge öffnet sich (blinkt genau einmal beim Hover) */
+.callout[data-callout="spoiler"]:hover .callout-icon svg {
+  animation: eyeReveal 0.5s ease-out forwards;
+  color:     var(--kuro-green-dim) !important;
+}
+
+
+/* ----------------------------------------------------------
+   5. [!streak] — FLAMMEN-INTENSIVIERUNG
+   Stärkerer Flicker-Effekt, Orange-Glow
+   ---------------------------------------------------------- */
+
+.callout[data-callout="streak"] {
+  transition: box-shadow 0.3s ease !important;
+}
+
+.callout[data-callout="streak"]:hover {
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.07),
+    0 0 20px rgba(249, 115, 22, 0.18) !important;
+}
+
+/* Stärkeres Flackern beim Hover */
+.callout[data-callout="streak"]:hover .callout-icon svg {
+  animation: streakFlame 0.5s ease-in-out infinite;
+  filter:    drop-shadow(0 0 8px rgba(249, 115, 22, 1));
+  color:     rgb(249, 115, 22) !important;
+}
+
+
+/* ----------------------------------------------------------
+   6. KEYFRAME-BIBLIOTHEK (Kuro-spezifisch)
+   ---------------------------------------------------------- */
+
+/* Phosphor-Flackern: seltenes, minimales Opacity-Dip */
+@keyframes phosphorFlicker {
+  0%,   93%, 100% { opacity: 1; }
+  94%              { opacity: 0.93; }
+  95%              { opacity: 1; }
+  97%              { opacity: 0.96; }
+  98%              { opacity: 1; }
+}
+
+/* Klassischer Cursor-Blink */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Neon-Pulsieren (für [!kuro] Icon) */
+@keyframes neonPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(0, 255, 65, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(0, 255, 65, 1))
+            drop-shadow(0 0 16px rgba(0, 255, 65, 0.4));
+  }
+}
+
+/* Level-Up Pop: mit Glow-Burst */
+@keyframes levelUpPop {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+    filter:    drop-shadow(0 0 3px rgba(16, 185, 129, 0.6));
+  }
+  40% {
+    transform: scale(1.25) translateY(-5px);
+    filter:    drop-shadow(0 0 10px rgba(16, 185, 129, 1))
+               drop-shadow(0 0 20px rgba(16, 185, 129, 0.5));
+  }
+  70% {
+    transform: scale(1.1) translateY(-2px);
+    filter:    drop-shadow(0 0 6px rgba(16, 185, 129, 0.8));
+  }
+}
+
+/* Streak-Flamme: Intensiv und unruhig */
+@keyframes streakFlame {
+  0%, 100% {
+    transform: scaleY(1) scaleX(1);
+    filter:    drop-shadow(0 0 5px rgba(249, 115, 22, 0.8));
+  }
+  20% {
+    transform: scaleY(1.1) scaleX(0.94);
+    filter:    drop-shadow(0 0 10px rgba(249, 115, 22, 1));
+  }
+  50% {
+    transform: scaleY(0.95) scaleX(1.06);
+    filter:    drop-shadow(0 0 7px rgba(249, 115, 22, 0.9));
+  }
+  80% {
+    transform: scaleY(1.08) scaleX(0.97);
+    filter:    drop-shadow(0 0 12px rgba(249, 115, 22, 1));
+  }
+}
+
+/* Auge öffnet sich (Spoiler Reveal) */
+@keyframes eyeReveal {
+  0%   { transform: scaleY(0.2); opacity: 0.4; }
+  60%  { transform: scaleY(1.15); }
+  100% { transform: scaleY(1);   opacity: 1; }
+}
+
+/* Glitch-Shift: kurzer horizontaler Versatz mit Clip */
+@keyframes glitchShift {
+  0%,  90%, 100% { transform: translateX(0);  clip-path: none; }
+  91%             { transform: translateX(-4px); }
+  92%             {
+    transform: translateX(3px);
+    clip-path: polygon(0 20%, 100% 20%, 100% 45%, 0 45%);
+  }
+  93%             { transform: translateX(0);   clip-path: none; }
+  96%             {
+    transform: translateX(2px);
+    clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+  }
+  97%             { transform: translateX(0);   clip-path: none; }
+}
+
+
+/* ----------------------------------------------------------
+   7. DARK / LIGHT MODE
+   ---------------------------------------------------------- */
+
+/* Light Mode: Terminal-Blöcke dunkel halten (Designentscheidung) */
+.theme-light pre.kuro-status,
+.theme-light pre.kuro-loot {
+  /* Intentional: Terminal bleibt dunkel im hellen Theme */
+  background: #0f110f !important;
+  color:      #00e83a !important;
+  border-color: rgba(0, 232, 58, 0.4) !important;
+  text-shadow:
+    0 0 4px rgba(0, 232, 58, 0.5),
+    0 0 8px rgba(0, 232, 58, 0.2);
+}
+
+/* Light Mode [!kuro] */
+.theme-light .callout[data-callout="kuro"] {
+  background: rgba(5, 15, 7, 0.95) !important;
+}
+
+
+/* ----------------------------------------------------------
+   8. MOBILE
+   ---------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  pre.kuro-status,
+  pre.kuro-loot {
+    font-size: 0.72em !important;
+    padding:   10px 12px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Scanlines auf Mobile deaktivieren (Performance) */
+  pre.kuro-status::before,
+  pre.kuro-loot::before {
+    display: none;
+  }
+
+  .callout[data-callout="kuro"] .callout-title {
+    font-size:      0.72em;
+    letter-spacing: 0.1em;
+  }
+}
+```

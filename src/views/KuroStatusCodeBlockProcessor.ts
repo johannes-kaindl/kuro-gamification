@@ -29,7 +29,7 @@ export function makeKuroCodeBlockProcessor(plugin: KuroPlugin) {
     try {
       cfg = parseBlockConfig(source);
     } catch (err) {
-      el.createEl('div', {
+      el.createDiv({
         cls: 'kuro-codeblock-error',
         text: t('codeblock.error.invalidConfig', plugin.data.settings.language, {
           err: (err instanceof Error ? err.message : String(err)),

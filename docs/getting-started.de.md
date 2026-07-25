@@ -22,7 +22,7 @@ Das Plugin ist noch nicht im Community-Katalog gelistet. Nutze vorerst die manue
 3. **Kuro Gamification** aktivieren
 
 > [!tip] Optionale CRT-Ästhetik
-> Kopiere `kuro-gamification.css` aus `assets/` nach `<vault>/.obsidian/snippets/`, dann unter **Settings → Appearance → CSS-Snippets** aktivieren. Das fügt die Gothic-Cyberpunk-Phosphor-Optik hinzu. Das Plugin funktioniert auch ohne das Snippet.
+> Siehe [Ästhetik-CSS](aesthetic-css.de.md) für das CSS und die Installationsanleitung. Das fügt die Gothic-Cyberpunk-Phosphor-Optik hinzu. Das Plugin funktioniert auch ohne das Snippet.
 
 ---
 

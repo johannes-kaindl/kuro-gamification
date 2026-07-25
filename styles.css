@@ -38,7 +38,7 @@
 /* (when CSS snippet kuro-gamification.css is NOT installed) */
 .kuro-view-body pre.kuro-status,
 .kuro-view-body pre.kuro-loot {
-  font-family: var(--font-monospace, ui-monospace, monospace);
+  font-family: var(--font-monospace, monospace);
   font-size: 0.78em; line-height: 1.55;
   background: var(--background-secondary, #2a2a2a);
   border: 1px solid var(--background-modifier-border, #444);

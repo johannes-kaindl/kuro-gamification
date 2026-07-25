@@ -20,7 +20,6 @@ function makeFakeDoc() {
     type: '',
     accept: '',
     files: null as any,
-    addClass(_cls: string) { /* no-op stub */ },
     addEventListener(ev: string, fn: () => void) {
       if (!listeners[ev]) listeners[ev] = [];
       listeners[ev].push(fn);
@@ -33,8 +32,7 @@ function makeFakeDoc() {
   };
 
   const doc: any = {
-    createElement: () => input,
-    body: { appendChild: (el: any) => { children.push(el); } },
+    body: { createEl: (_tag: string, _o?: any) => { children.push(input); return input; } },
   };
 
   return {

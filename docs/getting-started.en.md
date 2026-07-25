@@ -22,7 +22,7 @@ The plugin is not yet listed in the community catalogue. For now, use the manual
 3. Toggle **Kuro Gamification** on
 
 > [!tip] Optional CRT aesthetic
-> Copy `kuro-gamification.css` from `assets/` into `<vault>/.obsidian/snippets/`, then enable it under **Settings → Appearance → CSS Snippets**. This adds the gothic-cyberpunk phosphor-green look. The plugin works fine without it.
+> See [Aesthetic CSS](aesthetic-css.en.md) for the CSS and install instructions. This adds the gothic-cyberpunk phosphor-green look. The plugin works fine without it.
 
 ---
 

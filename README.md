@@ -28,7 +28,7 @@ Search for **Kuro Gamification** in **Settings → Community plugins → Browse*
 1. Download `main.js`, `manifest.json`, `styles.css`, `versions.json` from the [latest release](https://codeberg.org/jkaindl/kuro-gamification/releases) and copy them into `<vault>/.obsidian/plugins/kuro-gamification/`
 2. Settings → Community plugins → Reload plugins
 3. Settings → Community plugins → Kuro Gamification → enable
-4. (Optional) Install the `kuro-gamification.css` snippet for the full CRT/phosphor aesthetic — see "Aesthetic CSS" below
+4. (Optional) Install the CRT/phosphor aesthetic CSS snippet — see "Aesthetic CSS" below
 
 ## Usage
 
@@ -74,7 +74,7 @@ Most gamification plugins for note apps are built for neurotypical brains: hard 
 
 ## Aesthetic CSS
 
-This plugin works without external styling — it ships with sane structural CSS. For the full **gothic-cyberpunk CRT terminal aesthetic** (phosphor green, scanlines, flicker), copy the bundled snippet `kuro-gamification.css` (in this repo's `assets/`) into `<vault>/.obsidian/snippets/` and enable it via Settings → Appearance → CSS Snippets.
+This plugin works without external styling — it ships with sane structural CSS. For the full **gothic-cyberpunk CRT terminal aesthetic** (phosphor green, scanlines, flicker), see [Aesthetic CSS](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.de.md)) for the CSS and install instructions (it's kept as a doc, not a tracked `.css` file, so it isn't bundled and never shows up in CSS linting of the plugin's own source).
 
 The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]` callouts. It has no hard dependency on the Kuro theme (works under any theme that respects CSS custom properties).
 

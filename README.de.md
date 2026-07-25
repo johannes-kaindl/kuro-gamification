@@ -22,7 +22,7 @@
 1. `main.js`, `manifest.json`, `styles.css`, `versions.json` nach `<vault>/.obsidian/plugins/kuro-gamification/` kopieren
 2. Settings → Community-Plugins → Plugins neu laden
 3. Settings → Community-Plugins → Kuro Gamification → aktivieren
-4. Optional: `kuro-gamification.css`-Snippet aus `assets/` nach `<vault>/.obsidian/snippets/` kopieren und unter Settings → Appearance → CSS-Snippets aktivieren — für die volle CRT-Phosphor-Optik
+4. Optional: für die volle CRT-Phosphor-Optik siehe [Ästhetik-CSS](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.de.md) für das CSS + Installationsanleitung
 
 ## Verwendung
 

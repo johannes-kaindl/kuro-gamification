@@ -1,18 +1,39 @@
+# Aesthetic CSS — gothic-cyberpunk CRT terminal look
+
+The plugin works fine without this — it ships with sane structural CSS (see
+`styles.css` in the repo root). This snippet is a **purely optional**,
+separate visual layer: phosphor green, scanlines, subtle CRT flicker, a
+custom `[!kuro]` callout, and glow effects for `[!levelup]`/`[!spoiler]`/`[!streak]`.
+
+It's kept here as a markdown code block — not as a tracked `.css` file in the
+repo — so it never gets swept up by CSS-file linting on the plugin's own
+source tree; the plugin itself never loads or bundles it.
+
+## Install
+
+1. Copy the CSS below into a new file named `kuro-gamification.css` inside
+   `<vault>/.obsidian/snippets/` (create the `snippets` folder if it doesn't
+   exist yet).
+2. Settings → Appearance → CSS Snippets → enable `kuro-gamification`.
+
+## The CSS
+
+```css
 /* ==========================================================
    KURO GAMIFICATION — Terminal Aesthetic v1.0
    Gothic Cyberpunk · Phosphor Green · 80s CRT Vibe
    E.A. Poe meets William Gibson
    ==========================================================
 
-   INHALTSVERZEICHNIS
-   0  Design Tokens
-   1  Terminal Pre-Blöcke (Kuro Status + Loot Drop)
-   2  [!kuro] — Neuer Callout-Typ
-   3  [!levelup] — Kuro-Enhancement mit Cursor-Blink
-   4  [!spoiler] — Grünes Reveal beim Hover
-   5  [!streak] — Flammen-Intensivierung
-   6  Keyframe-Bibliothek (Terminal-spezifisch)
-   7  Dark/Light Mode Anpassungen
+   TABLE OF CONTENTS
+   0  Design tokens
+   1  Terminal pre-blocks (Kuro status + loot drop)
+   2  [!kuro] — new callout type
+   3  [!levelup] — Kuro enhancement with cursor blink
+   4  [!spoiler] — green reveal on hover
+   5  [!streak] — flame intensification
+   6  Keyframe library (terminal-specific)
+   7  Dark/light mode adjustments
    8  Mobile
 
    ========================================================== */
@@ -23,7 +44,7 @@
    ---------------------------------------------------------- */
 
 :root {
-  /* Phosphor-Grün Palette */
+  /* Phosphor green palette */
   --kuro-green:         #00ff41;
   --kuro-green-bright:  #39ff6e;
   --kuro-green-dim:     #00cc33;
@@ -31,29 +52,29 @@
   --kuro-green-glow:    rgba(0, 255, 65, 0.45);
   --kuro-green-subtle:  rgba(0, 255, 65, 0.22);
 
-  /* Hintergrund-Töne */
+  /* Background tones */
   --kuro-black:         #080808;
   --kuro-dark:          #0d0d0d;
-  --kuro-dark-mid:      #111411;   /* leicht grün getönt */
+  --kuro-dark-mid:      #111411;   /* slightly green-tinted */
 
-  /* Amber-Akzent (für Loot-Drops, Legendary) */
+  /* Amber accent (for loot drops, legendary) */
   --kuro-amber:         #ffb300;
   --kuro-amber-glow:    rgba(255, 179, 0, 0.35);
 
-  /* Monospace-Font-Stack */
+  /* Monospace font stack */
   --kuro-font: 'IBM Plex Mono', 'Fira Code', 'JetBrains Mono',
                'Cascadia Code', 'Courier New', Courier, monospace;
 }
 
 
 /* ----------------------------------------------------------
-   1. TERMINAL PRE-BLÖCKE
-   Dataview JS rendert .kuro-status und .kuro-loot als <pre>
+   1. TERMINAL PRE-BLOCKS
+   The sidebar/code-block renders .kuro-status and .kuro-loot as <pre>
    ---------------------------------------------------------- */
 
 pre.kuro-status,
 pre.kuro-loot {
-  /* Typografie */
+  /* Typography */
   font-family:    var(--kuro-font) !important;
   font-size:      0.82em !important;
   line-height:    1.58 !important;
@@ -61,20 +82,20 @@ pre.kuro-loot {
   white-space:    pre !important;
   word-break:     normal !important;
 
-  /* Farbe & Hintergrund */
+  /* Color & background */
   color:      var(--kuro-green) !important;
   background: var(--kuro-dark) !important;
 
-  /* Rahmen */
+  /* Border */
   border:        1px solid rgba(0, 255, 65, 0.3) !important;
   border-left:   3px solid var(--kuro-green) !important;
   border-radius: 6px !important;
 
-  /* Abstand */
+  /* Spacing */
   padding: 14px 18px !important;
   margin:  0 0 0 0 !important;
 
-  /* Phosphor-Glow Effekt */
+  /* Phosphor glow effect */
   text-shadow:
     0 0 4px rgba(0, 255, 65, 0.55),
     0 0 8px rgba(0, 255, 65, 0.2);
@@ -83,15 +104,15 @@ pre.kuro-loot {
     0 2px 12px rgba(0, 0, 0, 0.5),
     inset 0 0 40px rgba(0, 0, 0, 0.25);
 
-  /* CRT-Flackern (sehr subtil) */
+  /* CRT flicker (very subtle) */
   animation: phosphorFlicker 12s ease-in-out infinite;
 
-  /* Scanline-Overlay via ::before */
+  /* Scanline overlay via ::before */
   position: relative;
   overflow: hidden;
 }
 
-/* Scanlines — leicht, für das CRT-Feeling */
+/* Scanlines — light touch, for the CRT feel */
 pre.kuro-status::before,
 pre.kuro-loot::before {
   content: '';
@@ -109,7 +130,7 @@ pre.kuro-loot::before {
   border-radius: 6px;
 }
 
-/* Unterer Phosphor-Schimmer */
+/* Lower phosphor shimmer */
 pre.kuro-status::after,
 pre.kuro-loot::after {
   content: '';
@@ -126,7 +147,7 @@ pre.kuro-loot::after {
   z-index: 1;
 }
 
-/* Loot-Block: intensiverer Glow + goldener Rand-Akzent */
+/* Loot block: stronger glow + brighter-green border accent */
 pre.kuro-loot {
   border-color:  rgba(0, 255, 65, 0.5) !important;
   border-left:   3px solid var(--kuro-green-bright) !important;
@@ -137,7 +158,7 @@ pre.kuro-loot {
     inset 0 0 40px rgba(0, 20, 0, 0.3) !important;
 }
 
-/* Hover: Terminal erwacht */
+/* Hover: terminal wakes up */
 pre.kuro-status:hover,
 pre.kuro-loot:hover {
   border-color:  rgba(0, 255, 65, 0.6) !important;
@@ -153,8 +174,8 @@ pre.kuro-loot:hover {
 
 
 /* ----------------------------------------------------------
-   2. [!kuro] — NEUER CALLOUT-TYP
-   Für beliebige Kuro-Lore und Terminal-Inhalte
+   2. [!kuro] — NEW CALLOUT TYPE
+   For arbitrary Kuro lore and terminal content
    ---------------------------------------------------------- */
 
 .callout[data-callout="kuro"] {
@@ -190,7 +211,7 @@ pre.kuro-loot:hover {
   text-shadow: 0 0 3px rgba(0, 255, 65, 0.25);
 }
 
-/* Neon-Pulsieren beim Hover des Icons */
+/* Neon pulse on icon hover */
 .callout[data-callout="kuro"]:hover .callout-icon svg {
   animation: neonPulse 1.2s ease-in-out infinite;
   color:     var(--kuro-green) !important;
@@ -198,11 +219,11 @@ pre.kuro-loot:hover {
 
 
 /* ----------------------------------------------------------
-   3. [!levelup] — KURO-ENHANCEMENT
-   Cursor-Blink im Titel, Glow beim Hover
+   3. [!levelup] — KURO ENHANCEMENT
+   Cursor blink in the title, glow on hover
    ---------------------------------------------------------- */
 
-/* Sanfter grüner Glow immer sichtbar */
+/* Soft green glow always visible */
 .callout[data-callout="levelup"] {
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.05),
@@ -217,7 +238,7 @@ pre.kuro-loot:hover {
     0 0 0 1px rgba(16, 185, 129, 0.25) !important;
 }
 
-/* Blinkender Cursor nach dem Titel-Text */
+/* Blinking cursor after the title text */
 .callout[data-callout="levelup"] .callout-title-inner::after {
   content:   '_';
   font-family: var(--kuro-font);
@@ -228,7 +249,7 @@ pre.kuro-loot:hover {
   opacity:    1;
 }
 
-/* LevelUp Icon: Pfeile mit Glow statt nur Hüpfen */
+/* LevelUp icon: arrows with glow instead of just a bounce */
 .callout[data-callout="levelup"]:hover .callout-icon svg {
   animation:  levelUpPop 0.7s ease-in-out infinite;
   filter:     drop-shadow(0 0 5px rgba(16, 185, 129, 0.85));
@@ -237,17 +258,17 @@ pre.kuro-loot:hover {
 
 
 /* ----------------------------------------------------------
-   4. [!spoiler] — GRÜNES REVEAL BEIM HOVER
-   Im Kuro-Kontext leuchtet der Spoiler grün auf
+   4. [!spoiler] — GREEN REVEAL ON HOVER
+   In the Kuro context, the spoiler glows green on reveal
    ---------------------------------------------------------- */
 
-/* Sanfteres Blur (Original: 5px) */
+/* Softer blur (original: 5px) */
 .callout[data-callout="spoiler"] .callout-content {
   filter:     blur(6px);
   transition: filter 0.45s ease;
 }
 
-/* Beim Hover: Blur weg + grüner Leuchtrahmen */
+/* On hover: blur gone + green glow border */
 .callout[data-callout="spoiler"]:hover {
   border-left-color: var(--kuro-green) !important;
   box-shadow:
@@ -265,7 +286,7 @@ pre.kuro-loot:hover {
   transition: color 0.3s ease;
 }
 
-/* Spoiler-Icon: Auge öffnet sich (blinkt genau einmal beim Hover) */
+/* Spoiler icon: eye opens (blinks exactly once on hover) */
 .callout[data-callout="spoiler"]:hover .callout-icon svg {
   animation: eyeReveal 0.5s ease-out forwards;
   color:     var(--kuro-green-dim) !important;
@@ -273,8 +294,8 @@ pre.kuro-loot:hover {
 
 
 /* ----------------------------------------------------------
-   5. [!streak] — FLAMMEN-INTENSIVIERUNG
-   Stärkerer Flicker-Effekt, Orange-Glow
+   5. [!streak] — FLAME INTENSIFICATION
+   Stronger flicker effect, orange glow
    ---------------------------------------------------------- */
 
 .callout[data-callout="streak"] {
@@ -287,7 +308,7 @@ pre.kuro-loot:hover {
     0 0 20px rgba(249, 115, 22, 0.18) !important;
 }
 
-/* Stärkeres Flackern beim Hover */
+/* Stronger flicker on hover */
 .callout[data-callout="streak"]:hover .callout-icon svg {
   animation: streakFlame 0.5s ease-in-out infinite;
   filter:    drop-shadow(0 0 8px rgba(249, 115, 22, 1));
@@ -296,10 +317,10 @@ pre.kuro-loot:hover {
 
 
 /* ----------------------------------------------------------
-   6. KEYFRAME-BIBLIOTHEK (Kuro-spezifisch)
+   6. KEYFRAME LIBRARY (Kuro-specific)
    ---------------------------------------------------------- */
 
-/* Phosphor-Flackern: seltenes, minimales Opacity-Dip */
+/* Phosphor flicker: rare, minimal opacity dip */
 @keyframes phosphorFlicker {
   0%,   93%, 100% { opacity: 1; }
   94%              { opacity: 0.93; }
@@ -308,13 +329,13 @@ pre.kuro-loot:hover {
   98%              { opacity: 1; }
 }
 
-/* Klassischer Cursor-Blink */
+/* Classic cursor blink */
 @keyframes cursorBlink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
 }
 
-/* Neon-Pulsieren (für [!kuro] Icon) */
+/* Neon pulse (for the [!kuro] icon) */
 @keyframes neonPulse {
   0%, 100% {
     filter: drop-shadow(0 0 3px rgba(0, 255, 65, 0.6));
@@ -325,7 +346,7 @@ pre.kuro-loot:hover {
   }
 }
 
-/* Level-Up Pop: mit Glow-Burst */
+/* Level-up pop: with a glow burst */
 @keyframes levelUpPop {
   0%, 100% {
     transform: scale(1) translateY(0);
@@ -342,7 +363,7 @@ pre.kuro-loot:hover {
   }
 }
 
-/* Streak-Flamme: Intensiv und unruhig */
+/* Streak flame: intense and restless */
 @keyframes streakFlame {
   0%, 100% {
     transform: scaleY(1) scaleX(1);
@@ -362,14 +383,14 @@ pre.kuro-loot:hover {
   }
 }
 
-/* Auge öffnet sich (Spoiler Reveal) */
+/* Eye opens (spoiler reveal) */
 @keyframes eyeReveal {
   0%   { transform: scaleY(0.2); opacity: 0.4; }
   60%  { transform: scaleY(1.15); }
   100% { transform: scaleY(1);   opacity: 1; }
 }
 
-/* Glitch-Shift: kurzer horizontaler Versatz mit Clip */
+/* Glitch shift: brief horizontal offset with clip */
 @keyframes glitchShift {
   0%,  90%, 100% { transform: translateX(0);  clip-path: none; }
   91%             { transform: translateX(-4px); }
@@ -390,10 +411,10 @@ pre.kuro-loot:hover {
    7. DARK / LIGHT MODE
    ---------------------------------------------------------- */
 
-/* Light Mode: Terminal-Blöcke dunkel halten (Designentscheidung) */
+/* Light mode: keep terminal blocks dark (design decision) */
 .theme-light pre.kuro-status,
 .theme-light pre.kuro-loot {
-  /* Intentional: Terminal bleibt dunkel im hellen Theme */
+  /* Intentional: terminal stays dark even in a light theme */
   background: #0f110f !important;
   color:      #00e83a !important;
   border-color: rgba(0, 232, 58, 0.4) !important;
@@ -402,7 +423,7 @@ pre.kuro-loot:hover {
     0 0 8px rgba(0, 232, 58, 0.2);
 }
 
-/* Light Mode [!kuro] */
+/* Light mode [!kuro] */
 .theme-light .callout[data-callout="kuro"] {
   background: rgba(5, 15, 7, 0.95) !important;
 }
@@ -420,7 +441,7 @@ pre.kuro-loot:hover {
     line-height: 1.5 !important;
   }
 
-  /* Scanlines auf Mobile deaktivieren (Performance) */
+  /* Disable scanlines on mobile (performance) */
   pre.kuro-status::before,
   pre.kuro-loot::before {
     display: none;
@@ -431,3 +452,4 @@ pre.kuro-loot:hover {
     letter-spacing: 0.1em;
   }
 }
+```

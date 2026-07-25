@@ -154,7 +154,7 @@ Everything. Literally everything. In Settings → Kuro Gamification:
 ## Known quirks
 
 - **Mid-night refresh** runs once per session. If you leave Obsidian open all night, the status refreshes at 00:00:05. If not — on the next open.
-- The `kuro-gamification.css` (CRT phosphor aesthetic) is a **separate snippet**, not plugin content. Copy `kuro-gamification.css` from `assets/` into `<vault>/.obsidian/snippets/` and enable it under Settings → Appearance → CSS Snippets.
+- The CRT phosphor aesthetic is a **separate snippet**, not plugin content — see [Aesthetic CSS](aesthetic-css.en.md) for the CSS and install instructions.
 
 ## Troubleshooting
 

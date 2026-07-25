@@ -13,10 +13,9 @@
 export function downloadJson(doc: Document, filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = doc.createElement('a');
-  a.href = url;
-  a.download = filename;
+  const a = doc.body.createEl('a', { cls: 'kuro-hidden', attr: { href: url, download: filename } });
   a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 }
 
@@ -31,11 +30,10 @@ export function downloadJson(doc: Document, filename: string, data: unknown): vo
  */
 export function readJsonFile(doc: Document): Promise<string | null> {
   return new Promise((resolve) => {
-    const input = doc.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.addClass('kuro-hidden');
-    doc.body.appendChild(input);
+    const input = doc.body.createEl('input', {
+      cls: 'kuro-hidden',
+      attr: { type: 'file', accept: '.json,application/json' },
+    });
 
     const cleanup = (): void => { input.remove(); };
 

@@ -55,11 +55,16 @@
 }
 
 /* ── Reduced animations (a11y) ─────────────────────────── */
+/* No !important: each selector here already carries one more class
+   (.kuro-no-animation, added to an ancestor by KuroStatusRenderer) than the
+   animated rule it overrides — in the bundled styles.css and in the
+   optional aesthetic snippet (docs/aesthetic-css.*.md) alike — so it always
+   wins on specificity alone. */
 .kuro-no-animation pre.kuro-status,
 .kuro-no-animation pre.kuro-loot,
 .kuro-no-animation .callout[data-callout="kuro"],
 .kuro-no-animation .callout[data-callout="levelup"] .callout-title-inner::after {
-  animation: none !important;
+  animation: none;
 }
 
 /* ── XP breakdown table ───────────────────────────────── */

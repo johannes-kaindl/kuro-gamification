@@ -5,6 +5,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- Last remaining CSS-lint warning ("Avoid !important") on the reduce-animations a11y override
+  removed — the selectors already carry one extra class (`.kuro-no-animation`, added to an
+  ancestor) over the rules they override, so they win on specificity alone without `!important`.
+
 ## [1.0.5] — 2026-07-25
 
 ### Fixed

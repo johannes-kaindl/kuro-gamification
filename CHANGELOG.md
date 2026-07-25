@@ -5,6 +5,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Documentation
+
+- README (EN+DE) now covers all workspace-required sections: Requirements, Usage, Configuration, How it works.
+- Release badge switched from static to a dynamic Codeberg release badge.
+
+### Internal
+
+- Release tooling now delegates to the workspace-central `../tools/release/` (`release`/`version-bump`/`preflight`) instead of a vendored, stale copy in `scripts/`.
+
 ## [1.0.0] — 2026-07-25
 
 First public release. Neurodivergence-friendly gamification for your notes —

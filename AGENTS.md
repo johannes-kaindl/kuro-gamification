@@ -33,8 +33,10 @@ Arbeitsverzeichnis: **Repo-Root**.
 - lint: `npm run lint` (biome check)
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
 - version-bump: `npm run version-bump <ver>` (3-File-Sync package/manifest/versions)
-- release: `npm run release <ver>` (Ein-Befehl-Release: bump → commit → tag → Codeberg-Push
-  → build → Codeberg-Release → GitHub-Mirror; `--dry-run` zum Prüfen)
+- release: `npm run release <ver>` (Ein-Befehl-Release: bump → changelog → preflight → commit →
+  tag → Codeberg-Push → build → GitHub-Mirror + Verifikation → Codeberg-Release; `--dry-run`
+  zum Prüfen)
+- preflight: `npm run preflight <ver>` (Store-Checkliste standalone, ohne Release auszulösen)
 - deploy: `OBSIDIAN_PLUGIN_DIR=<vault>/.obsidian/plugins/kuro-gamification npm run deploy`
   (Standard-Test-Target: der produktive Pallas-Vault
   `/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification/`. Bei echten
@@ -56,6 +58,13 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   `Co-Authored-By: …` bei substanziellem AI-Beitrag. Details: `CONTRIBUTING.md`.
 
 ## Gotchas
+- **Release-Tooling ist zentral** (`../tools/release/{release,version-bump,preflight}.mjs`) — kein
+  vendored `scripts/release.mjs` mehr im Repo. Voraussetzung: dieses Repo muss im Dach-Verzeichnis
+  `obsidian-plugins/` neben `tools/` liegen (ein Clone ohne Dach ist nicht release-fähig, die
+  npm-Scripts prüfen das und brechen mit klarer Fehlermeldung ab). `preflight.mjs` deckt die
+  Store-Checkliste release-seitig ab; `SubmissionGate.ts`/`tests/submission-gate.test.ts` deckt
+  dieselben Checks test-seitig ab (`npm test`) — bewusste Teil-Doppelung, nicht redundant
+  (verschiedene Zeitpunkte). Migriert 2026-07-25, s. `_docs/LESSONS.md` (2026-07-25).
 - **Pure-Logik in `src/engine/`** (Node-testbar); UI ist dünner Glue über der Obsidian-API.
 - **Vault-reactive:** `vault.modify` ist 800 ms debounced.
 - **`onload`-Reihenfolge (load-bearing):** Debounced Fns (`debouncedSave`/`debouncedRefresh`)
@@ -78,11 +87,14 @@ Session-Handoff unter `.remember/` (gitignored).
       (`github.com/johannes-kaindl/kuro-gamification`) eingerichtet; Release `1.0.0`
       dual-gepusht, GitHub-`release.yml` grün (attestierte Assets), Store-Release live.
 - [x] CORE-META-10 — Forge-Beschreibung + Topics auf Codeberg **und** GitHub gesetzt.
-- [ ] CORE-META-02 — Release-Badge nach dem ersten Release von statisch auf dynamischen
-      Forge-Badge umstellen.
-- [ ] CORE-META-01 (aufgetaucht 2026-07-25) — README fehlen 4 vom Workspace-README-Spec
-      geforderte Sektionen (Requirements / Usage / Configuration / How it works); erst
-      sichtbar, seit die README am Repo-Root gelintet wird. Kein Store-Blocker.
+- [x] CORE-META-02 (2026-07-25) — Release-Badge von statisch auf dynamischen
+      Codeberg-Gitea-Badge umgestellt (`img.shields.io/gitea/v/release/...`), EN+DE.
+- [x] CORE-META-01 (2026-07-25) — README (EN+DE) um die 4 fehlenden Pflicht-Sektionen
+      ergänzt (Requirements / Usage / Configuration / How it works); `readme_lint.py`
+      meldet jetzt „keine Befunde".
+- [x] Release-Tooling-Migration (2026-07-25) — vendored `scripts/release.mjs` (stale, ohne
+      preflight/push-order-fix) durch Delegation an zentrales `../tools/release/` ersetzt;
+      s. `_docs/LESSONS.md` (2026-07-25).
 
 Erledigt (Konventions-Sweep 2026-06-10 + Submission-Readiness 2026-07-24):
 CORE-META-01/02/05/07/08 (README EN+DE, Badges, LICENSE am Root, AGPL, LICENSE-DOCS),

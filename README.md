@@ -2,14 +2,20 @@
 
 > 🇬🇧 English · [🇩🇪 Deutsch](README.de.md)
 
-Neurodivergence-friendly gamification for Obsidian — XP, levels, streaks with **freeze tokens**, deterministic loot drops, and optional lore, with everything that could escalate off by default.
+**Neurodivergence-friendly gamification for Obsidian — XP, levels, streaks with freeze tokens, deterministic loot drops, and optional lore, with everything that could escalate off by default.**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](LICENSE-DOCS)
-[![Release](https://img.shields.io/badge/release-1.0.0-green.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fcodeberg.org&label=release)](https://codeberg.org/jkaindl/kuro-gamification/releases)
 ![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.5.0-7c3aed)
 
 ![Kuro Gamification](docs/images/hero.svg)
+
+## Requirements
+
+- **Obsidian ≥ 1.5.0**, desktop or mobile (`isDesktopOnly: false`).
+- No external services, accounts, or network access — all XP/streak/loot/lore logic runs locally against your vault's daily notes.
+- No runtime dependencies.
 
 ## Install
 
@@ -24,11 +30,22 @@ Not yet published. For now: manual install.
 3. Settings → Community plugins → Kuro Gamification → enable
 4. (Optional) Install the `kuro-gamification.css` snippet for the full CRT/phosphor aesthetic — see "Aesthetic CSS" below
 
-## Quick start (3 clicks)
+## Usage
+
+### Quick start (3 clicks)
 
 1. Open the **Kuro Status** sidebar via the ribbon icon (terminal) or `Cmd+P` → "Kuro: Open status sidebar"
 2. Tick a checkbox in your daily note → sidebar refreshes within ~1 second
 3. Once you reach Level 2 (200 XP), click the **🎲 Redeem loot** button to redeem your first reward
+
+### Ongoing use
+
+- Ticked checkboxes in your daily note earn XP automatically as you save — no manual logging.
+- Add your own habits (frontmatter toggles like `qigong: true`) in Settings → Habits, each with its own XP value.
+- Set `review_done: true` / `planung_done: true` in a weekly note's frontmatter for the weekly review/planning bonus.
+- Embed a `kuro-status` code block (see [Status code block](#status-code-block) below) in any note for a live status view without opening the sidebar.
+- Missed a day? A freeze token absorbs it automatically — no action needed, no streak lost.
+- Use **Manual XP adjustment** (command palette) for offline activities, corrections, or gifts.
 
 ## Why this exists
 
@@ -61,7 +78,7 @@ This plugin works without external styling — it ships with sane structural CSS
 
 The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]` callouts. It has no hard dependency on the Kuro theme (works under any theme that respects CSS custom properties).
 
-## Settings overview
+## Configuration
 
 | Section | What it controls |
 |---|---|
@@ -110,11 +127,22 @@ Then in Settings → Habits, add e.g.:
 
 Pomodoros bonus is automatic when `pomodoros >= threshold` (default ≥ 4 → +10 XP).
 
-## Architecture
+## How it works
+
+The plugin watches `vault.modify` events (800 ms debounced) on your daily/weekly notes. On each trigger it re-reads the relevant notes' checkboxes and frontmatter, and pure-function engines compute the result from scratch — XP totals, level, streak state, and (once a new level is reached) a deterministic loot drop:
+
+- **`XpEngine`** sums XP from ticked checkboxes, completion-percentage bonuses, configured habits, and the weekly review/planning bonus, then derives the level from the linear-quadratic curve.
+- **`StreakEngine`** checks whether "today" met the day-qualification threshold, consumes a freeze token on a missed day instead of resetting, and applies streak-tier bonuses (3/7/14/30 days).
+- **`LootEngine`** picks a deterministic reward per level-up above 1 (seeded by level + save count, so a drop doesn't change on reload) from a 5-tier pool that's user-replaceable via **packs**.
+- **`LoreEngine`** reveals the narrative fragment tied to the new level, from whichever lore pack is active.
+
+All four engines live under `src/engine/`, are free of Obsidian imports, and run in plain Node under jest — the UI layer (sidebar, status code-block, modals, settings tab) is a thin layer over these pure computations and the Obsidian API. Data is persisted to `data.json` via Obsidian's plugin data API; export/import/reset in Settings → Erweitert operate on that same JSON.
+
+### Architecture
 
 - TypeScript strict, ES2018 target, no runtime dependencies
 - ~87 KB bundled (esbuild)
-- 79 unit tests (XP engine, streak engine, loot engine, data store, i18n, utils)
+- 209 unit tests (engines, data store, submission gate, i18n, utils, main lifecycle)
 - Pure-function engines — easy to test, no Obsidian-API coupling
 - Vault-reactive: `vault.modify` debounced 800ms triggers refresh
 

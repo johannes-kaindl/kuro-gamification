@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-25
+
 First public release. Neurodivergence-friendly gamification for your notes —
 off-by-default for everything that could escalate.
 

@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.0.6] — 2026-07-25
+
 ### Fixed
 
 - Last remaining CSS-lint warning ("Avoid !important") on the reduce-animations a11y override

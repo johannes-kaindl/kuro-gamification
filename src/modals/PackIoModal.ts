@@ -32,10 +32,10 @@ export class ImportPackModal extends Modal {
     const bar = c.createDiv({ cls: 'kuro-pack-templates' });
     const ta = c.createEl('textarea', { cls: 'kuro-data-io', attr: { rows: '14', spellcheck: 'false' } });
     const fileBtn = bar.createEl('button', { cls: 'kuro-btn', text: t('modal.pack.import.fromFile', lang) });
-    fileBtn.addEventListener('click', async () => {
+    fileBtn.addEventListener('click', () => { void (async () => {
       const text = await readJsonFile(this.contentEl.ownerDocument);
       if (text !== null) ta.value = text;
-    });
+    })(); });
 
     const msg = c.createDiv({ cls: 'kuro-pack-msg' });
 
@@ -120,10 +120,10 @@ export class ExportPackModal extends Modal {
 
     const footer = c.createDiv({ cls: 'kuro-modal-footer' });
     const copy = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.pack.export.copy', lang) });
-    copy.addEventListener('click', async () => {
+    copy.addEventListener('click', () => { void (async () => {
       try { await navigator.clipboard.writeText(ta.value); new Notice(t('modal.pack.export.copied', lang)); }
       catch { ta.select(); }
-    });
+    })(); });
     footer.createEl('button', { cls: 'kuro-btn', text: t('modal.pack.close', lang) })
       .addEventListener('click', () => this.close());
   }

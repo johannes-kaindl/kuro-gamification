@@ -45,7 +45,7 @@ export class AdjustXpModal extends Modal {
     const cancelBtn = footer.createEl('button', { cls: 'kuro-btn', text: t('modal.redeem.cancel', lang) });
     cancelBtn.addEventListener('click', () => this.close());
     const okBtn = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.adjust.apply', lang) });
-    okBtn.addEventListener('click', async () => {
+    okBtn.addEventListener('click', () => { void (async () => {
       if (this.amount === 0) return;
       this.plugin.data.manualXpAdjustments.push({
         date: todayIso(),
@@ -58,7 +58,7 @@ export class AdjustXpModal extends Modal {
         new Notice(t('modal.adjust.success', lang, { amount: (this.amount > 0 ? '+' : '') + this.amount }));
       }
       this.close();
-    });
+    })(); });
   }
 
   onClose(): void { this.contentEl.empty(); }

@@ -14,7 +14,9 @@ export class Logger {
   }
 
   info(...args: unknown[]): void {
-    if (this.lvl() >= 2) console.info('[kuro]', ...args);
+    // console.info is disallowed by the Obsidian store guideline (only
+    // warn/error/debug are); console.debug is the closest allowed method.
+    if (this.lvl() >= 2) console.debug('[kuro]', ...args);
   }
 
   debug(...args: unknown[]): void {

@@ -7,13 +7,13 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE)
 [![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS)
 [![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fcodeberg.org&label=release)](https://codeberg.org/jkaindl/kuro-gamification/releases)
-![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.5.0-7c3aed)
+![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.8.7-7c3aed)
 
 ![Kuro Gamification](https://codeberg.org/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.svg)
 
 ## Requirements
 
-- **Obsidian ≥ 1.5.0**, desktop or mobile (`isDesktopOnly: false`).
+- **Obsidian ≥ 1.8.7**, desktop or mobile (`isDesktopOnly: false`).
 - No external services, accounts, or network access — all XP/streak/loot/lore logic runs locally against your vault's daily notes.
 - No runtime dependencies.
 

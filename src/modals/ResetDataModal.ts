@@ -3,7 +3,7 @@
    ========================================================== */
 import { Modal, type App, Notice } from 'obsidian';
 import type KuroPlugin from '../main';
-import { DEFAULT_PLUGIN_DATA } from '../types';
+import { DEFAULT_PLUGIN_DATA, type KuroPluginData } from '../types';
 import { t } from '../i18n';
 
 export class ResetDataModal extends Modal {
@@ -41,9 +41,9 @@ export class ResetDataModal extends Modal {
       });
     } else {
       const okBtn = footer.createEl('button', { cls: 'kuro-btn kuro-btn-danger', text: t('modal.reset.confirm2', lang) });
-      okBtn.addEventListener('click', async () => {
+      okBtn.addEventListener('click', () => { void (async () => {
         // copy DEFAULT_PLUGIN_DATA via JSON to avoid shared-array mutations
-        const fresh = JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA));
+        const fresh = JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA)) as KuroPluginData;
         this.plugin.data = fresh;
         await this.plugin.persist();
         await this.plugin.refreshStatus(true);
@@ -51,7 +51,7 @@ export class ResetDataModal extends Modal {
           new Notice(t('modal.reset.success', lang));
         }
         this.close();
-      });
+      })(); });
     }
   }
 

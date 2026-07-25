@@ -2,6 +2,7 @@
    i18n — minimal lookup with positional {var} substitution.
    Falls back to English, then to the key itself.
    ========================================================== */
+import { getLanguage } from 'obsidian';
 import type { Lang } from '../types';
 import { de } from './de';
 import { en } from './en';
@@ -22,14 +23,13 @@ export function t(
 
 /**
  * Detect a supported Kuro language from Obsidian's UI language
- * (stored in localStorage under 'language'). Regional variants are
+ * (`getLanguage()`, requires minAppVersion 1.8.7). Regional variants are
  * matched by prefix; anything unsupported falls back to English.
  */
 export function detectLang(): Lang {
   let raw = '';
   try {
-    const ls = (globalThis as { localStorage?: { getItem(k: string): string | null } }).localStorage;
-    raw = (ls?.getItem('language') ?? '').toLowerCase();
+    raw = getLanguage().toLowerCase();
   } catch { raw = ''; }
   return raw.startsWith('de') ? 'de' : 'en';
 }

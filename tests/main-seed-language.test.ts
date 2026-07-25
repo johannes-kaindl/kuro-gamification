@@ -4,16 +4,7 @@
    stored language.
    ========================================================== */
 import KuroPlugin from '../src/main';
-
-/** In-memory localStorage stub on globalThis (Obsidian runs in Electron, where it exists). */
-const store: Record<string, string> = {};
-const localStorage = {
-  getItem: (k: string) => store[k] ?? null,
-  setItem: (k: string, v: string) => { store[k] = v; },
-  removeItem: (k: string) => { delete store[k]; },
-};
-beforeAll(() => { (globalThis as any).localStorage = localStorage; });
-afterAll(() => { (globalThis as any).localStorage = undefined; });
+import { __setMockLanguage } from 'obsidian';
 
 function makeFakeApp() {
   return {
@@ -37,22 +28,22 @@ async function boot(loaded: any) {
 }
 
 describe('KuroPlugin — fresh-install language seeding', () => {
-  afterEach(() => localStorage.removeItem('language'));
+  afterEach(() => __setMockLanguage('en'));
 
   it('adopts German on a fresh vault when Obsidian UI is German', async () => {
-    localStorage.setItem('language', 'de');
+    __setMockLanguage('de');
     const plugin = await boot(null);
     expect(plugin.data.settings.language).toBe('de');
   });
 
   it('adopts English on a fresh vault when Obsidian UI is English', async () => {
-    localStorage.setItem('language', 'en');
+    __setMockLanguage('en');
     const plugin = await boot(null);
     expect(plugin.data.settings.language).toBe('en');
   });
 
   it("keeps an existing install's stored language", async () => {
-    localStorage.setItem('language', 'en');
+    __setMockLanguage('en');
     const plugin = await boot({ onboardingShown: true, settings: { language: 'de' } });
     expect(plugin.data.settings.language).toBe('de');
   });

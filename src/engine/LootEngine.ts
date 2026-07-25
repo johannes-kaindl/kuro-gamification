@@ -40,7 +40,7 @@ export class LootEngine {
 
   static poolFor(tier: KuroLootTier, settings: KuroSettings): KuroLootDrop[] {
     if (settings.customLootPool?.[tier]?.length) {
-      return settings.customLootPool[tier] as KuroLootDrop[];
+      return settings.customLootPool[tier];
     }
     return defaultLootPool(settings.language)[tier] ?? [];
   }

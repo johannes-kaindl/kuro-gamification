@@ -31,6 +31,7 @@ Arbeitsverzeichnis: **Repo-Root**.
 - build: `npm run build` (tsc-Gate + esbuild production)
 - test: `npm test` (jest) · watch: `npm run test:watch`
 - lint: `npm run lint` (biome check)
+- lint:obsidian: `npm run lint:obsidian` (eslint-plugin-obsidianmd, additiver Store-Guideline-Gate über `src/`)
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
 - version-bump: `npm run version-bump <ver>` (3-File-Sync package/manifest/versions)
 - release: `npm run release <ver>` (Ein-Befehl-Release: bump → changelog → preflight → commit →
@@ -50,10 +51,18 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   Deaktivierte Regeln mit Begründung: `complexity/noStaticOnlyClass` (statisch-only Engines sind
   bewusstes Architektur-Pattern), `complexity/noUselessConstructor` nur in `tests/**`
   (Mock-Konstruktoren spiegeln Obsidian-API-Signaturen).
-- **Store-Gate:** kuro ist biome-only (kein eslint). Die Rolle der
-  `eslint-plugin-obsidianmd`-Regeln `validate-manifest`/`validate-license` übernimmt
-  `SubmissionGate` (`src/engine/SubmissionGate.ts`), verdrahtet über `tests/submission-gate.test.ts`
-  — die echten `manifest.json`/`LICENSE` laufen durchs Gate, ein kaputtes Manifest failt `npm test`.
+- **Store-Gate:** biome bleibt Formatter/Haupt-Linter; zusätzlich läuft `eslint-plugin-obsidianmd`
+  additiv über `src/**/*.ts` (`npm run lint:obsidian`, `eslint.config.mjs`, Muster wie
+  json_viewer/vault-crews) — genau die Guideline-Regeln, die der echte Community-Store-Scanner
+  prüft (2026-07-25 eingeführt, nachdem ein manueller Review-Auftrag reale Findings zutage
+  förderte, die biome/SubmissionGate blind waren: doppeltes Command-Präfix, `minAppVersion` zu
+  niedrig für tatsächlich genutzte APIs, `globalThis`/`console.info`/`element.style`-Verstöße).
+  `display()`/`setWarning()` sind in `eslint.config.mjs` für `SettingsTab.ts`/`ConfirmModal.ts`
+  bewusst von `no-deprecated` ausgenommen — die Alternativen (`getSettingDefinitions`/
+  `setDestructive`) verlangen `minAppVersion` 1.13+, was `preflight.mjs` als "Catalyst-only"-Floor
+  explizit verbietet. `SubmissionGate` (`src/engine/SubmissionGate.ts`, verdrahtet über
+  `tests/submission-gate.test.ts`) deckt ergänzend `manifest.json`/`LICENSE` test-seitig ab — die
+  echten Dateien laufen durchs Gate, ein kaputtes Manifest failt `npm test`.
 - Commits: Conventional Commits; **nur berührte Dateien stagen, nie `git add -A`**; AI-Trailer
   `Co-Authored-By: …` bei substanziellem AI-Beitrag. Details: `CONTRIBUTING.md`.
 

@@ -19,8 +19,8 @@ function makeFakeDoc() {
   const input: any = {
     type: '',
     accept: '',
-    style: {} as Record<string, string>,
     files: null as any,
+    addClass(_cls: string) { /* no-op stub */ },
     addEventListener(ev: string, fn: () => void) {
       if (!listeners[ev]) listeners[ev] = [];
       listeners[ev].push(fn);

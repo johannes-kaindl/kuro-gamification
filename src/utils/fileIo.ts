@@ -34,7 +34,7 @@ export function readJsonFile(doc: Document): Promise<string | null> {
     const input = doc.createElement('input');
     input.type = 'file';
     input.accept = '.json,application/json';
-    input.style.display = 'none';
+    input.addClass('kuro-hidden');
     doc.body.appendChild(input);
 
     const cleanup = (): void => { input.remove(); };

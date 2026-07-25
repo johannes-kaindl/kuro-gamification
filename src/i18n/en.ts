@@ -168,6 +168,7 @@ export const en: Record<string, string> = {
   'habit.defaultLabel': '🌱 New habit',
 
   'codeblock.error.invalidConfig': '⚠️ Kuro code block: invalid config ({err})',
+  'codeblock.noData': '>_ Kuro: no data yet — tick a checkbox in today\'s daily note.',
 
   'notice.noData': 'No data yet — please recompute the status.',
   'notice.noLore': 'No lore fragment available for the current level.',

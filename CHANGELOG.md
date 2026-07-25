@@ -5,6 +5,25 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- `minAppVersion` raised from 1.5.0 to 1.8.7 — the actually-lowest floor that covers every API
+  the plugin calls (`Workspace.revealLeaf`, `Vault.getAllFolders`, `getLanguage`).
+- Every command's display name no longer duplicates the plugin name — Obsidian already prefixes
+  command-palette entries with it, so commands used to show up doubled ("Kuro Gamification: Kuro: ...").
+- UI language detection now uses Obsidian's `getLanguage()` instead of reading `localStorage`
+  directly.
+- The "no data yet" message inside an embedded `kuro-status` code block was a hardcoded German
+  string, shown regardless of the user's language — now properly localized.
+- Popout-window-safe globals: `window`/injected `Document` instead of `globalThis`/global
+  `document.createElement`/`element.style.display` in a few remaining spots.
+- `console.info` (disallowed by the store guideline) replaced with `console.debug` in the logger.
+
+### Internal
+
+- Added `eslint-plugin-obsidianmd` as an additive guideline gate (`npm run lint:obsidian`) next to
+  biome — mirrors the real Community Plugin review scanner locally.
+
 ## [1.0.3] — 2026-07-25
 
 ## [1.0.2] — 2026-07-25

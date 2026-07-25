@@ -4,7 +4,6 @@
    ========================================================== */
 import { Notice } from 'obsidian';
 import type KuroPlugin from '../main';
-import { LootRedeemModal } from '../modals/LootRedeemModal';
 import { LoreRevealModal } from '../modals/LoreRevealModal';
 import { AdjustXpModal } from '../modals/AdjustXpModal';
 import { ExportDataModal, ImportDataModal } from '../modals/DataIoModal';

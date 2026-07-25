@@ -7,6 +7,9 @@
    that snippet — just less beautiful.
    ========================================================== */
 
+/* ── Utility ──────────────────────────────────────────── */
+.kuro-hidden { display: none; }
+
 /* ── Sidebar root ─────────────────────────────────────── */
 .kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; }
 .kuro-view-body { display: flex; flex-direction: column; gap: 10px; }

@@ -94,6 +94,6 @@ export class VaultReader {
 
   private frontmatterFor(f: TFile): Record<string, unknown> {
     const cache = this.app.metadataCache.getFileCache(f);
-    return (cache?.frontmatter as Record<string, unknown> | undefined) ?? {};
+    return cache?.frontmatter ?? {};
   }
 }

@@ -5,7 +5,6 @@
 import { Modal, type App, Notice, setIcon } from 'obsidian';
 import type KuroPlugin from '../main';
 import { TIER_EMOJI } from '../data/default-levels';
-import { LootEngine } from '../engine/LootEngine';
 import { t } from '../i18n';
 import { todayIso } from '../utils/dateUtils';
 
@@ -56,11 +55,11 @@ export class LootRedeemModal extends Modal {
     const okBtn = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.redeem.confirm', lang) });
     setIcon(okBtn, 'check');
     okBtn.appendText(` ${t('modal.redeem.confirm', lang)}`);
-    okBtn.addEventListener('click', async () => {
+    okBtn.addEventListener('click', () => { void (async () => {
       if (this.selectedIdx === null) return;
       await this.applyRedeem(this.selectedIdx);
       this.close();
-    });
+    })(); });
   }
 
   private async applyRedeem(idx: number): Promise<void> {

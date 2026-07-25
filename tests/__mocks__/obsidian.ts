@@ -87,6 +87,11 @@ export function debounce<T extends (...args: any[]) => any>(fn: T, _ms: number, 
   return fn;
 }
 
+/** Mutable stub for `getLanguage()` — tests set it via `__setMockLanguage`. */
+let mockLanguage = 'en';
+export function getLanguage(): string { return mockLanguage; }
+export function __setMockLanguage(lang: string): void { mockLanguage = lang; }
+
 function makeFakeEl(): any {
   const el: any = {
     children: [] as any[],

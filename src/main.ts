@@ -22,14 +22,14 @@ import { WelcomeModal } from './modals/WelcomeModal';
 import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
 import { readCoreDailyNotesConfig } from './utils/coreDailyNotes';
-import { todayIso, formatYearMonth, isIsoDate, isIsoWeek } from './utils/dateUtils';
+import { todayIso, isIsoDate, isIsoWeek } from './utils/dateUtils';
 import { fmtNum } from './utils/progressBar';
 import { t, detectLang } from './i18n';
 import { defaultHabits } from './data/default-habits';
 
 export default class KuroPlugin extends Plugin {
   // public so views/modals/settings can read/mutate
-  public data: KuroPluginData = JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA));
+  public data: KuroPluginData = JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA)) as KuroPluginData;
   public dataStore!: DataStore;
   public vaultReader!: VaultReader;
   public logger!: Logger;
@@ -49,7 +49,7 @@ export default class KuroPlugin extends Plugin {
     // Must precede regenFreezeTokensIfNeeded(): on a fresh vault the regen
     // branch fires (lastRegen '' → current month) and calls debouncedSave().
     this.debouncedRefresh = debounce(() => this.refreshStatus(false), 800, true);
-    this.debouncedSave = debounce(() => { this.persist(); }, 500, true);
+    this.debouncedSave = debounce(() => { void this.persist(); }, 500, true);
 
     this.regenFreezeTokensIfNeeded();
     await this.seedFreshInstallDefaults();
@@ -62,15 +62,15 @@ export default class KuroPlugin extends Plugin {
     this.registerEvent(this.app.vault.on('rename', (f) => this.onVaultChange(f)));
 
     this.addRibbonIcon('terminal', t('plugin.name', this.data.settings.language), () => {
-      this.activateSidebar();
+      void this.activateSidebar();
     });
 
     registerCommands(this);
     this.addSettingTab(new KuroSettingsTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
-      if (this.data.settings.openSidebarOnStartup) this.activateSidebar();
-      this.refreshStatus(true);
+      if (this.data.settings.openSidebarOnStartup) void this.activateSidebar();
+      void this.refreshStatus(true);
       this.scheduleMidnightTick();
       if (!this.data.onboardingShown) new WelcomeModal(this.app, this).open();
     });
@@ -99,8 +99,8 @@ export default class KuroPlugin extends Plugin {
     await this.persist();
   }
 
-  async onunload(): Promise<void> {
-    if (this.midnightTimeout !== null) activeWindow.clearTimeout(this.midnightTimeout);
+  onunload(): void {
+    if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
     if (this.statusBarEl) this.statusBarEl.detach();
     this.statusBarEl = null;
     this.logger.info('plugin unloaded');
@@ -224,12 +224,12 @@ export default class KuroPlugin extends Plugin {
       leaf = workspace.getRightLeaf(false);
       if (leaf) await leaf.setViewState({ type: VIEW_TYPE_KURO, active: true });
     }
-    if (leaf) workspace.revealLeaf(leaf);
+    if (leaf) await workspace.revealLeaf(leaf);
   }
 
   syncSidebar(): void {
     if (this.data.settings.enableSidebar) {
-      this.activateSidebar();
+      void this.activateSidebar();
     } else {
       for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_KURO)) leaf.detach();
     }
@@ -286,15 +286,15 @@ export default class KuroPlugin extends Plugin {
 
   /* ── Mid-night refresh ────────────────────────────────── */
   private scheduleMidnightTick(): void {
-    if (this.midnightTimeout !== null) activeWindow.clearTimeout(this.midnightTimeout);
+    if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
     const now = new Date();
     const next = new Date(now);
     next.setDate(next.getDate() + 1);
     next.setHours(0, 0, 5, 0); // 5 sec past midnight, next day
     const ms = next.getTime() - now.getTime();
-    this.midnightTimeout = activeWindow.setTimeout(() => {
+    this.midnightTimeout = window.setTimeout(() => {
       this.regenFreezeTokensIfNeeded();
-      this.refreshStatus(true);
+      void this.refreshStatus(true);
       this.scheduleMidnightTick();
     }, ms);
   }

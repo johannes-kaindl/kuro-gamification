@@ -179,6 +179,7 @@ export const de: Record<string, string> = {
 
   /* Codeblock */
   'codeblock.error.invalidConfig': '⚠️ Kuro-Codeblock: ungültige Konfiguration ({err})',
+  'codeblock.noData': '>_ Kuro: noch keine Daten — hake eine Checkbox in deiner heutigen Tagesnotiz ab.',
 
   /* Notices triggered from commands */
   'notice.noData': 'Noch keine Daten — bitte Status neu berechnen.',

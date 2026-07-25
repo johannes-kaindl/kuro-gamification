@@ -4,6 +4,7 @@
    ========================================================== */
 import { Modal, type App, Notice } from 'obsidian';
 import type KuroPlugin from '../main';
+import type { KuroPluginData } from '../types';
 import { t } from '../i18n';
 
 export class ExportDataModal extends Modal {
@@ -23,14 +24,14 @@ export class ExportDataModal extends Modal {
 
     const footer = this.contentEl.createDiv({ cls: 'kuro-modal-footer' });
     const copyBtn = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.export.copy', lang) });
-    copyBtn.addEventListener('click', async () => {
+    copyBtn.addEventListener('click', () => { void (async () => {
       try {
         await navigator.clipboard.writeText(ta.value);
         new Notice(t('modal.export.copied', lang));
       } catch {
         ta.select();
       }
-    });
+    })(); });
     const closeBtn = footer.createEl('button', { cls: 'kuro-btn', text: t('modal.lore.close', lang) });
     closeBtn.addEventListener('click', () => this.close());
   }
@@ -57,9 +58,9 @@ export class ImportDataModal extends Modal {
     const cancelBtn = footer.createEl('button', { cls: 'kuro-btn', text: t('modal.redeem.cancel', lang) });
     cancelBtn.addEventListener('click', () => this.close());
     const okBtn = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.import.apply', lang) });
-    okBtn.addEventListener('click', async () => {
+    okBtn.addEventListener('click', () => { void (async () => {
       try {
-        const parsed = JSON.parse(ta.value);
+        const parsed = JSON.parse(ta.value) as Partial<KuroPluginData>;
         this.plugin.data = this.plugin.dataStore.merge(parsed);
         await this.plugin.persist();
         await this.plugin.refreshStatus(true);
@@ -71,7 +72,7 @@ export class ImportDataModal extends Modal {
         const msg = err instanceof Error ? err.message : String(err);
         new Notice(t('modal.import.error', lang, { err: msg }));
       }
-    });
+    })(); });
   }
 
   onClose(): void { this.contentEl.empty(); }

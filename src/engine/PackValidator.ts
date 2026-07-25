@@ -3,7 +3,7 @@
    No Obsidian imports. Node-testable. Issues carry stable
    `code`s; the UI layer localizes them via i18n.
    ========================================================== */
-import type { KuroHabit, KuroLootTier, KuroPack } from '../types';
+import type { KuroLootTier, KuroPack } from '../types';
 
 export interface PackIssue {
   /** Dotted path into the pack, e.g. "loot.epc" or "lore[2].title". */

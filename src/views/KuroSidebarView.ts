@@ -29,7 +29,7 @@ export class KuroSidebarView extends ItemView {
     const refreshBtn = toolbar.createEl('button', { cls: 'kuro-btn', attr: { 'aria-label': t('sidebar.refresh', this.plugin.data.settings.language) } });
     setIcon(refreshBtn, 'refresh-cw');
     refreshBtn.appendText(` ${t('sidebar.refresh', this.plugin.data.settings.language)}`);
-    refreshBtn.addEventListener('click', () => this.plugin.refreshStatus(true));
+    refreshBtn.addEventListener('click', () => { void this.plugin.refreshStatus(true); });
 
     const redeemBtn = toolbar.createEl('button', { cls: 'kuro-btn kuro-btn-primary' });
     setIcon(redeemBtn, 'gift');

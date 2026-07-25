@@ -42,7 +42,7 @@ export function makeKuroCodeBlockProcessor(plugin: KuroPlugin) {
     if (!snap) {
       el.createEl('pre', {
         cls: 'kuro-status',
-        text: '>_ KURO: noch keine Daten — öffne deine Tagesnotiz und hake etwas ab.',
+        text: t('codeblock.noData', plugin.data.settings.language),
       });
       return;
     }

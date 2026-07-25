@@ -1174,7 +1174,7 @@ Expected: `../50_build/kuro-gamification/main.js` updated, no errors.
 Deploy to a test vault and verify by hand (no automated DOM tests in this project):
 
 ```bash
-cd 40_src && OBSIDIAN_PLUGIN_DIR=/Users/Shared/10_ObsidianVaults/Y3_ProtoVault/.obsidian/plugins/kuro-gamification npm run deploy
+cd 40_src && OBSIDIAN_PLUGIN_DIR=<vault>/.obsidian/plugins/kuro-gamification npm run deploy
 ```
 
 Then in Obsidian (reload the plugin), confirm:

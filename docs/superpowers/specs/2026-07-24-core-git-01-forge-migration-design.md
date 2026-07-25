@@ -105,7 +105,7 @@ Repo `README.md` am Root liegt.
 
 - **Autonom (lokal):** Archiv-Umzug, `git init`, Datei-Migration, Pipeline-Setup,
   neue AGENTS.md, lokaler Build + volle Test-/Lint-/Typecheck-Verifikation,
-  Deploy-Test gegen Pallas.
+  Deploy-Test gegen das produktive Test-Vault.
 - **Handover an Jay (nach außen / Auth):** Repos auf Codeberg + GitHub anlegen,
   `~/.codeberg-token` bereitstellen, erster Push (`origin` + Mirror), erster
   Release-Lauf. Der Plan markiert diese Schritte klar als Handover — **kein
@@ -113,9 +113,9 @@ Repo `README.md` am Root liegt.
 
 ## Risiken / Gotchas
 
-- **Pallas-Deploy-Kontinuität:** Der Deploy-Target-Pfad
+- **Vault-Deploy-Kontinuität:** Der Deploy-Target-Pfad
   `.obsidian/plugins/kuro-gamification/` bleibt gleich (id unverändert) → die
-  bestehende Pallas-Installation + `data.json` bleiben gültig, keine Migration.
+  bestehende Vault-Installation + `data.json` bleiben gültig, keine Migration.
 - **`package-lock.json` / `node_modules`:** Im neuen Repo `npm install` frisch,
   `package-lock.json` committen; `node_modules` gitignored.
 - **Kein Datenverlust beim Archiv-Umzug:** reines `mv` des Verzeichnisses; der
@@ -132,6 +132,6 @@ Repo `README.md` am Root liegt.
 - [ ] `npm install` + Build + `npm test` + `biome check` + `typecheck` grün.
 - [ ] `readme_lint.py` grün (README am Root).
 - [ ] Release-Pipeline lokal `--dry-run`-verifiziert (biome/jest, kein eslint).
-- [ ] Deploy gegen Pallas getestet, Plugin lädt, `data.json` intakt.
+- [ ] Deploy gegen das produktive Test-Vault getestet, Plugin lädt, `data.json` intakt.
 - [ ] Handover-Note für Jay: Forge-Anlage + Token + erster Push/Release.
 ```

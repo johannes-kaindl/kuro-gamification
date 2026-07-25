@@ -934,12 +934,12 @@ Add imports to `SettingsTab.ts`: `import { activeNames, activatePack, deletePack
 Run: `npm run build && npm run lint`
 Expected: build succeeds, no lint errors. (Confirms the UI compiles and the tsc gate passes.)
 
-- [ ] **Step 5: Manual smoke** (deploy to Pallas test vault, back up `data.json` first):
+- [ ] **Step 5: Manual smoke** (deploy to the production test vault, back up `data.json` first):
 
 ```bash
-cp "/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification/data.json" \
-   "/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification/data.json.bak"
-OBSIDIAN_PLUGIN_DIR="/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification" npm run deploy
+cp "<vault>/.obsidian/plugins/kuro-gamification/data.json" \
+   "<vault>/.obsidian/plugins/kuro-gamification/data.json.bak"
+OBSIDIAN_PLUGIN_DIR="<vault>/.obsidian/plugins/kuro-gamification" npm run deploy
 ```
 
 Smoke checklist (in Obsidian, reload plugin): the „📚 Packs" section shows Jay's migrated „Gothic-Cyberpunk" as active lore; import a second pack → appears + activates; activate the first → swaps; delete a pack → confirm dialog → reverts to factory if it was active; „Loot auf Factory" works. XP/level unchanged throughout.

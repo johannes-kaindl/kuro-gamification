@@ -38,8 +38,8 @@ Arbeitsverzeichnis: **Repo-Root**.
   zum Prüfen)
 - preflight: `npm run preflight <ver>` (Store-Checkliste standalone, ohne Release auszulösen)
 - deploy: `OBSIDIAN_PLUGIN_DIR=<vault>/.obsidian/plugins/kuro-gamification npm run deploy`
-  (Standard-Test-Target: der produktive Pallas-Vault
-  `/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification/`. Bei echten
+  (Standard-Test-Target: das produktive Test-Vault
+  `<vault>/.obsidian/plugins/kuro-gamification/`. Bei echten
   Daten: **`data.json` vor Build-Wechseln sichern** (`cp data.json data.json.bak`), falls eine
   Schema-Migration schiefgeht.)
 

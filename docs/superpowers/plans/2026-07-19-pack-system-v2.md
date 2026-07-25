@@ -1013,7 +1013,7 @@ git commit -m "feat(packs): ship Gothic/Cozy as repo files, drop bundled templat
 - [ ] **Step 1: data.json sichern + deployen**
 
 ```bash
-PLUGDIR="/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification"
+PLUGDIR="<vault>/.obsidian/plugins/kuro-gamification"
 cp "$PLUGDIR/data.json" "$PLUGDIR/data.json.bak"
 cd 40_src && OBSIDIAN_PLUGIN_DIR="$PLUGDIR" npm run deploy
 ```

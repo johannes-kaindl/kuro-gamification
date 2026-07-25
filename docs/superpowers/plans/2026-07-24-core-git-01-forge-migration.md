@@ -250,28 +250,28 @@ git commit -q -m "chore: package-lock.json (fresh install)"
 
 ---
 
-### Task 6: Deploy-Test gegen Pallas (Kontinuität der bestehenden Installation)
+### Task 6: Deploy-Test gegen das produktive Test-Vault (Kontinuität der bestehenden Installation)
 
 **Files:** keine (nur Deploy + manuelle Smoke-Notiz)
 
 **Interfaces:**
 - Consumes: grüner Build aus Task 5.
-- Produces: Bestätigung, dass die bestehende Pallas-Installation + `data.json` mit dem flachen Repo weiterläuft (id unverändert → kein Orphan).
+- Produces: Bestätigung, dass die bestehende Vault-Installation + `data.json` mit dem flachen Repo weiterläuft (id unverändert → kein Orphan).
 
 - [ ] **Step 1: `data.json` sichern (echter Vault-State)**
 
 ```bash
-cp "/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification/data.json" /tmp/kuro-data.bak 2>/dev/null || echo "keine data.json — frische Install ok"
+cp "<vault>/.obsidian/plugins/kuro-gamification/data.json" /tmp/kuro-data.bak 2>/dev/null || echo "keine data.json — frische Install ok"
 ```
 
 - [ ] **Step 2: Deploy aus dem flachen Repo**
 
-Run: `OBSIDIAN_PLUGIN_DIR="/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification" npm run deploy`
+Run: `OBSIDIAN_PLUGIN_DIR="<vault>/.obsidian/plugins/kuro-gamification" npm run deploy`
 Expected: `main.js`/`manifest.json`/`styles.css`/`versions.json` kopiert, kein Fehler.
 
 - [ ] **Step 3: Deployte Version verifizieren**
 
-Run: `cat "/Users/Shared/10_ObsidianVaults/10_Pallas/.obsidian/plugins/kuro-gamification/manifest.json" | grep -E "version|fundingUrl"`
+Run: `cat "<vault>/.obsidian/plugins/kuro-gamification/manifest.json" | grep -E "version|fundingUrl"`
 Expected: `"version": "1.0.0"`, **kein** `fundingUrl`. → Handover-Note vermerkt: Jay lädt das Plugin in Obsidian neu und smoked kurz (Sidebar lädt, `data.json` intakt).
 
 - [ ] **Step 4: Kein Commit** (Deploy fasst das Repo nicht an).
@@ -347,7 +347,7 @@ Voraussetzung: `~/.codeberg-token` existiert (Codeberg → Settings → Applicat
 - Remotes/Tag → Task 7 Handover ✓
 - ③ README-Root → Task 5 Step 3 ✓
 - Ausführungs-Grenze (Handover) → Task 7 ✓
-- Pallas-Deploy-Kontinuität → Task 6 ✓
+- Vault-Deploy-Kontinuität → Task 6 ✓
 - docs/ aus zwei Quellen → Task 2 Steps 1–2 ✓
 
 **Placeholder-Scan:** Kopier-Anweisungen zeigen auf reale Sibling-Dateien (konkrete Pfade), keine „TODO/TBD". Neue Dateien (.gitignore, CHANGELOG) sind vollständig ausgeschrieben.

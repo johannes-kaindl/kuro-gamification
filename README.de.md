@@ -28,7 +28,7 @@
 
 ### Schnellstart (3 Klicks)
 
-1. Öffne die **Kuro Status**-Sidebar via Ribbon-Icon (Terminal) oder `Cmd+P` → „Kuro: Status-Sidebar öffnen"
+1. Öffne die **Kuro Status**-Sidebar via Ribbon-Icon (Terminal) oder `Cmd+P` → „Status-Sidebar öffnen"
 2. Hake eine Checkbox in deiner Daily-Note ab → Sidebar refresht binnen ~1 Sekunde
 3. Sobald du Level 2 erreichst (200 XP), klick **🎲 Loot einlösen** für deine erste Belohnung
 

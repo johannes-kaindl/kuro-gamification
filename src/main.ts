@@ -100,7 +100,7 @@ export default class KuroPlugin extends Plugin {
   }
 
   async onunload(): Promise<void> {
-    if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
+    if (this.midnightTimeout !== null) activeWindow.clearTimeout(this.midnightTimeout);
     if (this.statusBarEl) this.statusBarEl.detach();
     this.statusBarEl = null;
     this.logger.info('plugin unloaded');
@@ -286,13 +286,13 @@ export default class KuroPlugin extends Plugin {
 
   /* ── Mid-night refresh ────────────────────────────────── */
   private scheduleMidnightTick(): void {
-    if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
+    if (this.midnightTimeout !== null) activeWindow.clearTimeout(this.midnightTimeout);
     const now = new Date();
     const next = new Date(now);
     next.setDate(next.getDate() + 1);
     next.setHours(0, 0, 5, 0); // 5 sec past midnight, next day
     const ms = next.getTime() - now.getTime();
-    this.midnightTimeout = window.setTimeout(() => {
+    this.midnightTimeout = activeWindow.setTimeout(() => {
       this.regenFreezeTokensIfNeeded();
       this.refreshStatus(true);
       this.scheduleMidnightTick();

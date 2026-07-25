@@ -75,15 +75,15 @@ export const de: Record<string, string> = {
   'modal.import.error': 'Import fehlgeschlagen: {err}',
 
   /* Commands */
-  'cmd.openStatus': 'Kuro: Status-Sidebar öffnen',
-  'cmd.refresh': 'Kuro: Status neu berechnen',
-  'cmd.redeem': 'Kuro: Loot einlösen…',
-  'cmd.showLore': 'Kuro: Aktuelles Lore-Fragment zeigen',
-  'cmd.adjustXp': 'Kuro: XP manuell anpassen…',
-  'cmd.insertCodeblock': 'Kuro: Status-Codeblock einfügen',
-  'cmd.exportData': 'Kuro: Plugin-Daten exportieren (JSON)',
-  'cmd.importData': 'Kuro: Plugin-Daten importieren (JSON)',
-  'cmd.resetData': 'Kuro: Alle Daten zurücksetzen…',
+  'cmd.openStatus': 'Status-Sidebar öffnen',
+  'cmd.refresh': 'Status neu berechnen',
+  'cmd.redeem': 'Loot einlösen…',
+  'cmd.showLore': 'Aktuelles Lore-Fragment zeigen',
+  'cmd.adjustXp': 'XP manuell anpassen…',
+  'cmd.insertCodeblock': 'Status-Codeblock einfügen',
+  'cmd.exportData': 'Plugin-Daten exportieren (JSON)',
+  'cmd.importData': 'Plugin-Daten importieren (JSON)',
+  'cmd.resetData': 'Alle Daten zurücksetzen…',
 
   /* Settings tab — sections */
   'settings.section.general': '🎮 Allgemein',
@@ -185,8 +185,8 @@ export const de: Record<string, string> = {
   'notice.noLore': 'Kein Lore-Fragment für aktuelles Level vorhanden.',
 
   // ── Pack-Import/-Export ──
-  'cmd.importPack': 'Kuro: Loot-/Lore-Pack importieren (JSON)…',
-  'cmd.exportPack': 'Kuro: Aktuelles Loot/Lore als Pack exportieren (JSON)',
+  'cmd.importPack': 'Loot-/Lore-Pack importieren (JSON)…',
+  'cmd.exportPack': 'Aktuelles Loot/Lore als Pack exportieren (JSON)',
   'modal.pack.import.title': 'Loot-/Lore-Pack importieren',
   'modal.pack.import.intro': 'Füge ein Pack-JSON ein oder wähle eine .json-Datei. Dein XP und Fortschritt bleiben unangetastet.',
   'modal.pack.import.apply': 'Importieren',

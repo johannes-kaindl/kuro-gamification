@@ -104,7 +104,7 @@ Rules:
 Es gibt zwei Wege, den Import-Dialog zu öffnen:
 
 - **Einstellungen → 📚 Packs → Pack importieren**
-- **Command Palette** (`Cmd+P` / `Ctrl+P`) → `Kuro: Import loot/lore pack`
+- **Command Palette** (`Cmd+P` / `Ctrl+P`) → `Import loot/lore pack (JSON)…`
 
 Sobald der Dialog offen ist:
 
@@ -121,6 +121,6 @@ Importierte Packs landen in der **Pack-Bibliothek** (Einstellungen → 📚 Pack
 
 Um dein aktuelles Loot und deine Lore als teilbares Pack zu exportieren:
 
-**Command Palette → `Kuro: Export current loot/lore as a pack`**
+**Command Palette → `Export current loot/lore as a pack (JSON)`**
 
 Das liefert dir ein JSON-Objekt, das du als Datei speichern, mit anderen teilen oder als Backup behalten kannst. Andere importieren es auf genau demselben Weg — JSON einfügen, fertig.

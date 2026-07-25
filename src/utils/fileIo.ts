@@ -5,10 +5,15 @@
    the OS file picker and resolves the chosen file's text.
    ========================================================== */
 
-export function downloadJson(filename: string, data: unknown): void {
+/**
+ * Triggers a `.json` download. Takes the owning Document (e.g.
+ * `containerEl.ownerDocument`) rather than the global `document` so this
+ * also works when the settings tab is opened in a pop-out window.
+ */
+export function downloadJson(doc: Document, filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = doc.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();

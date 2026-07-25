@@ -1,15 +1,15 @@
 # Kuro Gamification
 
-> 🇬🇧 English · [🇩🇪 Deutsch](README.de.md)
+> 🇬🇧 English · [🇩🇪 Deutsch](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/README.de.md)
 
 **Neurodivergence-friendly gamification for Obsidian — XP, levels, streaks with freeze tokens, deterministic loot drops, and optional lore, with everything that could escalate off by default.**
 
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](LICENSE-DOCS)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE)
+[![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS)
 [![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fcodeberg.org&label=release)](https://codeberg.org/jkaindl/kuro-gamification/releases)
 ![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.5.0-7c3aed)
 
-![Kuro Gamification](docs/images/hero.svg)
+![Kuro Gamification](https://codeberg.org/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.svg)
 
 ## Requirements
 
@@ -19,13 +19,13 @@
 
 ## Install
 
-### Via Obsidian Community Plugins (planned)
+### Community Plugins
 
-Not yet published. For now: manual install.
+Search for **Kuro Gamification** in **Settings → Community plugins → Browse**, then click **Install** and **Enable**.
 
 ### Manual install
 
-1. Copy `main.js`, `manifest.json`, `styles.css`, `versions.json` into `<vault>/.obsidian/plugins/kuro-gamification/`
+1. Download `main.js`, `manifest.json`, `styles.css`, `versions.json` from the [latest release](https://codeberg.org/jkaindl/kuro-gamification/releases) and copy them into `<vault>/.obsidian/plugins/kuro-gamification/`
 2. Settings → Community plugins → Reload plugins
 3. Settings → Community plugins → Kuro Gamification → enable
 4. (Optional) Install the `kuro-gamification.css` snippet for the full CRT/phosphor aesthetic — see "Aesthetic CSS" below
@@ -34,7 +34,7 @@ Not yet published. For now: manual install.
 
 ### Quick start (3 clicks)
 
-1. Open the **Kuro Status** sidebar via the ribbon icon (terminal) or `Cmd+P` → "Kuro: Open status sidebar"
+1. Open the **Kuro Status** sidebar via the ribbon icon (terminal) or `Cmd+P` → "Open status sidebar"
 2. Tick a checkbox in your daily note → sidebar refreshes within ~1 second
 3. Once you reach Level 2 (200 XP), click the **🎲 Redeem loot** button to redeem your first reward
 
@@ -153,14 +153,14 @@ All four engines live under `src/engine/`, are free of Obsidian imports, and run
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.en.md) · ([DE](docs/getting-started.de.md))
-- [Manual](docs/manual.en.md) · ([DE](docs/manual.de.md))
-- [Customization — loot/lore packs & LLM prompts](docs/customization.en.md) · ([DE](docs/customization.de.md))
-- [Design Philosophy](docs/philosophy.en.md) · ([DE](docs/philosophy.de.md))
+- [Getting Started](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.de.md))
+- [Manual](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/manual.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/manual.de.md))
+- [Customization — loot/lore packs & LLM prompts](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/customization.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/customization.de.md))
+- [Design Philosophy](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.de.md))
 
 ## License
 
-Code: **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE).
-Documentation: **CC BY-SA 4.0** — see [`LICENSE-DOCS`](LICENSE-DOCS).
+Code: **AGPL-3.0-or-later** — see [`LICENSE`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE).
+Documentation: **CC BY-SA 4.0** — see [`LICENSE-DOCS`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS).
 
-A commercial license is available for uses incompatible with the AGPL — see [`LICENSING.md`](LICENSING.md). Contributions are accepted under the [CLA](CLA.md).
+A commercial license is available for uses incompatible with the AGPL — see [`LICENSING.md`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSING.md). Contributions are accepted under the [CLA](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/CLA.md).

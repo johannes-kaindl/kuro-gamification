@@ -62,7 +62,7 @@ Hidden XP formulas create situations where the number goes up and you do not kno
 Every XP calculation in Kuro is explainable line-by-line:
 
 - **Verbose breakdown** (Settings → 🎮 General → "Verbose breakdown") shows exactly which checkbox, habit, or bonus contributed which amount
-- **Manual XP adjustment** (`Cmd+P` → "Kuro: Adjust XP Manually…") lets you correct mistakes or credit offline activities, with a mandatory reason field that becomes part of the audit trail
+- **Manual XP adjustment** (`Cmd+P` → "Adjust XP manually…") lets you correct mistakes or credit offline activities, with a mandatory reason field that becomes part of the audit trail
 - **Export** dumps the complete state to JSON so you can inspect every decision the plugin has ever made
 
 No black boxes. If the number looks wrong, you can find out why within two clicks.

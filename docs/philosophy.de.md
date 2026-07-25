@@ -62,7 +62,7 @@ Versteckte XP-Formeln erzeugen Situationen, in denen die Zahl steigt und du nich
 Jede XP-Berechnung in Kuro ist Zeile für Zeile erklärbar:
 
 - **Verbose-Aufschlüsselung** (Settings → 🎮 Allgemein → „Verbose-Status") zeigt genau, welche Checkbox, welcher Habit oder welcher Bonus welchen Betrag beigetragen hat
-- **Manuelle XP-Anpassung** (`Cmd+P` → „Kuro: XP manuell anpassen…") lässt dich Fehler korrigieren oder Offline-Aktivitäten gutschreiben, mit einem Pflichtfeld für den Grund, das Teil des Prüfpfads wird
+- **Manuelle XP-Anpassung** (`Cmd+P` → „XP manuell anpassen…") lässt dich Fehler korrigieren oder Offline-Aktivitäten gutschreiben, mit einem Pflichtfeld für den Grund, das Teil des Prüfpfads wird
 - **Export** gibt den vollständigen State als JSON aus, damit du jede Entscheidung inspizieren kannst, die das Plugin je getroffen hat
 
 Keine schwarzen Boxen. Wenn die Zahl falsch aussieht, kannst du innerhalb von zwei Klicks herausfinden warum.

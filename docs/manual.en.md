@@ -22,7 +22,7 @@ This is **not a productivity trick** designed to force you to produce more outpu
 3. Check the sidebar — the XP is in. When you reach Level 2, click **🎲 Redeem loot**
 
 > [!tip] Sidebar gone, plugin still useful?
-> `Cmd+P` → "Kuro: Insert Status Code Block" — inserts a ` ```kuro-status ` block that renders the same status inline.
+> `Cmd+P` → "Insert status code block" — inserts a ` ```kuro-status ` block that renders the same status inline.
 
 ## What triggers XP?
 
@@ -37,7 +37,7 @@ This is **not a productivity trick** designed to force you to produce more outpu
 | Weekly review (`review_done: true`) | +50 | Settings → 📅 Weekly |
 | Weekly planning (`planung_done: true`) | +30 | Settings → 📅 Weekly |
 | Streak bonus (3+ qualifying days) | 5/10/15/20 XP/day (tiered) | Settings → 🔥 Streaks |
-| Manually added XP | any amount | Command "Kuro: Adjust XP Manually…" |
+| Manually added XP | any amount | Command "Adjust XP manually…" |
 
 ## How to set up habits
 
@@ -98,7 +98,7 @@ You can replace the default loot rewards and lore fragments with a custom JSON "
 
 **Import a pack:**
 - Settings → 📚 Packs → **Import a pack**, or
-- `Cmd+P` → "Kuro: Import loot/lore pack"
+- `Cmd+P` → "Import loot/lore pack (JSON)…"
 
 In the dialog: paste your JSON directly, or click **Choose file…** and pick a `.json` pack. Two ready-made packs ship in the repo's `packs/` folder — `gothic-lore.kuro.json` (gothic-cyberpunk) and `cozy-lore.kuro.json` (cozy); download one and import it. The plugin validates before applying — your XP and progress are never touched.
 
@@ -106,7 +106,7 @@ Imported packs land in the **pack library** (Settings → 📚 Packs). There you
 
 **Export your current pack:**
 - Settings → 📚 Packs → in the **Lore**, **Loot**, or **Habits** row → **Export to file** (or **Copy**), or
-- `Cmd+P` → "Kuro: Export current loot/lore as a pack"
+- `Cmd+P` → "Export current loot/lore as a pack (JSON)"
 
 This gives you a JSON object covering your current loot and lore that you can save, share, or use as a backup.
 
@@ -116,7 +116,7 @@ For the full pack format reference and an LLM prompt that generates a themed pac
 
 When you reach each new level you unlock a **narrative fragment** — 10 short texts, one per level. They appear automatically as a spoiler callout in the sidebar when you reach the relevant level. The built-in default is **calm and plain-language**; import the gothic-cyberpunk or cozy pack (or your own) to change the tone.
 
-`Cmd+P` → "Kuro: Show Current Lore Fragment" shows the current fragment in a modal.
+`Cmd+P` → "Show current lore fragment" shows the current fragment in a modal.
 
 You can replace the default lore with your own by importing a pack — see the [Customization guide](customization.en.md).
 
@@ -137,13 +137,13 @@ Everything. Literally everything. In Settings → Kuro Gamification:
 
 ## When the XP looks wrong
 
-- **Adjust manually:** `Cmd+P` → "Kuro: Adjust XP Manually…" — enter a difference (positive or negative) and a reason
+- **Adjust manually:** `Cmd+P` → "Adjust XP manually…" — enter a difference (positive or negative) and a reason
 - **Turn on verbose mode:** Settings → 🎮 General → "Verbose breakdown" — the sidebar then shows exactly where each XP came from
-- **Full reset:** `Cmd+P` → "Kuro: Reset All Data…" — requires double confirmation. Resets only plugin data, **your daily notes are untouched**
+- **Full reset:** `Cmd+P` → "Reset all data…" — requires double confirmation. Resets only plugin data, **your daily notes are untouched**
 
 ## Export / backup data
 
-`Cmd+P` → "Kuro: Export Plugin Data (JSON)" → modal with the complete state (settings + drops + adjustments + lore unlocks). Copy to clipboard, paste wherever you need it. Import via "Kuro: Import Plugin Data (JSON)".
+`Cmd+P` → "Export plugin data (JSON)" → modal with the complete state (settings + drops + adjustments + lore unlocks). Copy to clipboard, paste wherever you need it. Import via "Import plugin data (JSON)".
 
 ## Performance
 

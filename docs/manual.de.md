@@ -20,7 +20,7 @@ Das ist **kein Produktivitäts-Trick**, der dich zu mehr Output zwingen soll. Es
 3. Schau in die Sidebar — die XP sind drin. Wenn du Level 2 erreichst, klick **🎲 Loot einlösen**
 
 > [!tip] Sidebar weg, Plugin trotzdem nutzen?
-> `Cmd+P` → „Kuro: Status-Codeblock einfügen" — fügt einen ```kuro-status```-Block ein, der den gleichen Status inline rendert.
+> `Cmd+P` → „Status-Codeblock einfügen" — fügt einen ```kuro-status```-Block ein, der den gleichen Status inline rendert.
 
 ## Was triggert XP?
 
@@ -35,7 +35,7 @@ Das ist **kein Produktivitäts-Trick**, der dich zu mehr Output zwingen soll. Es
 | Weekly-Review (`review_done: true`) | +50 | Settings → 📅 Weekly |
 | Weekly-Planung (`planung_done: true`) | +30 | Settings → 📅 Weekly |
 | Streak-Bonus (3+ Tage qualifiziert) | 5/10/15/20 XP/Tag (Staffel) | Settings → 🔥 Streaks |
-| Manuell vergebene XP | beliebig | Command „Kuro: XP manuell anpassen…" |
+| Manuell vergebene XP | beliebig | Command „XP manuell anpassen…" |
 
 ## Wie ich Habits anlege
 
@@ -96,7 +96,7 @@ Du kannst die Standard-Loot-Belohnungen und Lore-Fragmente durch ein eigenes JSO
 
 **Pack importieren:**
 - Einstellungen → 📚 Packs → **Pack importieren**, oder
-- `Cmd+P` → „Kuro: Loot-/Lore-Pack importieren (JSON)…"
+- `Cmd+P` → „Loot-/Lore-Pack importieren (JSON)…"
 
 Im Dialog: füge dein JSON direkt ein, oder klick **Datei wählen…** und wähle eine `.json`-Datei. Zwei fertige Packs liegen im `packs/`-Ordner des Repos — `gothic-lore.kuro.json` (Gothic-Cyberpunk) und `cozy-lore.kuro.json` (gemütlich); lade eins herunter und importier es. Das Plugin prüft vor dem Anwenden — dein XP und Fortschritt werden nie angetastet.
 
@@ -104,7 +104,7 @@ Importierte Packs landen in der **Pack-Bibliothek** (Einstellungen → 📚 Pack
 
 **Aktuelles Pack exportieren:**
 - Einstellungen → 📚 Packs → in der Zeile **Lore**, **Loot** oder **Habits** → **Datei exportieren** (oder **Kopieren**), oder
-- `Cmd+P` → „Kuro: Aktuelles Loot/Lore als Pack exportieren (JSON)"
+- `Cmd+P` → „Aktuelles Loot/Lore als Pack exportieren (JSON)"
 
 Das liefert dir ein JSON-Objekt mit deinem aktuellen Loot und deiner Lore, das du speichern, teilen oder als Backup behalten kannst.
 
@@ -114,7 +114,7 @@ Die vollständige Pack-Format-Referenz und einen LLM-Prompt, der ein thematische
 
 Beim Erreichen jedes neuen Levels schaltest du ein **narrative Fragment** frei — 10 kurze Texte, eines pro Level. Sie tauchen automatisch als Spoiler-Callout in der Sidebar auf, sobald du das jeweilige Level erreichst. Der eingebaute Standard ist **ruhig und in Klartext**; importier das Gothic-Cyberpunk- oder Cozy-Pack (oder dein eigenes), um den Ton zu ändern.
 
-Befehl `Cmd+P` → „Kuro: Aktuelles Lore-Fragment zeigen" zeigt das aktuelle Fragment in einem Modal.
+Befehl `Cmd+P` → „Aktuelles Lore-Fragment zeigen" zeigt das aktuelle Fragment in einem Modal.
 
 ## Was kann ich abschalten?
 
@@ -133,13 +133,13 @@ Alles. Wirklich alles. In Settings → Kuro Gamification:
 
 ## Wenn die XP nicht mehr stimmen
 
-- **Manuell anpassen:** `Cmd+P` → „Kuro: XP manuell anpassen…" — gib eine Differenz (positiv oder negativ) und einen Grund ein
+- **Manuell anpassen:** `Cmd+P` → „XP manuell anpassen…" — gib eine Differenz (positiv oder negativ) und einen Grund ein
 - **Verbose-Modus** anschalten in Settings → 🎮 Allgemein → „Verbose-Status (Aufschlüsselung)" — dann zeigt die Sidebar genau, woher jede XP kommt
-- **Komplett zurücksetzen:** `Cmd+P` → „Kuro: Alle Daten zurücksetzen…" — Doppel-Bestätigung erforderlich. Setzt nur Plugin-Daten zurück, **deine Daily-Notes bleiben unangetastet**
+- **Komplett zurücksetzen:** `Cmd+P` → „Alle Daten zurücksetzen…" — Doppel-Bestätigung erforderlich. Setzt nur Plugin-Daten zurück, **deine Daily-Notes bleiben unangetastet**
 
 ## Daten exportieren / sichern
 
-`Cmd+P` → „Kuro: Plugin-Daten exportieren (JSON)" → Modal mit dem kompletten State (Settings + Drops + Adjustments + Lore-Unlocks). Per Klipboard rauskopieren, wo immer du willst. Import via „Kuro: Plugin-Daten importieren (JSON)".
+`Cmd+P` → „Plugin-Daten exportieren (JSON)" → Modal mit dem kompletten State (Settings + Drops + Adjustments + Lore-Unlocks). Per Klipboard rauskopieren, wo immer du willst. Import via „Plugin-Daten importieren (JSON)".
 
 ## Performance
 

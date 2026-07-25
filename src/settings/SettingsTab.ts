@@ -372,7 +372,7 @@ export class KuroSettingsTab extends PluginSettingTab {
       .addButton((b) => b.setButtonText(t('pack.action.export', lang))
         .onClick(() => {
           const pack = buildUnitPack(unit, this.plugin.data.settings);
-          downloadJson(`kuro-${unit}.kuro.json`, pack);
+          downloadJson(containerEl.ownerDocument, `kuro-${unit}.kuro.json`, pack);
         }))
       .addButton((b) => b.setButtonText(t('pack.action.copy', lang))
         .onClick(async () => {

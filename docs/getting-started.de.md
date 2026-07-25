@@ -50,9 +50,9 @@ Das Plugin muss wissen, wo du deine Daily-Notes aufbewahrst und welches Datumsfo
 4. Schau zu, wie die XP erscheinen (die Sidebar refresht automatisch binnen ~1 Sekunde)
 
 > [!tip] Keine Sidebar? Kein Problem.
-> `Cmd+P` (oder `Ctrl+P`) → **„Kuro: Status-Codeblock einfügen"** — fügt einen ` ```kuro-status `-Block ein, der in jeder Note inline rendert.
+> `Cmd+P` (oder `Ctrl+P`) → **„Status-Codeblock einfügen"** — fügt einen ` ```kuro-status `-Block ein, der in jeder Note inline rendert.
 >
-> Oder manuell neu berechnen: `Cmd+P` → **„Kuro: Status neu berechnen"**.
+> Oder manuell neu berechnen: `Cmd+P` → **„Status neu berechnen"**.
 
 Jede abgehakte Checkbox bringt standardmäßig 2 XP. Das Abschließen von 50 %, 75 % oder 90 % der Tages-Checkboxen gibt einen Bonus (+10 / +20 / +30 XP). Level 2 beginnt bei 200 XP.
 

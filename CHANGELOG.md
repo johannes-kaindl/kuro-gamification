@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-07-25
+
 ### Documentation
 
 - README (EN+DE) now covers all workspace-required sections: Requirements, Usage, Configuration, How it works.

@@ -1,8 +1,8 @@
 {
   "name": "kuro-gamification",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
-  "description": "Neurodivergence-friendly gamification plugin for Obsidian.",
+  "description": "Neurodivergence-friendly gamification plugin.",
   "license": "AGPL-3.0-or-later",
   "author": {
     "name": "Jay",

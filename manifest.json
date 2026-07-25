@@ -1,9 +1,9 @@
 {
   "id": "kuro-gamification",
   "name": "Kuro Gamification",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.5.0",
-  "description": "Neurodivergence-friendly gamification for Obsidian — XP, levels, streaks with freeze tokens, deterministic loot drops, and gothic-cyberpunk lore. Off-by-default for everything that could escalate.",
+  "description": "Neurodivergence-friendly gamification — XP, levels, streaks with freeze tokens, deterministic loot drops, and gothic-cyberpunk lore. Off-by-default for everything that could escalate.",
   "author": "Jay",
   "authorUrl": "https://github.com/v6t2b9",
   "isDesktopOnly": false

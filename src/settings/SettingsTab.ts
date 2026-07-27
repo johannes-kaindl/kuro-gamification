@@ -27,7 +27,7 @@ import { ImportPackModal } from '../modals/PackIoModal';
 import { ResetDataModal } from '../modals/ResetDataModal';
 import { WelcomeModal } from '../modals/WelcomeModal';
 import { HelpModal } from '../modals/HelpModal';
-import { confirmModal } from '../modals/ConfirmModal';
+import { confirmAction } from '../vendor/kit-obsidian/confirm';
 import { FolderSuggest } from '../vendor/kit/folder-suggest';
 import { collapsibleSection, type CollapsibleStorage } from '../vendor/kit-obsidian/collapsible';
 import { buildUnitPack, resetUnit, type PackUnit } from '../utils/packSections';
@@ -419,11 +419,11 @@ export class KuroSettingsTab extends PluginSettingTab {
    */
   private async _resetUnitConfirmed(unit: PackUnit, lang: Lang): Promise<void> {
     const label = t(`settings.section.${unit}`, lang);
-    const ok = await confirmModal(this.app, {
+    const ok = await confirmAction(this.app, {
       title: t('pack.reset.confirmTitle', lang, { unit: label }),
-      body: t(`pack.reset.confirmBody.${unit}`, lang),
-      confirmText: t('pack.action.reset', lang),
-      cancelText: t('modal.pack.cancel', lang),
+      message: t(`pack.reset.confirmBody.${unit}`, lang),
+      confirmLabel: t('pack.action.reset', lang),
+      cancelLabel: t('modal.pack.cancel', lang),
     });
     if (!ok) return;
     // Lore/Loot are pack-library backed: cache AND pointer must be cleared
@@ -486,11 +486,11 @@ export class KuroSettingsTab extends PluginSettingTab {
             this._refreshUi();
           }))
         .addButton((b) => b.setButtonText(t('set.packs.delete', lang)).setWarning().onClick(async () => {
-          const ok = await confirmModal(this.app, {
+          const ok = await confirmAction(this.app, {
             title: t('modal.pack.delete.title', lang),
-            body: t('modal.pack.delete.body', lang, { name: pack.name }),
-            confirmText: t('modal.pack.delete.confirm', lang),
-            cancelText: t('modal.pack.delete.cancel', lang),
+            message: t('modal.pack.delete.body', lang, { name: pack.name }),
+            confirmLabel: t('modal.pack.delete.confirm', lang),
+            cancelLabel: t('modal.pack.delete.cancel', lang),
           });
           if (!ok) return;
           this.plugin.data.settings = deletePack(this.plugin.data.settings, pack.id);

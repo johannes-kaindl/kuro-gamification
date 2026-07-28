@@ -28,7 +28,7 @@ import { ResetDataModal } from '../modals/ResetDataModal';
 import { WelcomeModal } from '../modals/WelcomeModal';
 import { HelpModal } from '../modals/HelpModal';
 import { confirmAction } from '../vendor/kit-obsidian/confirm';
-import { FolderSuggest } from '../vendor/kit/folder-suggest';
+import { FolderSuggest } from '../vendor/kit-obsidian/folder-suggest';
 import { collapsibleSection, type CollapsibleStorage } from '../vendor/kit-obsidian/collapsible';
 import { buildUnitPack, resetUnit, type PackUnit } from '../utils/packSections';
 import { activeNames, activatePack, canActivatePack, deletePack, resetSection } from '../utils/packLibrary';

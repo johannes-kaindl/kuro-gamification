@@ -16,7 +16,7 @@
 - **Remotes:** `origin` = `codeberg.org/jkaindl/kuro-gamification` · Mirror `github` = `github.com/johannes-kaindl/kuro-gamification`.
 - **Release-Tag ohne `v`-Präfix**, SemVer, = `manifest.json`-Version (erster Release: `1.0.0`).
 - **Ausführungs-Grenze:** Forge-Repo-Anlage, `~/.codeberg-token`, erster Push/Release = **Handover an Jay** (Auth). Kein Auto-Push.
-- **Kanonischer Pfad bleibt** `/Users/Shared/code/obsidian-plugins/kuro-gamification/` (Deploy-Target/Cockpit-Referenz stabil).
+- **Kanonischer Pfad bleibt** `<workspace>/obsidian-plugins/kuro-gamification/` (Deploy-Target/Cockpit-Referenz stabil; `<workspace>` = Wurzel des Multi-Projekt-Workspace des Maintainers).
 
 ---
 
@@ -30,19 +30,19 @@
 
 - [ ] **Step 1: Working-Tree des Containers ist sauber**
 
-Run: `cd /Users/Shared/code/obsidian-plugins/kuro-gamification && git status --porcelain`
+Run: `cd <workspace>/obsidian-plugins/kuro-gamification && git status --porcelain`
 Expected: leer (alle bisherigen Commits durch → Gate `56c4ab6`, Spec `3fcba23`, Plan committen NICHT nötig, Plan lebt im Archiv). Falls nicht leer: erst committen.
 
 - [ ] **Step 2: Container umbenennen**
 
 ```bash
-cd /Users/Shared/code/obsidian-plugins
+cd <workspace>/obsidian-plugins
 mv kuro-gamification kuro-gamification-container
 ```
 
 - [ ] **Step 3: Archiv-Integrität verifizieren**
 
-Run: `cd /Users/Shared/code/obsidian-plugins/kuro-gamification-container && git log --oneline -1 && ls 40_src/manifest.json`
+Run: `cd <workspace>/obsidian-plugins/kuro-gamification-container && git log --oneline -1 && ls 40_src/manifest.json`
 Expected: letzter Commit `3fcba23` sichtbar, `40_src/manifest.json` existiert. Historie unangetastet.
 
 - [ ] **Step 4: Kein Commit** (reines lokales Move, das Archiv-Repo bleibt wie es ist).
@@ -63,7 +63,7 @@ Expected: letzter Commit `3fcba23` sichtbar, `40_src/manifest.json` existiert. H
 - [ ] **Step 1: Neues Verzeichnis + Inhalt aus 40_src kopieren (node_modules ausgeschlossen)**
 
 ```bash
-cd /Users/Shared/code/obsidian-plugins
+cd <workspace>/obsidian-plugins
 mkdir kuro-gamification
 rsync -a --exclude 'node_modules' kuro-gamification-container/40_src/ kuro-gamification/
 ```
@@ -71,14 +71,14 @@ rsync -a --exclude 'node_modules' kuro-gamification-container/40_src/ kuro-gamif
 - [ ] **Step 2: Container-Root-docs (specs/plans) einhängen**
 
 ```bash
-cd /Users/Shared/code/obsidian-plugins/kuro-gamification
+cd <workspace>/obsidian-plugins/kuro-gamification
 mkdir -p docs/superpowers
 rsync -a ../kuro-gamification-container/docs/superpowers/ docs/superpowers/
 ```
 
 - [ ] **Step 3: Verifizieren, dass die Store-Dateien am Root liegen**
 
-Run: `cd /Users/Shared/code/obsidian-plugins/kuro-gamification && ls manifest.json styles.css versions.json package.json src/main.ts README.md LICENSE`
+Run: `cd <workspace>/obsidian-plugins/kuro-gamification && ls manifest.json styles.css versions.json package.json src/main.ts README.md LICENSE`
 Expected: alle vorhanden, kein Fehler. `ls node_modules 2>&1` → „No such file".
 
 - [ ] **Step 4: `git init` + Placeholder-Commit (wird in Task 7 zum finalen v1.0.0)**
@@ -177,7 +177,7 @@ git commit -q -m "chore: flat-repo meta files (.gitignore, changelog, contributi
 - [ ] **Step 1: Pipeline-Dateien kopieren (NUR diese drei Scripts, nicht die IMG-spezifischen)**
 
 ```bash
-cd /Users/Shared/code/obsidian-plugins/kuro-gamification
+cd <workspace>/obsidian-plugins/kuro-gamification
 mkdir -p scripts/lib .github/workflows
 cp ../image-to-markdown/scripts/release.mjs scripts/release.mjs
 cp ../image-to-markdown/scripts/version-bump.mjs scripts/version-bump.mjs
@@ -226,7 +226,7 @@ git commit -q -m "feat(release): Dual-Push-Pipeline (release.mjs, version-bump, 
 - [ ] **Step 1: Frische Installation**
 
 ```bash
-cd /Users/Shared/code/obsidian-plugins/kuro-gamification
+cd <workspace>/obsidian-plugins/kuro-gamification
 npm install
 ```
 Expected: `node_modules/` entsteht (gitignored), `package-lock.json` geschrieben.
@@ -238,7 +238,7 @@ Expected: typecheck grün · jest **alle** grün (inkl. `submission-gate` 23/23)
 
 - [ ] **Step 3: README-Root-Gate (③) grün**
 
-Run: `python3 /Users/Shared/code/_docs/readme/readme_lint.py obsidian-plugins/kuro-gamification`
+Run: `python3 <workspace>/_docs/readme/readme_lint.py obsidian-plugins/kuro-gamification`
 Expected: kein `readme-present`-Error mehr (README.md liegt am Root). Verbleibende Warnungen notieren, nicht-blockierend.
 
 - [ ] **Step 4: Commit lockfile**
@@ -290,7 +290,7 @@ Expected: `"version": "1.0.0"`, **kein** `fundingUrl`. → Handover-Note vermerk
 - [ ] **Step 1: Historie glätten zu einem `v1.0.0`-Commit (frische Historie)**
 
 ```bash
-cd /Users/Shared/code/obsidian-plugins/kuro-gamification
+cd <workspace>/obsidian-plugins/kuro-gamification
 git reset --soft $(git rev-list --max-parents=0 HEAD)
 git commit --amend -q -m "feat: Kuro Gamification 1.0.0 — erste öffentliche Version
 

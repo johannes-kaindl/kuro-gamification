@@ -25,7 +25,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -p tsconfig.build.json -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "test": "jest",
+    "test": "node scripts/check-no-abs-paths.mjs && jest",
     "test:watch": "jest --watch",
     "lint": "biome check .",
     "lint:obsidian": "eslint src",

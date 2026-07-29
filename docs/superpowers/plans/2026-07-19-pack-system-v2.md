@@ -510,7 +510,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Vendor the Kit module verbatim**
 
-Create `src/vendor/kit-obsidian/collapsible.ts` mit exakt dem Inhalt von `/Users/Shared/code/obsidian-plugins/obsidian-kit/src/obsidian/collapsible.ts` (verbatim), und diesem Header davor:
+Create `src/vendor/kit-obsidian/collapsible.ts` mit exakt dem Inhalt von `../obsidian-kit/src/obsidian/collapsible.ts` (Schwester-Repo `obsidian-kit`, verbatim), und diesem Header davor:
 
 ```ts
 /* VENDORED from obsidian-kit@0.13.0 (src/obsidian/collapsible.ts), REGISTRY §83.

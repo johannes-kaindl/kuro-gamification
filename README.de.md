@@ -23,7 +23,7 @@ Deine Daily-Notes halten längst fest, was du getan hast — dieses Plugin liest
 - **Deterministische Loot-Drops** — 1 Drop pro Level über 1, 5 Tiers (Common → Mythic), 50+ Default-Belohnungen. Custom-Pool unterstützt
 - **Lore-Reveal** — 10 narrative Fragmente, eines pro Level. Standardmäßig ruhige Klartext-Lore; fertige **Gothic-Cyberpunk**- und **Cozy**-Packs liegen im `packs/`-Ordner des Repos, oder importier dein eigenes
 - **Sidebar-Status-Widget** + **Status-Codeblock** (`` ```kuro-status `` in jeder Note einbetten)
-- **Manuelle XP-Anpassung** — für Offline-Aktivitäten, Geschenke, Korrekturen
+- **„XP manuell anpassen…"** — Befehl für Offline-Aktivitäten, Geschenke, Korrekturen
 - **Export / Import / Reset** — volle Daten-Portabilität via JSON, plus Loot/Lore-**Pack**-Import/-Export
 - **Zweisprachig** — Deutsch und Englisch; folgt beim ersten Start deiner Obsidian-UI-Sprache
 

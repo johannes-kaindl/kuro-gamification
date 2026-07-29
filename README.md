@@ -23,7 +23,7 @@ Your daily notes already record what you did — this plugin reads them and turn
 - **Deterministic loot drops** — 1 drop per level above 1, 5 tiers (Common → Mythic), 50+ default rewards. Custom pool supported
 - **Lore reveal** — 10 narrative fragments, one per level. Ships with calm plain-language lore by default; ready-made **gothic-cyberpunk** and **cozy** packs are in the repo's `packs/` folder, or import your own
 - **Sidebar status widget** + **status code-block** (`` ```kuro-status `` embed in any note)
-- **Manual XP adjustment** — for offline activities, gifts, mistakes
+- **"Adjust XP manually…"** — command for offline activities, gifts, mistakes
 - **Export / import / reset** — full data portability via JSON, plus loot/lore **pack** import/export
 - **Bilingual** — English and German; follows your Obsidian UI language on first launch
 

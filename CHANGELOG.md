@@ -5,6 +5,23 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- README (EN + DE) restructured to the workspace README gold standard
+  (`_docs/templates/README-obsidian-plugin.md`): features first, context paragraph under the
+  badge row, install in three ways (Community · Manual · From source), a Contributing section,
+  and the `src/`-layout details moved out of the README into `AGENTS.md` (PROF-OBS-05).
+- README command references now match the actual command names ("Adjust XP manually…" /
+  "XP manuell anpassen…"), and the palette is referenced without a hardcoded hotkey.
+- README.de.md brought to parity with the English version — it was still missing the
+  Community-Plugins install path, the aesthetic-CSS section and the contributing pointer,
+  and described the XP curve as linear rather than linear-quadratic.
+
+### Fixed
+
+- Nested `kuro-status` example in both READMEs was written with a three-backtick outer fence,
+  which terminated the block early; it now uses a four-backtick fence.
+
 ## [1.0.6] — 2026-07-25
 
 ### Fixed

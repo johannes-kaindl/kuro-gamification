@@ -108,6 +108,9 @@ Session-Handoff unter `.remember/` (gitignored).
       (`codeberg.org/jkaindl/kuro-gamification`) + GitHub-Mirror
       (`github.com/johannes-kaindl/kuro-gamification`) eingerichtet; Release `1.0.0`
       dual-gepusht, GitHub-`release.yml` grün (attestierte Assets), Store-Release live.
+- [x] Developer-Dashboard-Review-Status (2026-07-25) — nach drei Runden Submission-Readiness-
+      Fixes (bis Release 1.0.6) von **Satisfactory** auf **Passed** gesprungen. Bestätigt:
+      Zero-Warnings-Ziel erreicht, keine offenen Dashboard-Findings mehr.
 - [x] CORE-META-10 — Forge-Beschreibung + Topics auf Codeberg **und** GitHub gesetzt.
 - [x] CORE-META-02 (2026-07-25) — Release-Badge von statisch auf dynamischen
       Codeberg-Gitea-Badge umgestellt (`img.shields.io/gitea/v/release/...`), EN+DE.

@@ -1,17 +1,17 @@
 # Kuro Gamification
 
-> 🇬🇧 English · [🇩🇪 Deutsch](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/README.de.md)
+> 🇬🇧 English · [🇩🇪 Deutsch](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/README.de.md)
 
 **Neurodivergence-friendly gamification for Obsidian — XP, levels, streaks with freeze tokens, deterministic loot drops, and optional lore, with everything that could escalate off by default.**
 
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE)
-[![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS)
-[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fcodeberg.org&label=release)](https://codeberg.org/jkaindl/kuro-gamification/releases)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE)
+[![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS)
+[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fgit.jkaindl.de&label=release)](https://git.jkaindl.de/jkaindl/kuro-gamification/releases)
 ![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.8.7-7c3aed)
 
 Your daily notes already record what you did — this plugin reads them and turns that into XP, levels and a streak that survives a missed day. It runs entirely inside your vault: no account, no server, no network access, and nothing that nags you unless you switch it on yourself.
 
-![Kuro Gamification](https://codeberg.org/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.svg)
+![Kuro Gamification](https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.svg)
 
 ## Features
 
@@ -52,14 +52,14 @@ Search for **Kuro Gamification** in **Settings → Community plugins → Browse*
 
 ### Manual
 
-1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://codeberg.org/jkaindl/kuro-gamification/releases) and copy them into `<vault>/.obsidian/plugins/kuro-gamification/`
+1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://git.jkaindl.de/jkaindl/kuro-gamification/releases) and copy them into `<vault>/.obsidian/plugins/kuro-gamification/`
 2. Settings → Community plugins → Reload plugins
 3. Settings → Community plugins → Kuro Gamification → enable
 
 ### From source
 
 ```bash
-git clone https://codeberg.org/jkaindl/kuro-gamification
+git clone https://git.jkaindl.de/jkaindl/kuro-gamification
 cd kuro-gamification && npm install && npm run build
 # main.js manifest.json styles.css → <vault>/.obsidian/plugins/kuro-gamification/
 ```
@@ -134,7 +134,7 @@ Pomodoros bonus is automatic when `pomodoros >= threshold` (default ≥ 4 → +1
 
 ### Aesthetic CSS
 
-This plugin works without external styling — it ships with sane structural CSS. For the full **gothic-cyberpunk CRT terminal aesthetic** (phosphor green, scanlines, flicker), see [Aesthetic CSS](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.de.md)) for the CSS and install instructions (it's kept as a doc, not a tracked `.css` file, so it isn't bundled and never shows up in CSS linting of the plugin's own source).
+This plugin works without external styling — it ships with sane structural CSS. For the full **gothic-cyberpunk CRT terminal aesthetic** (phosphor green, scanlines, flicker), see [Aesthetic CSS](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.de.md)) for the CSS and install instructions (it's kept as a doc, not a tracked `.css` file, so it isn't bundled and never shows up in CSS linting of the plugin's own source).
 
 The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]` callouts. It has no hard dependency on the Kuro theme (works under any theme that respects CSS custom properties).
 
@@ -147,18 +147,18 @@ The plugin watches `vault.modify` events (800 ms debounced) on your daily/weekly
 - **`LootEngine`** picks a deterministic reward per level-up above 1 (seeded by level + save count, so a drop doesn't change on reload) from a 5-tier pool that's user-replaceable via **packs**.
 - **`LoreEngine`** reveals the narrative fragment tied to the new level, from whichever lore pack is active.
 
-The engines carry no Obsidian imports, so they run in plain Node under jest — the UI layer (sidebar, status code-block, modals, settings tab) is a thin layer over these pure computations and the Obsidian API. Data is persisted to `data.json` via Obsidian's plugin data API; export/import/reset in Settings → Advanced operate on that same JSON. Module layout and the architectural rules behind it are documented in [`AGENTS.md`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/AGENTS.md).
+The engines carry no Obsidian imports, so they run in plain Node under jest — the UI layer (sidebar, status code-block, modals, settings tab) is a thin layer over these pure computations and the Obsidian API. Data is persisted to `data.json` via Obsidian's plugin data API; export/import/reset in Settings → Advanced operate on that same JSON. Module layout and the architectural rules behind it are documented in [`AGENTS.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/AGENTS.md).
 
 ## Documentation
 
-- [Getting Started](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.de.md))
-- [Manual](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/manual.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/manual.de.md))
-- [Customization — loot/lore packs & LLM prompts](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/customization.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/customization.de.md))
-- [Design Philosophy](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.en.md) · ([DE](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.de.md))
+- [Getting Started](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.de.md))
+- [Manual](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/manual.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/manual.de.md))
+- [Customization — loot/lore packs & LLM prompts](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/customization.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/customization.de.md))
+- [Design Philosophy](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.de.md))
 
 ## Contributing
 
-Issues and pull requests go to [Codeberg](https://codeberg.org/jkaindl/kuro-gamification) (the GitHub repo is a mirror). Development is test-driven — `npm test` must stay green, and the engines are the place where new rules belong. See [`CONTRIBUTING.md`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/CONTRIBUTING.md) and [`AGENTS.md`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/AGENTS.md); contributions are accepted under the [CLA](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/CLA.md).
+Issues and pull requests go to [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification) (the GitHub repo is a mirror). Development is test-driven — `npm test` must stay green, and the engines are the place where new rules belong. See [`CONTRIBUTING.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/CONTRIBUTING.md) and [`AGENTS.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/AGENTS.md); contributions are accepted under the [CLA](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/CLA.md).
 
 ## Credits
 
@@ -167,9 +167,9 @@ Issues and pull requests go to [Codeberg](https://codeberg.org/jkaindl/kuro-gami
 
 ## License
 
-Code: **AGPL-3.0-or-later** — see [`LICENSE`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE).
-Documentation: **CC BY-SA 4.0** — see [`LICENSE-DOCS`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS).
+Code: **AGPL-3.0-or-later** — see [`LICENSE`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE).
+Documentation: **CC BY-SA 4.0** — see [`LICENSE-DOCS`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS).
 
-A commercial license is available for uses incompatible with the AGPL — see [`LICENSING.md`](https://codeberg.org/jkaindl/kuro-gamification/src/branch/main/LICENSING.md).
+A commercial license is available for uses incompatible with the AGPL — see [`LICENSING.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSING.md).
 
 Copyright © 2026 Johannes Kaindl.

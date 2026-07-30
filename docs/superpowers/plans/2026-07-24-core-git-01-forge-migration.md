@@ -13,9 +13,9 @@
 - **Name/id permanent:** `id` = `kuro-gamification`, Display = `Kuro Gamification` — NICHT ändern (nach Store-Listing eingefroren, LESSONS.md:238).
 - **manifest.json store-konform:** muss `SubmissionGate.validateManifest` bestehen (kein `fundingUrl:""`, keine Fremd-Keys, `description` 10–250 Z. mit Punkt).
 - **`node_modules` im NEUEN Repo untracked** (gitignored). Die Container-Regel „node_modules bewusst getrackt" gilt NUR fürs Archiv.
-- **Remotes:** `origin` = `codeberg.org/jkaindl/kuro-gamification` · Mirror `github` = `github.com/johannes-kaindl/kuro-gamification`.
+- **Remotes:** `origin` = `git.jkaindl.de/jkaindl/kuro-gamification` · Mirror `github` = `github.com/johannes-kaindl/kuro-gamification`.
 - **Release-Tag ohne `v`-Präfix**, SemVer, = `manifest.json`-Version (erster Release: `1.0.0`).
-- **Ausführungs-Grenze:** Forge-Repo-Anlage, `~/.codeberg-token`, erster Push/Release = **Handover an Jay** (Auth). Kein Auto-Push.
+- **Ausführungs-Grenze:** Forge-Repo-Anlage, `~/.forgejo-token`, erster Push/Release = **Handover an Jay** (Auth). Kein Auto-Push.
 - **Kanonischer Pfad bleibt** `<workspace>/obsidian-plugins/kuro-gamification/` (Deploy-Target/Cockpit-Referenz stabil; `<workspace>` = Wurzel des Multi-Projekt-Workspace des Maintainers).
 
 ---
@@ -310,13 +310,13 @@ Create `HANDOVER-forge-push.md` mit diesen Schritten (Auth/nach-außen, kein Aut
 ```markdown
 # Handover: Forge-Anlage + erster Push (CORE-GIT-01)
 
-Voraussetzung: `~/.codeberg-token` existiert (Codeberg → Settings → Applications → Token mit repo-Scope).
+Voraussetzung: `~/.forgejo-token` existiert (Codeberg → Settings → Applications → Token mit repo-Scope).
 
 1. Repos anlegen (leer, ohne README/gitignore/License):
-   - Codeberg: `codeberg.org/jkaindl/kuro-gamification`
+   - Codeberg: `git.jkaindl.de/jkaindl/kuro-gamification`
    - GitHub:   `github.com/johannes-kaindl/kuro-gamification`
 2. Remotes setzen:
-   git remote add origin git@codeberg.org:jkaindl/kuro-gamification.git
+   git remote add origin git@git.jkaindl.de:jkaindl/kuro-gamification.git
    git remote add github git@github.com:johannes-kaindl/kuro-gamification.git
 3. Ersten Push (Codeberg kanonisch + GitHub-Mirror):
    git push -u origin HEAD

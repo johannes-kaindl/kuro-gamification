@@ -36,7 +36,7 @@ Arbeitsverzeichnis: **Repo-Root**.
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
 - version-bump: `npm run version-bump <ver>` (3-File-Sync package/manifest/versions)
 - release: `npm run release <ver>` (Ein-Befehl-Release: bump → changelog → preflight → commit →
-  tag → Codeberg-Push → build → GitHub-Mirror + Verifikation → Codeberg-Release; `--dry-run`
+  tag → Forgejo-Push → build → GitHub-Mirror + Verifikation → Forgejo-Release; `--dry-run`
   zum Prüfen)
 - preflight: `npm run preflight <ver>` (Store-Checkliste standalone, ohne Release auszulösen)
 - deploy: `OBSIDIAN_PLUGIN_DIR=<vault>/.obsidian/plugins/kuro-gamification npm run deploy`
@@ -115,16 +115,16 @@ Session-Handoff unter `.remember/` (gitignored).
 
 ## Offene Konventions-Punkte
 
-- [x] CORE-GIT-01 (2026-07-25) — Codeberg-`origin`
-      (`codeberg.org/jkaindl/kuro-gamification`) + GitHub-Mirror
+- [x] CORE-GIT-01 (2026-07-25) — Forgejo-`origin`
+      (`git.jkaindl.de/jkaindl/kuro-gamification`) + GitHub-Mirror
       (`github.com/johannes-kaindl/kuro-gamification`) eingerichtet; Release `1.0.0`
       dual-gepusht, GitHub-`release.yml` grün (attestierte Assets), Store-Release live.
 - [x] Developer-Dashboard-Review-Status (2026-07-25) — nach drei Runden Submission-Readiness-
       Fixes (bis Release 1.0.6) von **Satisfactory** auf **Passed** gesprungen. Bestätigt:
       Zero-Warnings-Ziel erreicht, keine offenen Dashboard-Findings mehr.
-- [x] CORE-META-10 — Forge-Beschreibung + Topics auf Codeberg **und** GitHub gesetzt.
+- [x] CORE-META-10 — Forge-Beschreibung + Topics auf Forgejo **und** GitHub gesetzt.
 - [x] CORE-META-02 (2026-07-25) — Release-Badge von statisch auf dynamischen
-      Codeberg-Gitea-Badge umgestellt (`img.shields.io/gitea/v/release/...`), EN+DE.
+      Forgejo-Gitea-Badge umgestellt (`img.shields.io/gitea/v/release/...`), EN+DE.
 - [x] CORE-META-01 (2026-07-25) — README (EN+DE) um die 4 fehlenden Pflicht-Sektionen
       ergänzt (Requirements / Usage / Configuration / How it works); `readme_lint.py`
       meldet jetzt „keine Befunde".

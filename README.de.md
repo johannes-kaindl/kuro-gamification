@@ -6,7 +6,7 @@
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](LICENSE-DOCS)
-[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fcodeberg.org&label=release)](https://codeberg.org/jkaindl/kuro-gamification/releases)
+[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fgit.jkaindl.de&label=release)](https://git.jkaindl.de/jkaindl/kuro-gamification/releases)
 ![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.8.7-7c3aed)
 
 Deine Daily-Notes halten längst fest, was du getan hast — dieses Plugin liest sie und macht daraus XP, Level und einen Streak, der einen verpassten Tag übersteht. Alles läuft in deinem Vault: kein Account, kein Server, kein Netzwerkzugriff, und nichts nervt dich, solange du es nicht selbst einschaltest.
@@ -52,14 +52,14 @@ Die meisten Gamification-Plugins für Note-Apps sind für neurotypische Gehirne 
 
 ### Manuell
 
-1. `main.js`, `manifest.json`, `styles.css` aus dem [letzten Release](https://codeberg.org/jkaindl/kuro-gamification/releases) laden und nach `<vault>/.obsidian/plugins/kuro-gamification/` kopieren
+1. `main.js`, `manifest.json`, `styles.css` aus dem [letzten Release](https://git.jkaindl.de/jkaindl/kuro-gamification/releases) laden und nach `<vault>/.obsidian/plugins/kuro-gamification/` kopieren
 2. Einstellungen → Community-Plugins → Plugins neu laden
 3. Einstellungen → Community-Plugins → Kuro Gamification → aktivieren
 
 ### Aus dem Quellcode
 
 ```bash
-git clone https://codeberg.org/jkaindl/kuro-gamification
+git clone https://git.jkaindl.de/jkaindl/kuro-gamification
 cd kuro-gamification && npm install && npm run build
 # main.js manifest.json styles.css → <vault>/.obsidian/plugins/kuro-gamification/
 ```
@@ -158,7 +158,7 @@ Die Engines tragen keine Obsidian-Imports und laufen deshalb in reinem Node unte
 
 ## Mitwirken
 
-Issues und Pull-Requests laufen über [Codeberg](https://codeberg.org/jkaindl/kuro-gamification) (das GitHub-Repo ist ein Mirror). Entwickelt wird testgetrieben — `npm test` muss grün bleiben, und neue Regeln gehören in die Engines. Siehe [`CONTRIBUTING.md`](CONTRIBUTING.md) und [`AGENTS.md`](AGENTS.md); Beiträge werden unter dem [CLA](CLA.md) angenommen.
+Issues und Pull-Requests laufen über [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification) (das GitHub-Repo ist ein Mirror). Entwickelt wird testgetrieben — `npm test` muss grün bleiben, und neue Regeln gehören in die Engines. Siehe [`CONTRIBUTING.md`](CONTRIBUTING.md) und [`AGENTS.md`](AGENTS.md); Beiträge werden unter dem [CLA](CLA.md) angenommen.
 
 ## Credits
 

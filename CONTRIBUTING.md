@@ -24,8 +24,8 @@ Contributions of all sizes are welcome: bug reports, fixes, docs, and features. 
 ## Tags and remotes
 
 - Releases are tagged with [SemVer](https://semver.org/) **without** a `v` prefix — e.g. `1.2.3`, not `v1.2.3`.
-- [Codeberg](https://codeberg.org/jkaindl/kuro-gamification) is the canonical, primary remote (`origin`).
-- The [GitHub repository](https://github.com/johannes-kaindl/kuro-gamification) is a **mirror** only (used for the community plugin registry and release CI). Open your contributions against Codeberg.
+- [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification) is the canonical, primary remote (`origin`).
+- The [GitHub repository](https://github.com/johannes-kaindl/kuro-gamification) is a **mirror** only (used for the community plugin registry and release CI). Open your contributions against Forgejo.
 
 ## Quality gate
 
@@ -41,7 +41,7 @@ All user-facing strings (UI labels, commands, notices) go through the i18n modul
 
 ## Where to work
 
-- File issues and open pull requests on **Codeberg**: <https://codeberg.org/jkaindl/kuro-gamification>. (GitHub is a mirror, not the place for contributions.)
+- File issues and open pull requests on **Forgejo**: <https://git.jkaindl.de/jkaindl/kuro-gamification>. (GitHub is a mirror, not the place for contributions.)
 - For larger features, work through **brainstorm → spec → plan → TDD**, and keep the resulting artefacts under `docs/superpowers/`. Smaller fixes can go straight to a `feat/<name>` branch with tests.
 
 ## License of contributions

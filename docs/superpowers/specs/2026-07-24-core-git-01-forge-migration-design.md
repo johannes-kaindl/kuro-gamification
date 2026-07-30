@@ -32,7 +32,7 @@ geteilten `release.mjs`-Pipeline (PROF-OBS-09).
 | Struktur | **An Sibling-Form angleichen** — Plugin-Source an den Repo-Root. |
 | Historie | **Frische, saubere Historie ab `v1.0.0`.** Container mit voller Historie bleibt LOKAL als Archiv, wird nie gepusht. |
 | Name / `id` | **„Kuro Gamification" / `kuro-gamification` behalten** (permanent nach erstem Store-Listing — LESSONS.md:238; jetzt bewusst festgezurrt). |
-| Remotes | `origin` = `codeberg.org/jkaindl/kuro-gamification` · Mirror = `github.com/johannes-kaindl/kuro-gamification`. |
+| Remotes | `origin` = `git.jkaindl.de/jkaindl/kuro-gamification` · Mirror = `github.com/johannes-kaindl/kuro-gamification`. |
 | Release-Tag | = `manifest.json`-Version → `1.0.0`. |
 | Session-Scope | Nur **Spec + Plan** hier; invasiver Umbau + Forge-Anlage als eigene Session. |
 
@@ -107,7 +107,7 @@ Repo `README.md` am Root liegt.
   neue AGENTS.md, lokaler Build + volle Test-/Lint-/Typecheck-Verifikation,
   Deploy-Test gegen das produktive Test-Vault.
 - **Handover an Jay (nach außen / Auth):** Repos auf Codeberg + GitHub anlegen,
-  `~/.codeberg-token` bereitstellen, erster Push (`origin` + Mirror), erster
+  `~/.forgejo-token` bereitstellen, erster Push (`origin` + Mirror), erster
   Release-Lauf. Der Plan markiert diese Schritte klar als Handover — **kein
   Auto-Push**.
 

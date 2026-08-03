@@ -31,8 +31,12 @@ Arbeitsverzeichnis: **Repo-Root**.
 - dev: `npm run dev` (esbuild watch)
 - build: `npm run build` (tsc-Gate + esbuild production)
 - test: `npm test` (jest) · watch: `npm run test:watch`
-- lint: `npm run lint` (biome check)
-- lint:obsidian: `npm run lint:obsidian` (eslint-plugin-obsidianmd, additiver Store-Guideline-Gate über `src/`)
+- lint: `npm run lint` (biome check, mit `--error-on-warnings`)
+- lint:obsidian: `npm run lint:obsidian` (eslint-plugin-obsidianmd, additiver Store-Guideline-Gate über `src/`,
+  mit `--max-warnings 0`). **Beide Warnungs-Flags sind PROF-TS-05 [MUST]** — ohne sie endet ein Lauf mit
+  Warnungen auf Exit 0 und das Gate behauptet Sauberkeit, die es nie geprüft hat. Bei
+  `eslint-plugin-obsidianmd` ist das akut: es führt die store-relevanten Regeln als `warning`, und der
+  Store-Scanner ist derselbe Linter.
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
 - gate: `npm run gate` (lint → lint:obsidian → typecheck → test → build; **die** Gate-Definition —
   `.github/workflows/release.yml` ruft nur diesen Befehl, damit lokal und CI nie auseinanderlaufen)

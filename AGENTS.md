@@ -34,6 +34,8 @@ Arbeitsverzeichnis: **Repo-Root**.
 - lint: `npm run lint` (biome check)
 - lint:obsidian: `npm run lint:obsidian` (eslint-plugin-obsidianmd, additiver Store-Guideline-Gate über `src/`)
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
+- gate: `npm run gate` (lint → lint:obsidian → typecheck → test → build; **die** Gate-Definition —
+  `.github/workflows/release.yml` ruft nur diesen Befehl, damit lokal und CI nie auseinanderlaufen)
 - version-bump: `npm run version-bump <ver>` (3-File-Sync package/manifest/versions)
 - release: `npm run release <ver>` (Ein-Befehl-Release: bump → changelog → preflight → commit →
   tag → Forgejo-Push → build → GitHub-Mirror + Verifikation → Forgejo-Release; `--dry-run`
@@ -58,7 +60,7 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   prüft (2026-07-25 eingeführt, nachdem ein manueller Review-Auftrag reale Findings zutage
   förderte, die biome/SubmissionGate blind waren: doppeltes Command-Präfix, `minAppVersion` zu
   niedrig für tatsächlich genutzte APIs, `globalThis`/`console.info`/`element.style`-Verstöße).
-  `setWarning()` ist in `eslint.config.mjs` für `SettingsTab.ts`/`ConfirmModal.ts` bewusst von
+  `setWarning()` ist in `eslint.config.mjs` für `SettingsTab.ts`/`vendor/kit-obsidian/confirm.ts` bewusst von
   `no-deprecated` ausgenommen — die Alternative `setDestructive()` verlangt `minAppVersion` 1.13+,
   was `preflight.mjs` als "Catalyst-only"-Floor explizit verbietet. `getSettingDefinitions()` ist
   dagegen **implementiert** (2026-07-25): `SettingsTab.ts` hat eine einzige deklarative

@@ -27,6 +27,7 @@
     "build": "tsc -p tsconfig.build.json -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "test": "node scripts/check-no-abs-paths.mjs && jest",
     "test:watch": "jest --watch",
+    "gate": "npm run lint && npm run lint:obsidian && npm run typecheck && npm test && npm run build",
     "lint": "biome check .",
     "lint:obsidian": "eslint src",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",

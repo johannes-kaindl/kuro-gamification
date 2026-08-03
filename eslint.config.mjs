@@ -39,7 +39,10 @@ export default [
     // lower floor (1.8.7) for reach (preflight.mjs explicitly bans 1.13+
     // "Catalyst-only" floors), so display()/setWarning() stay the correct,
     // wider-compatible choice here, not a defect to migrate away from.
-    files: ["src/settings/SettingsTab.ts", "src/modals/ConfirmModal.ts"],
+    // confirm.ts is vendored verbatim from obsidian-kit (never hand-edit) and
+    // carries the same setWarning() call — it replaced the deleted
+    // src/modals/ConfirmModal.ts that used to be listed here.
+    files: ["src/settings/SettingsTab.ts", "src/vendor/kit-obsidian/confirm.ts"],
     rules: {
       "@typescript-eslint/no-deprecated": "off",
     },

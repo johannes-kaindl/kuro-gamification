@@ -1,0 +1,11 @@
+{
+  "note": "Verbatim snapshots aus obsidian-kit/src/pure. Never hand-edit. Re-copy from obsidian-kit to update.",
+  "modules": [
+    { "file": "num.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
+    { "file": "sse.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
+    { "file": "think-splitter.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
+    { "file": "endpoint.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
+    { "file": "reasoning.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
+    { "file": "endpoint_diagnostics.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" }
+  ]
+}

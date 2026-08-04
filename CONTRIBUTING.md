@@ -29,11 +29,18 @@ Contributions of all sizes are welcome: bug reports, fixes, docs, and features. 
 
 ## Quality gate
 
-Run these locally before you commit, and make sure they're green:
+Run **`npm run gate`** locally before you commit and make sure it's green. It is the single gate
+definition — release CI runs this exact command and nothing else, so a green gate locally means a
+green gate in CI. It chains, in order:
 
+- **Lint:** `npm run lint` — biome, fails on warnings.
+- **Store guidelines:** `npm run lint:obsidian` — `eslint-plugin-obsidianmd`, the same linter the Obsidian community review scanner uses. Fails on warnings, because that plugin reports most store-relevant rules as warnings.
+- **Typecheck:** `npm run typecheck`.
 - **Tests:** `npm test` — the suite is test-driven (Jest), currently 209 tests. This includes the submission gate (`tests/submission-gate.test.ts`), which validates `manifest.json` / `LICENSE` against the Obsidian store checks — a broken manifest fails the suite.
-- **Lint:** `npm run lint` — biome, must be clean.
-- **Typecheck:** `npm run typecheck` — must be clean.
+- **Build:** `npm run build` — the release also needs `main.js` to actually come out.
+
+Run the individual scripts while you work, by all means; just don't treat a green subset as a green
+gate.
 
 The project is test-driven, so new behavior should arrive with tests. Pure logic lives in Obsidian-free, Node-testable engines under `src/engine/` — keep the engine ↔ Obsidian-API boundary intact.
 

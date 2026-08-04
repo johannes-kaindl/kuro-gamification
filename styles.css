@@ -157,3 +157,46 @@
   font-weight: var(--font-semibold);
 }
 .kuro-hidden { display: none; }
+
+/* ── Companion-Chat: Panel ────────────────────────────── */
+.kuro-chat-body { display: flex; flex-direction: column; height: 100%; }
+.kuro-chat-context {
+  margin-bottom: var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+.kuro-chat-context summary { cursor: pointer; }
+.kuro-chat-context-body {
+  white-space: pre-wrap;
+  max-height: 12em;
+  overflow-y: auto;
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2);
+}
+.kuro-chat-log { flex: 1; overflow-y: auto; margin-bottom: var(--size-4-2); }
+.kuro-chat-line { margin-bottom: var(--size-4-2); }
+.kuro-chat-who {
+  color: var(--text-accent);
+  margin-right: var(--size-2-2);
+  font-weight: var(--font-semibold);
+}
+.kuro-chat-text { white-space: pre-wrap; }
+.kuro-chat-error .kuro-chat-text { color: var(--text-error); }
+.kuro-chat-detail {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin-top: var(--size-2-1);
+}
+.kuro-chat-cursor { color: var(--text-accent); }
+.kuro-chat-pin {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0 var(--size-2-2);
+}
+.kuro-chat-pin:hover:not(:disabled) { color: var(--text-accent); }
+.kuro-chat-pin:disabled { opacity: 0.4; cursor: default; }
+.kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; }
+.kuro-chat-input { flex: 1; min-width: 0; }

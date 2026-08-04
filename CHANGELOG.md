@@ -5,6 +5,30 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **Companion chat (off by default).** Kuro can now talk to you — asking what to start with,
+  saying you're stuck, thinking the day through out loud. It adds a body-doubling layer on top
+  of the existing scaffolding. Streams from an OpenAI-compatible endpoint you configure
+  yourself (built for local servers like LM Studio or Ollama); no preset provider, no cloud
+  default. While `Enable chat` is off, the plugin makes no network connection at all and the
+  sidebar looks exactly as before.
+- The sidebar gained **tabs** (Status · Chat) when the chat is enabled. Both bodies stay in the
+  DOM; the 800 ms snapshot refresh only redraws the status one, so an in-flight conversation
+  and a half-typed question survive editing any note.
+- **Notes (📌)** — a short, persistent list of sentences Kuro keeps in context ("Don't remind
+  me about streaks unprompted"). Added via `remember: …` in the chat, a pin button next to
+  your own messages, or the settings; editable and deletable there at any time. Capped at 20
+  entries, and when full the add button is disabled rather than silently dropping the oldest.
+  The conversation history itself is deliberately **not** persisted.
+- **Transparency about what is sent.** `From today's note` chooses between nothing, the
+  checkbox and habit lines (default), or the whole note; journal prose stays out unless you
+  ask for it. Both the settings and the chat tab show a live preview of exactly what would go
+  out, rendered by the same function that builds the prompt.
+- **`persona` field for packs** — the chat's voice follows the active lore pack (warm for
+  Cozy, dark for Gothic) and can be overridden with your own text in the settings. Optional
+  and length-capped; the pack format stays at `kuroPack: 1`.
+
 ### Changed
 
 - README (EN + DE) restructured to the workspace README gold standard

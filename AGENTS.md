@@ -25,6 +25,12 @@ Pure-Function-Engines (`src/engine/`) bleiben frei von Obsidian-Imports und in N
 UI/Views/Modals kapseln die Obsidian-API. **Die Schichtengrenze Engine ↔ Obsidian-API nicht
 aufweichen.**
 
+`src/llm/` (Companion-Chat) ist die **zweite pure Zone**: alles darin ist obsidian-frei und in
+Node testbar — **einzige Ausnahme `XhrSseTransport.ts`**. `src/engine/` bleibt dem
+deterministischen Gamification-Regelwerk vorbehalten; ein LLM-Client dort würde genau die
+Bedeutung verwässern, die diese Grenze trägt. Die Chat-Module lesen **nie** selbst aus dem
+Vault — Snapshot und Notiztext kommen als Argumente aus `main.ts`.
+
 ## Commands
 Arbeitsverzeichnis: **Repo-Root**.
 - install: `npm install`
@@ -98,6 +104,25 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   function`), für Engine/DataStore-Tests unsichtbar. Abgesichert durch `tests/main-onload.test.ts`.
 - **Pack-I/O:** `📚 Packs` (SettingsTab) ist DER Ort für alle Pack-Operationen; die
   Einheiten-Sektionen tragen nur Inhalts-Einstellungen. Pure-Logik in `src/utils/packLibrary.ts`.
+- **Companion-Chat (`src/llm/`, seit 1.1.0):**
+  - **Off-by-default** (`enableChat`). Ist er aus, wird keine Tab-Leiste gezeichnet, kein
+    Endpunkt kontaktiert und `lastDailyText` gar nicht erst gelesen.
+  - **Vorschau nie nachbauen.** Settings-Vorschau, Chat-Ausklapper und Prompt-Bau rufen
+    alle `kuroContext.renderDailyExtract`. Eine zweite Formatierung driftet und zeigt
+    beruhigend etwas anderes, als tatsächlich gesendet wird.
+  - **Prompt-Blockreihenfolge ist load-bearing:** Rolle → Stimme → Kontext → Merkzettel →
+    **Regeln zuletzt**. Stimme (importiertes Pack) und Kontext (eigene Notizen) sind Text,
+    den das Plugin nicht kontrolliert; die Regeln sagen ausdrücklich, dass frühere Blöcke
+    sie nicht aufheben. Neue Blöcke **vor** den Regeln einfügen, nie danach.
+  - **Merkzettel kappt hart** (`kuroNotes`, 20 × 200 Zeichen): bei Erreichen wird der
+    Hinzufügen-Knopf deaktiviert, statt still den ältesten Eintrag zu verwerfen. Der
+    Gesprächsverlauf wird bewusst **nicht** persistiert.
+  - **Timer über den injizierten `ClockPort`** (`vendor/kit-obsidian/clock`), nicht über
+    nacktes `setTimeout`: Der Store-Lint verlangt `window.setTimeout`, das es in jests
+    node-Umgebung nicht gibt. Ohne den Port wäre der Client entweder lint-widrig oder nur
+    mit Obsidian-Mock testbar.
+  - **`activePersona` folgt der Lore**, nicht dem Loot — wer die Gothic-Lore aktiviert, will
+    auch die Gothic-Stimme.
 - **CRT/Phosphor-Optik** (`docs/aesthetic-css.{en,de}.md`) wird **nicht** mit dem Plugin
   gebündelt — der User installiert es als Vault-CSS-Snippet. Bewusst als Markdown-Codeblock
   gepflegt, nicht als getrackte `.css`-Datei: eine `assets/kuro-gamification.css` wurde vom

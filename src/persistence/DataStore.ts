@@ -31,6 +31,7 @@ export class DataStore {
       redeemedDrops: Array.isArray(raw.redeemedDrops) ? raw.redeemedDrops : [],
       manualXpAdjustments: Array.isArray(raw.manualXpAdjustments) ? raw.manualXpAdjustments : [],
       unlockedLore: Array.isArray(raw.unlockedLore) ? raw.unlockedLore : [],
+      kuroNotes: Array.isArray(raw.kuroNotes) ? raw.kuroNotes : [],
       lastSnapshot: raw.lastSnapshot ?? null,
     };
     return this.migrate(merged);

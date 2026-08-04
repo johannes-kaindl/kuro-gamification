@@ -114,3 +114,40 @@ describe('DataStore — pack library defaults', () => {
     expect(data.settings.activeLorePackId).toBe(data.settings.packLibrary[0].id);
   });
 });
+
+describe('DataStore.merge — chat & notes', () => {
+  const fakePlugin = { loadData: () => Promise.resolve(null), saveData: () => Promise.resolve() } as any;
+  const ds = new DataStore(fakePlugin);
+
+  it('defaults kuroNotes to an empty array when absent', () => {
+    expect(ds.merge({}).kuroNotes).toEqual([]);
+  });
+
+  it('keeps a stored kuroNotes array', () => {
+    expect(ds.merge({ kuroNotes: ['nenn mich nicht Operative'] }).kuroNotes)
+      .toEqual(['nenn mich nicht Operative']);
+  });
+
+  it('falls back to an empty array when kuroNotes is not an array', () => {
+    expect(ds.merge({ kuroNotes: 'kaputt' } as never).kuroNotes).toEqual([]);
+  });
+
+  it('defaults the chat settings to off and empty', () => {
+    const s = ds.merge({}).settings;
+    expect(s.enableChat).toBe(false);
+    expect(s.chatEndpoint).toBe('');
+    expect(s.chatApiKey).toBe('');
+    expect(s.chatModel).toBe('');
+    expect(s.chatDailyContext).toBe('tasks');
+    expect(s.chatSuppressThinking).toBe(true);
+    expect(s.chatPersonaOverride).toBe('');
+  });
+
+  it('preserves user-overridden chat settings', () => {
+    const merged = ds.merge({
+      settings: { ...DEFAULT_SETTINGS, enableChat: true, chatEndpoint: 'http://localhost:1234' },
+    });
+    expect(merged.settings.enableChat).toBe(true);
+    expect(merged.settings.chatEndpoint).toBe('http://localhost:1234');
+  });
+});

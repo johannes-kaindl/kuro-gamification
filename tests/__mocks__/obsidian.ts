@@ -106,10 +106,16 @@ function makeFakeEl(): any {
   el.appendText = (s: string) => { el.text += s; };
   el.addClass = (c: string) => { el.classes.add(c); };
   el.removeClass = (c: string) => { el.classes.delete(c); };
+  el.hasClass = (c: string) => el.classes.has(c);
+  el.toggleClass = (c: string, on: boolean) => {
+    if (on) el.classes.add(c); else el.classes.delete(c);
+  };
+  el.setAttr = (_k: string, _v: string) => {};
   el.createEl = (_tag: string, opts?: any) => {
     const child = makeFakeEl();
     if (opts?.text) child.setText(opts.text);
-    if (opts?.cls) child.classes = new Set([opts.cls]);
+    // `cls` darf mehrere Klassen tragen ("a b") — wie im echten DOM einzeln ablegen.
+    if (opts?.cls) child.classes = new Set(String(opts.cls).split(/\s+/).filter(Boolean));
     el.children.push(child);
     return child;
   };

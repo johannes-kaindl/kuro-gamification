@@ -1,9 +1,23 @@
 import { KuroChatClient, effectiveSuppress, type SseTransport, type ChatConfig } from '../src/llm/KuroChatClient';
+import type { ClockPort } from '../src/vendor/kit-obsidian/clock';
 
 const CFG: ChatConfig = {
   endpoint: 'http://localhost:1234/', apiKey: '', model: 'test-model', suppressThinking: false,
 };
 const MSGS = [{ role: 'user' as const, content: 'hallo' }];
+
+/* Node-Clock: die Produktion nutzt window.setTimeout (Popout-Kompatibilität,
+   obsidianmd/prefer-window-timers), das es in testEnvironment: node nicht gibt.
+   Genau dafür ist der Clock injizierbar. */
+const nodeClock: ClockPort = {
+  now: () => Date.now(),
+  setTimeout: (fn, ms) => setTimeout(fn, ms) as unknown as number,
+  clearTimeout: (id) => clearTimeout(id as unknown as NodeJS.Timeout),
+};
+
+/** Client mit Node-Clock; Timeout per Default gross genug, um nie zu feuern. */
+const makeClient = (t: SseTransport, timeoutMs = 120_000): KuroChatClient =>
+  new KuroChatClient(t, timeoutMs, nodeClock);
 
 /** Transport, der vorgegebene Rohstücke ausliefert. */
 const fakeTransport = (chunks: string[], status = 200): SseTransport => ({
@@ -19,14 +33,14 @@ const sse = (text: string): string =>
 describe('KuroChatClient.stream', () => {
   it('assembles streamed content and reports each token', async () => {
     const tokens: string[] = [];
-    const client = new KuroChatClient(fakeTransport([sse('Hallo'), sse(' Welt')]));
+    const client = makeClient(fakeTransport([sse('Hallo'), sse(' Welt')]));
     const out = await client.stream(CFG, MSGS, (t) => tokens.push(t), new AbortController().signal);
     expect(out).toEqual({ ok: true, content: 'Hallo Welt' });
     expect(tokens.join('')).toBe('Hallo Welt');
   });
 
   it('strips a think block from the visible answer', async () => {
-    const client = new KuroChatClient(fakeTransport([sse('<think>grübel</think>Antwort')]));
+    const client = makeClient(fakeTransport([sse('<think>grübel</think>Antwort')]));
     const out = await client.stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(out).toEqual({ ok: true, content: 'Antwort' });
   });
@@ -36,7 +50,7 @@ describe('KuroChatClient.stream', () => {
     const t: SseTransport = { async postStream() { called = true; return 200; } };
     const ctrl = new AbortController();
     ctrl.abort();
-    const out = await new KuroChatClient(t).stream(CFG, MSGS, () => {}, ctrl.signal);
+    const out = await makeClient(t).stream(CFG, MSGS, () => {}, ctrl.signal);
     expect(called).toBe(false);
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.kind).toBe('aborted');
@@ -51,7 +65,7 @@ describe('KuroChatClient.stream', () => {
         throw err;
       },
     };
-    const out = await new KuroChatClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
+    const out = await makeClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(out.ok).toBe(false);
     if (!out.ok) {
       expect(out.kind).toBe('aborted');
@@ -60,7 +74,7 @@ describe('KuroChatClient.stream', () => {
   });
 
   it('classifies a non-2xx status as http and caps the error body', async () => {
-    const out = await new KuroChatClient(fakeTransport(['x'.repeat(5000)], 500))
+    const out = await makeClient(fakeTransport(['x'.repeat(5000)], 500))
       .stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(out.ok).toBe(false);
     if (!out.ok) {
@@ -72,7 +86,7 @@ describe('KuroChatClient.stream', () => {
 
   it('classifies a thrown transport error as network', async () => {
     const t: SseTransport = { async postStream() { throw new Error('connection refused'); } };
-    const out = await new KuroChatClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
+    const out = await makeClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(out.ok).toBe(false);
     if (!out.ok) {
       expect(out.kind).toBe('network');
@@ -92,7 +106,7 @@ describe('KuroChatClient.stream', () => {
         });
       },
     };
-    const out = await new KuroChatClient(t, 20).stream(CFG, MSGS, () => {}, new AbortController().signal);
+    const out = await makeClient(t, 20).stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.kind).toBe('timeout');
   });
@@ -107,7 +121,7 @@ describe('KuroChatClient.stream', () => {
         return 200;
       },
     };
-    await new KuroChatClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
+    await makeClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(seenUrl).toBe('http://localhost:1234/v1/chat/completions');
     expect(seenBody.model).toBe('test-model');
     expect(seenBody.stream).toBe(true);
@@ -118,10 +132,10 @@ describe('KuroChatClient.stream', () => {
     const t: SseTransport = {
       async postStream(_u, _b, headers) { seen = headers; return 200; },
     };
-    await new KuroChatClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
+    await makeClient(t).stream(CFG, MSGS, () => {}, new AbortController().signal);
     expect(seen.Authorization).toBeUndefined();
 
-    await new KuroChatClient(t).stream(
+    await makeClient(t).stream(
       { ...CFG, apiKey: 'geheim' }, MSGS, () => {}, new AbortController().signal,
     );
     expect(seen.Authorization).toBe('Bearer geheim');

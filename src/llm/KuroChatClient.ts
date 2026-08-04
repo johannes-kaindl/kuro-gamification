@@ -11,6 +11,7 @@ import { parseSSE } from '../vendor/kit/sse';
 import { ThinkSplitter } from '../vendor/kit/think-splitter';
 import { normalizeEndpoint } from '../vendor/kit/endpoint';
 import { suppressParams, isAlwaysOnThinker } from '../vendor/kit/reasoning';
+import { realClock, type ClockPort } from '../vendor/kit-obsidian/clock';
 import type { LlmMessage } from './kuroPrompt';
 
 export interface SseTransport {
@@ -46,9 +47,15 @@ export function effectiveSuppress(model: string, wanted: boolean): boolean {
 }
 
 export class KuroChatClient {
+  /**
+   * Der Clock wird injiziert, weil `window` in einer reinen Node-Testumgebung
+   * fehlt, die Obsidian-Runtime aber `window.setTimeout` verlangt
+   * (obsidianmd/prefer-window-timers, Popout-Fenster-Kompatibilität).
+   */
   constructor(
     private readonly transport: SseTransport,
     private readonly timeoutMs: number = DEFAULT_TIMEOUT_MS,
+    private readonly clock: ClockPort = realClock,
   ) {}
 
   async stream(
@@ -80,7 +87,7 @@ export class KuroChatClient {
     let timedOut = false;
     const onCallerAbort = (): void => ctrl.abort();
     signal.addEventListener('abort', onCallerAbort, { once: true });
-    const timer = setTimeout(() => { timedOut = true; ctrl.abort(); }, this.timeoutMs);
+    const timer = this.clock.setTimeout(() => { timedOut = true; ctrl.abort(); }, this.timeoutMs);
 
     const splitter = new ThinkSplitter();
     let content = '';
@@ -121,7 +128,7 @@ export class KuroChatClient {
       }
       return { ok: false, kind: 'network', detail: err.message, partial: content };
     } finally {
-      clearTimeout(timer);
+      this.clock.clearTimeout(timer);
       signal.removeEventListener('abort', onCallerAbort);
     }
 

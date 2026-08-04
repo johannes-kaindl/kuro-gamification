@@ -2,6 +2,7 @@
   "note": "Verbatim snapshots. Never hand-edit. Re-copy from obsidian-kit to update. collapsible.ts ist separat per Datei-Header gepinnt (@0.13.0) und NICHT von dieser VENDOR.json abgedeckt.",
   "modules": [
     { "file": "confirm.ts", "source": "obsidian-kit", "version": "0.16.1", "sha": "b7aaf7c" },
-    { "file": "folder-suggest.ts", "source": "obsidian-kit", "version": "0.18.0", "sha": "988f4fd" }
+    { "file": "folder-suggest.ts", "source": "obsidian-kit", "version": "0.18.0", "sha": "988f4fd" },
+    { "file": "clock.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" }
   ]
 }

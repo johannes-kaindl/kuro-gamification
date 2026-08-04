@@ -12,6 +12,9 @@
 import { ItemView, type WorkspaceLeaf, setIcon } from 'obsidian';
 import type KuroPlugin from '../main';
 import { KuroStatusRenderer } from './KuroStatusRenderer';
+import { KuroChatPanel } from './KuroChatPanel';
+import { buildDailyExtract } from '../llm/kuroContext';
+import { canAddNote } from '../llm/kuroNotes';
 import { t } from '../i18n';
 
 export const VIEW_TYPE_KURO = 'kuro-status-view';
@@ -25,6 +28,7 @@ export class KuroSidebarView extends ItemView {
   activeTab: KuroTab = 'status';
 
   private tabButtons: Record<KuroTab, HTMLElement> | null = null;
+  private chatPanel: KuroChatPanel | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: KuroPlugin) {
     super(leaf);
@@ -71,8 +75,21 @@ export class KuroSidebarView extends ItemView {
     this.statusBodyEl = root.createDiv({ cls: 'kuro-view-body' });
     this.chatBodyEl = chatOn ? root.createDiv({ cls: 'kuro-view-body kuro-chat-body' }) : null;
 
+    if (this.chatBodyEl) {
+      this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, this.plugin.chatSession, {
+        onAsk: (q) => { void this.plugin.askKuro(q); },
+        onAbort: () => this.plugin.abortChat(),
+        onClear: () => this.plugin.clearChat(),
+        onRemember: (txt) => this.plugin.rememberNote(txt),
+        canRemember: () => canAddNote(this.plugin.data.kuroNotes),
+        contextInfo: () => buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
+        openSettings: () => this.plugin.openOwnSettings(),
+      });
+    }
+
     this.showTab('status');
     this.renderSnapshot();
+    this.renderChat();
   }
 
   async onClose(): Promise<void> {
@@ -81,6 +98,23 @@ export class KuroSidebarView extends ItemView {
     this.chatBodyEl = null;
     this.tabBarEl = null;
     this.tabButtons = null;
+    this.chatPanel = null;
+  }
+
+  /** Chat-Tab neu zeichnen; ohne eingerichteten Endpunkt der Setup-Hinweis. */
+  renderChat(): void {
+    if (this.chatPanel === null) return;
+    const s = this.plugin.data.settings;
+    if (s.chatEndpoint === '' || s.chatModel === '') {
+      this.chatPanel.showSetupHint();
+      return;
+    }
+    this.chatPanel.render();
+  }
+
+  /** Laufende Antwort fortschreiben, ohne den ganzen Tab neu zu zeichnen. */
+  appendChatToken(token: string): void {
+    this.chatPanel?.appendToken(token);
   }
 
   showTab(id: KuroTab): void {

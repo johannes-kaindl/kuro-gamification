@@ -200,3 +200,20 @@
 .kuro-chat-pin:disabled { opacity: 0.4; cursor: default; }
 .kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; }
 .kuro-chat-input { flex: 1; min-width: 0; }
+
+/* ── Companion-Chat: Kontext-Vorschau in den Einstellungen ── */
+.kuro-settings-label {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  margin-bottom: var(--size-2-2);
+}
+.kuro-context-preview {
+  white-space: pre-wrap;
+  max-height: 12em;
+  overflow-y: auto;
+  font-size: var(--font-ui-smaller);
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2);
+  margin: 0;
+}

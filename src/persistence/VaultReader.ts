@@ -65,6 +65,19 @@ export class VaultReader {
     return { date: isoDate, stats, frontmatter: fm };
   }
 
+  /**
+   * Rohtext einer Tagesnotiz — der einzige zusätzliche Vault-Zugriff, den der
+   * Companion-Chat braucht. Die Chat-Module selbst lesen nie aus dem Vault;
+   * sie bekommen diesen Text als Argument (Schichtengrenze).
+   */
+  async readDailyRaw(opts: VaultReadOptions, isoDate: string): Promise<string | null> {
+    const file = this.app.vault.getAbstractFileByPath(
+      normalizePath(`${opts.dailyFolder}/${isoDate}.md`),
+    );
+    if (!(file instanceof TFile)) return null;
+    return this.app.vault.cachedRead(file);
+  }
+
   private findFolder(path: string): TFolder | null {
     const af = this.app.vault.getAbstractFileByPath(normalizePath(path));
     return af instanceof TFolder ? af : null;

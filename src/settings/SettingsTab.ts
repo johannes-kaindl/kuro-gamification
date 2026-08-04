@@ -32,6 +32,8 @@ import { FolderSuggest } from '../vendor/kit-obsidian/folder-suggest';
 import { collapsibleSection, type CollapsibleStorage } from '../vendor/kit-obsidian/collapsible';
 import { buildUnitPack, resetUnit, type PackUnit } from '../utils/packSections';
 import { activeNames, activatePack, canActivatePack, deletePack, resetSection } from '../utils/packLibrary';
+import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
+import { canAddNote, normalizeNote, MAX_NOTES } from '../llm/kuroNotes';
 import { downloadJson } from '../utils/fileIo';
 
 /** A declarative group, tagged with the section key it was built from —
@@ -200,6 +202,14 @@ export class KuroSettingsTab extends PluginSettingTab {
     else this.display();
   }
 
+  /** Nur speichern, ohne Neuberechnung — für Änderungen, die den
+   *  Snapshot nicht berühren (z. B. Merkzettel-Einträge). Ein voller
+   *  Vault-Scan pro Tastendruck wäre hier reine Verschwendung. */
+  private async _persistOnly(): Promise<void> {
+    await this.plugin.persist();
+    this.plugin.syncChat();
+  }
+
   private async _save(): Promise<void> {
     await this.plugin.persist();
     await this.plugin.refreshStatus(true);
@@ -241,6 +251,8 @@ export class KuroSettingsTab extends PluginSettingTab {
       this._lootGroup(lang),
       this._habitsGroup(lang),
       this._packsGroup(lang),
+      this._chatGroup(lang),
+      this._notesGroup(lang),
       this._advancedGroup(lang),
       this._aboutGroup(lang),
     ];
@@ -553,6 +565,114 @@ export class KuroSettingsTab extends PluginSettingTab {
    *  row. Empties settingEl — the item's own name/desc (already applied by
    *  `_renderItem` before calling `render`) is discarded along with it,
    *  which is fine here since these bodies draw their own headings/text. */
+  /* ── §12 Companion-Chat ───────────────────────────────── */
+  private _chatGroup(lang: Lang): KuroGroup {
+    return {
+      type: 'group', key: 'chat', heading: this._heading('chat', lang),
+      items: [
+        { name: t('set.enableChat.name', lang), desc: t('set.enableChat.desc', lang),
+          control: { type: 'toggle', key: 'enableChat' } },
+        { name: t('set.chatEndpoint.name', lang), desc: t('set.chatEndpoint.desc', lang),
+          control: { type: 'text', key: 'chatEndpoint' } },
+        { name: t('set.chatApiKey.name', lang), desc: t('set.chatApiKey.desc', lang),
+          control: { type: 'text', key: 'chatApiKey' } },
+        { name: t('set.chatModel.name', lang), desc: t('set.chatModel.desc', lang),
+          render: (setting) => this._renderModelRow(this._hostFor(setting), lang) },
+        { name: t('set.chatSuppressThinking.name', lang), desc: t('set.chatSuppressThinking.desc', lang),
+          control: { type: 'toggle', key: 'chatSuppressThinking' } },
+        { name: t('set.chatDailyContext.name', lang), desc: t('set.chatDailyContext.desc', lang),
+          control: { type: 'dropdown', key: 'chatDailyContext', options: {
+            none: t('set.chatDailyContext.none', lang),
+            tasks: t('set.chatDailyContext.tasks', lang),
+            full: t('set.chatDailyContext.full', lang),
+          } } },
+        { name: t('set.chatDailyContext.preview', lang),
+          render: (setting) => this._renderContextPreview(this._hostFor(setting), lang) },
+        { name: t('set.chatPersona.name', lang), desc: t('set.chatPersona.desc', lang),
+          control: { type: 'text', key: 'chatPersonaOverride' } },
+      ],
+    };
+  }
+
+  /**
+   * Transparenz-Vorschau: ruft DIESELBE Funktion wie der Prompt-Bau
+   * (buildDailyExtract → renderDailyExtract). Eine nachgebaute Vorschau
+   * würde driften und beruhigend etwas anderes zeigen, als gesendet wird.
+   */
+  private _renderContextPreview(containerEl: HTMLElement, lang: Lang): void {
+    const text = renderDailyExtract(
+      buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
+    );
+    containerEl.createDiv({
+      cls: 'kuro-settings-label',
+      text: t('set.chatDailyContext.preview', lang),
+    });
+    containerEl.createEl('pre', {
+      cls: 'kuro-context-preview',
+      text: text === '' ? t('set.chatDailyContext.previewEmpty', lang) : text,
+    });
+  }
+
+  private _renderModelRow(containerEl: HTMLElement, lang: Lang): void {
+    const s = this.plugin.data.settings;
+    new Setting(containerEl)
+      .setName(t('set.chatModel.name', lang))
+      .setDesc(t('set.chatModel.desc', lang))
+      .addText((tx) => tx.setValue(s.chatModel)
+        .onChange(async (v) => { s.chatModel = v.trim(); await this._persistOnly(); }))
+      .addButton((b) => b.setButtonText(t('set.chatModel.refresh', lang)).onClick(async () => {
+        const models = await this.plugin.fetchChatModels();
+        if (models.length === 0) { new Notice(t('set.chatModel.failed', lang)); return; }
+        s.chatModel = models[0];
+        await this._persistOnly();
+        new Notice(t('set.chatModel.loaded', lang, { n: models.length }));
+        this._refreshUi();
+      }));
+  }
+
+  /* ── §13 Merkzettel ───────────────────────────────────── */
+  private _notesGroup(lang: Lang): KuroGroup {
+    return {
+      type: 'group', key: 'notes', heading: this._heading('notes', lang),
+      items: [
+        { name: t('settings.section.notes', lang), desc: t('notes.desc', lang, { max: MAX_NOTES }),
+          render: (setting) => this._renderNotesList(this._hostFor(setting), lang) },
+      ],
+    };
+  }
+
+  private _renderNotesList(containerEl: HTMLElement, lang: Lang): void {
+    const notes = this.plugin.data.kuroNotes;
+
+    notes.forEach((note, idx) => {
+      new Setting(containerEl)
+        .addText((tx) => tx.setPlaceholder(t('notes.placeholder', lang)).setValue(note)
+          .onChange(async (v) => { notes[idx] = normalizeNote(v); await this._persistOnly(); }))
+        .addExtraButton((b) => b.setIcon('trash').setTooltip(t('notes.delete', lang))
+          .onClick(async () => {
+            notes.splice(idx, 1);
+            await this._persistOnly();
+            this._refreshUi();
+          }));
+    });
+
+    // Voll heisst voll: der Knopf wird deaktiviert, statt still den ältesten
+    // Eintrag zu verwerfen. Ein Merkzettel, der heimlich vergisst, ist
+    // schlimmer als einer, der voll ist.
+    const addable = canAddNote(notes);
+    const row = new Setting(containerEl);
+    if (!addable) row.setDesc(t('notes.full', lang));
+    row.addButton((b) => {
+      b.setButtonText(t('notes.add', lang)).setDisabled(!addable).onClick(async () => {
+        // Prädikat erneut prüfen: ein veralteter DOM-Klick darf nie durchschlagen.
+        if (!canAddNote(this.plugin.data.kuroNotes)) return;
+        this.plugin.data.kuroNotes.push('');
+        await this._persistOnly();
+        this._refreshUi();
+      });
+    });
+  }
+
   private _hostFor(setting: Setting): HTMLElement {
     setting.settingEl.empty();
     setting.settingEl.removeClass('setting-item');

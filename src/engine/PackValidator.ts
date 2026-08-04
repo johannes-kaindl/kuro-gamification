@@ -4,6 +4,7 @@
    `code`s; the UI layer localizes them via i18n.
    ========================================================== */
 import type { KuroLootTier, KuroPack } from '../types';
+import { MAX_PERSONA_LEN } from '../llm/kuroPrompt';
 
 export interface PackIssue {
   /** Dotted path into the pack, e.g. "loot.epc" or "lore[2].title". */
@@ -109,6 +110,23 @@ export function validatePack(raw: unknown, opts: ValidateOpts = {}): PackValidat
         if (!isObj(h) || !isStr(h.key) || !isStr(h.label) || typeof h.xp !== 'number') {
           errors.push({ path: `habits[${i}]`, code: 'habitItemInvalid', vars: { index: i } });
         }
+      });
+    }
+  }
+
+  // ── persona (optionale Stimme für den Companion-Chat) ──
+  // Fremder Persona-Text landet im System-Prompt; die Länge wird deshalb
+  // hart begrenzt, damit ein Pack den Kontext nicht fluten kann. Die
+  // inhaltliche Absicherung leistet die Blockreihenfolge in kuroPrompt.ts
+  // (Regeln stehen zuletzt und sind unaufhebbar).
+  if (raw.persona !== undefined) {
+    if (!isStr(raw.persona)) {
+      errors.push({ path: 'persona', code: 'personaNotString' });
+    } else if (raw.persona.length > MAX_PERSONA_LEN) {
+      errors.push({
+        path: 'persona',
+        code: 'personaTooLong',
+        vars: { len: raw.persona.length, max: MAX_PERSONA_LEN },
       });
     }
   }

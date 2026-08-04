@@ -34,7 +34,18 @@ export function installPack(settings: KuroSettings, pack: KuroPack, id: string, 
   const entry: InstalledPack = { id, name: resolvePackName(pack, deps) };
   if (pack.lore !== undefined) entry.lore = pack.lore;
   if (pack.loot !== undefined) entry.loot = pack.loot;
+  if (pack.persona !== undefined) entry.persona = pack.persona;
   return { ...settings, packLibrary: [...settings.packLibrary, entry] };
+}
+
+/**
+ * Stimme des lore-aktiven Packs für den Companion-Chat, oder undefined.
+ * Die Persona gehört zum Erzählton, folgt also der Lore — nicht dem Loot:
+ * wer die Gothic-Lore aktiviert, will auch die Gothic-Stimme.
+ */
+export function activePersona(settings: KuroSettings): string | undefined {
+  if (settings.activeLorePackId === null) return undefined;
+  return settings.packLibrary.find((p) => p.id === settings.activeLorePackId)?.persona;
 }
 
 /** Apply a pack: set pointer + cache for each section it carries; others untouched. */

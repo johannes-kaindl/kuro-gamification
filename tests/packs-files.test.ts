@@ -33,3 +33,16 @@ describe('bundled pack files mirror their in-code lore constants', () => {
     });
   }
 });
+
+describe('bundled pack personas', () => {
+  for (const file of ['gothic-lore.kuro.json', 'cozy-lore.kuro.json']) {
+    it(`${file} carries a persona within the length limit`, () => {
+      const raw = JSON.parse(fs.readFileSync(path.join(packsDir, file), 'utf8')) as {
+        persona?: unknown;
+      };
+      expect(typeof raw.persona).toBe('string');
+      expect((raw.persona as string).length).toBeGreaterThan(50);
+      expect((raw.persona as string).length).toBeLessThanOrEqual(2000);
+    });
+  }
+});

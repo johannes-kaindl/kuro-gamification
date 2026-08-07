@@ -31,6 +31,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Changed
 
+- Destructive buttons no longer call the deprecated `setWarning()`. They go through the kit's
+  `applyDestructive()`, which uses `setDestructive()` on Obsidian 1.13+ and falls back to the
+  native `mod-warning` class below it — so the store review stops flagging it without raising
+  `minAppVersion` above 1.8.7. Vendored `confirm.ts` re-copied from obsidian-kit@0.25.0.
 - README (EN + DE) restructured to the workspace README gold standard
   (`_docs/templates/README-obsidian-plugin.md`): features first, context paragraph under the
   badge row, install in three ways (Community · Manual · From source), a Contributing section,

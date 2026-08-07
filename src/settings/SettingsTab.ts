@@ -27,7 +27,7 @@ import { ImportPackModal } from '../modals/PackIoModal';
 import { ResetDataModal } from '../modals/ResetDataModal';
 import { WelcomeModal } from '../modals/WelcomeModal';
 import { HelpModal } from '../modals/HelpModal';
-import { confirmAction } from '../vendor/kit-obsidian/confirm';
+import { applyDestructive, confirmAction } from '../vendor/kit-obsidian/confirm';
 import { FolderSuggest } from '../vendor/kit-obsidian/folder-suggest';
 import { collapsibleSection, type CollapsibleStorage } from '../vendor/kit-obsidian/collapsible';
 import { buildUnitPack, resetUnit, type PackUnit } from '../utils/packSections';
@@ -420,7 +420,7 @@ export class KuroSettingsTab extends PluginSettingTab {
           const pack = buildUnitPack(unit, this.plugin.data.settings);
           try { await navigator.clipboard.writeText(JSON.stringify(pack, null, 2)); new Notice(t('modal.pack.export.copied', lang)); } catch { /* clipboard unavailable */ }
         }))
-      .addButton((b) => b.setButtonText(t('pack.action.reset', lang)).setWarning()
+      .addButton((b) => applyDestructive(b.setButtonText(t('pack.action.reset', lang)))
         .onClick(() => { void this._resetUnitConfirmed(unit, lang); }));
   }
 
@@ -497,7 +497,7 @@ export class KuroSettingsTab extends PluginSettingTab {
             if (this.plugin.data.settings.enableNotices) new Notice(t('notice.pack.activated', lang, { name: pack.name }));
             this._refreshUi();
           }))
-        .addButton((b) => b.setButtonText(t('set.packs.delete', lang)).setWarning().onClick(async () => {
+        .addButton((b) => applyDestructive(b.setButtonText(t('set.packs.delete', lang))).onClick(async () => {
           const ok = await confirmAction(this.app, {
             title: t('modal.pack.delete.title', lang),
             message: t('modal.pack.delete.body', lang, { name: pack.name }),
@@ -540,7 +540,7 @@ export class KuroSettingsTab extends PluginSettingTab {
           render: (setting) => { setting.addButton((b) => b.setButtonText(t('btn.import', lang))
             .onClick(() => new ImportDataModal(this.app, this.plugin).open())); } },
         { name: t('set.advanced.reset', lang),
-          render: (setting) => { setting.addButton((b) => b.setButtonText(t('btn.reset', lang)).setWarning()
+          render: (setting) => { setting.addButton((b) => applyDestructive(b.setButtonText(t('btn.reset', lang)))
             .onClick(() => new ResetDataModal(this.app, this.plugin).open())); } },
       ],
     };

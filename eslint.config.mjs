@@ -34,15 +34,15 @@ export default [
     },
   },
   {
-    // display()/setWarning() are deprecated in favor of getSettingDefinitions()/
-    // setDestructive() — both @since 1.13.0. kuro deliberately keeps a much
-    // lower floor (1.8.7) for reach (preflight.mjs explicitly bans 1.13+
-    // "Catalyst-only" floors), so display()/setWarning() stay the correct,
-    // wider-compatible choice here, not a defect to migrate away from.
-    // confirm.ts is vendored verbatim from obsidian-kit (never hand-edit) and
-    // carries the same setWarning() call — it replaced the deleted
-    // src/modals/ConfirmModal.ts that used to be listed here.
-    files: ["src/settings/SettingsTab.ts", "src/vendor/kit-obsidian/confirm.ts"],
+    // display() is deprecated in favor of getSettingDefinitions() (@since 1.13.0).
+    // kuro deliberately keeps a much lower floor (1.8.7) for reach (preflight.mjs
+    // explicitly bans 1.13+ "Catalyst-only" floors), so display() stays the
+    // correct, wider-compatible choice here, not a defect to migrate away from.
+    // setWarning() no longer needs an exception: every destructive button — in
+    // SettingsTab and inside the vendored confirm.ts — now goes through the kit's
+    // applyDestructive(), which calls setDestructive() when available (>= 1.13)
+    // and falls back to the native mod-warning class below it.
+    files: ["src/settings/SettingsTab.ts"],
     rules: {
       "@typescript-eslint/no-deprecated": "off",
     },

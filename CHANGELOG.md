@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-08-11
+
 ### Added
 
 - **TaskNotes pomodoro field-mismatch hint.** If the [TaskNotes](https://github.com/callumalpass/tasknotes)

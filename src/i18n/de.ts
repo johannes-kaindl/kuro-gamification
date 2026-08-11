@@ -139,6 +139,8 @@ export const de: Record<string, string> = {
     + 'eine reine Zahl als auch das Session-Array, das TaskNotes bei '
     + 'pomodoroStorageLocation "daily-notes" schreibt — gezählt werden nur abgeschlossene '
     + 'Work-Sessions, Pausen und abgebrochene Sessions ignoriert Kuro.',
+  'set.pomoKey.mismatchHint': 'TaskNotes schreibt Pomodoro-Sessions in die Tagesnotizen unter „{key}" — abweichend vom Key oben, der Bonus kann also nie greifen.',
+  'set.pomoKey.mismatchApply': '„{key}" übernehmen',
   'set.pomoThreshold.name': 'Pomodoro-Schwelle',
   'set.pomoBonus.name': 'Pomodoro-Bonus',
 

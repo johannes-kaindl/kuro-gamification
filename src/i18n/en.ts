@@ -129,6 +129,8 @@ export const en: Record<string, string> = {
   'set.pomoKey.desc': 'Default "pomodoros" matches TaskNotes\' own default. Accepts either a plain '
     + 'number or the session array TaskNotes writes when pomodoroStorageLocation is "daily-notes" '
     + '— only completed work sessions are counted, breaks and interrupted sessions are ignored.',
+  'set.pomoKey.mismatchHint': 'TaskNotes is writing pomodoro sessions to daily notes under "{key}" — different from the key above, so the bonus can never fire.',
+  'set.pomoKey.mismatchApply': 'Use "{key}"',
   'set.pomoThreshold.name': 'Pomodoro threshold',
   'set.pomoBonus.name': 'Pomodoro bonus',
 

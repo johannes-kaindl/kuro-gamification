@@ -5,6 +5,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **TaskNotes pomodoro field-mismatch hint.** If the [TaskNotes](https://github.com/callumalpass/tasknotes)
+  community plugin is installed and stores pomodoro sessions in daily notes
+  (`pomodoroStorageLocation: "daily-notes"`) under a frontmatter key that differs from Kuro's
+  `pomodoroFrontmatterKey`, the settings tab now shows a hint with a one-click fix instead of the
+  bonus silently never firing. No warning if TaskNotes isn't installed, uses its own plugin
+  storage, or the keys already match.
+
 ### Changed
 
 - README (EN + DE) restructured to the workspace README gold standard

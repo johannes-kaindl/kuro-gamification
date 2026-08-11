@@ -36,6 +36,8 @@ import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
 import { canAddNote, normalizeNote, MAX_NOTES } from '../llm/kuroNotes';
 import { downloadJson } from '../utils/fileIo';
 import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../utils/taskNotesPomodoro';
+import { endpointStatusText } from './endpointStatusText';
+import type { EndpointStatusKind } from '../vendor/kit/endpoint_diagnostics';
 
 /** A declarative group, tagged with the section key it was built from —
  *  `_section()` needs the key (i18n + persisted collapse state), which the
@@ -637,21 +639,51 @@ export class KuroSettingsTab extends PluginSettingTab {
     });
   }
 
+  /** Modell-Wahl: sobald eine Liste vorliegt, ein echtes Dropdown daraus —
+   *  vorher wurde hier stumm immer models[0] übernommen, ohne Auswahl zu
+   *  zeigen. Der Stift-Knopf schaltet auf Handeintrag zurück (die Desc
+   *  verspricht "oder von Hand eintragen" weiterhin, z. B. für ein Modell,
+   *  das der Endpunkt nicht in /v1/models listet). */
   private _renderModelRow(containerEl: HTMLElement, lang: Lang): void {
     const s = this.plugin.data.settings;
-    new Setting(containerEl)
+    const known = this.plugin.lastFetchedModels;
+    const showDropdown = known.length > 0 && !this.plugin.chatModelManualEdit;
+
+    const setting = new Setting(containerEl)
       .setName(t('set.chatModel.name', lang))
-      .setDesc(t('set.chatModel.desc', lang))
-      .addText((tx) => tx.setValue(s.chatModel)
-        .onChange(async (v) => { s.chatModel = v.trim(); await this._persistOnly(); }))
-      .addButton((b) => b.setButtonText(t('set.chatModel.refresh', lang)).onClick(async () => {
-        const models = await this.plugin.fetchChatModels();
-        if (models.length === 0) { new Notice(t('set.chatModel.failed', lang)); return; }
-        s.chatModel = models[0];
-        await this._persistOnly();
-        new Notice(t('set.chatModel.loaded', lang, { n: models.length }));
-        this._refreshUi();
-      }));
+      .setDesc(t('set.chatModel.desc', lang));
+
+    if (showDropdown) {
+      const choices = known.includes(s.chatModel) ? known : [s.chatModel, ...known];
+      setting.addDropdown((dd) => {
+        for (const m of choices) dd.addOption(m, m);
+        dd.setValue(s.chatModel).onChange(async (v) => { s.chatModel = v; await this._persistOnly(); });
+      });
+      setting.addExtraButton((b) => b.setIcon('pencil').setTooltip(t('set.chatModel.editManually', lang))
+        .onClick(() => { this.plugin.chatModelManualEdit = true; this._refreshUi(); }));
+    } else {
+      setting.addText((tx) => tx.setValue(s.chatModel)
+        .onChange(async (v) => { s.chatModel = v.trim(); await this._persistOnly(); }));
+      if (known.length > 0) {
+        setting.addExtraButton((b) => b.setIcon('list').setTooltip(t('set.chatModel.chooseFromList', lang))
+          .onClick(() => { this.plugin.chatModelManualEdit = false; this._refreshUi(); }));
+      }
+    }
+
+    setting.addButton((b) => b.setButtonText(t('set.chatModel.refresh', lang)).onClick(async () => {
+      const result = await this.plugin.fetchChatModels();
+      if (!result.status.reachable) {
+        new Notice(endpointStatusText(result.status.kind as Exclude<EndpointStatusKind, 'ok'>, lang));
+        return;
+      }
+      if (result.models.length === 0) { new Notice(t('set.chatModel.noModels', lang)); return; }
+      this.plugin.lastFetchedModels = result.models;
+      this.plugin.chatModelManualEdit = false;
+      if (!result.models.includes(s.chatModel)) s.chatModel = result.models[0];
+      await this._persistOnly();
+      new Notice(t('set.chatModel.loaded', lang, { n: result.models.length }));
+      this._refreshUi();
+    }));
   }
 
   /* ── §13 Merkzettel ───────────────────────────────────── */

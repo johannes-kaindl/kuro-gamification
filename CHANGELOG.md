@@ -29,6 +29,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
   Cozy, dark for Gothic) and can be overridden with your own text in the settings. Optional
   and length-capped; the pack format stays at `kuroPack: 1`.
 
+### Fixed
+
+- **Endpoint setup gave no feedback when it failed.** The model row in settings was a text
+  field plus a refresh button that silently picked the first model on success and showed one
+  generic "unreachable" message on failure — no way to tell a refused connection from a wrong
+  path from a missing API key. The model list fetch also never sent the configured API key, so
+  any endpoint that requires one always failed there even though chat itself worked. Fixed: the
+  refresh button now shows a specific, localized reason (refused / timed out / wrong host /
+  unauthorized / not an OpenAI-compatible API), sends the API key like the chat client always
+  did, and — once a list loads — turns the model field into an actual dropdown instead of
+  guessing; a pencil button switches back to manual entry for a model the endpoint doesn't list.
+
 ## [1.1.0] — 2026-08-11
 
 ### Added

@@ -83,6 +83,9 @@ export class ItemView {
 
 export const setIcon = (_el: any, _name: string) => {};
 export const normalizePath = (s: string) => s;
+/** Tests overwrite this with their own jest.fn() per case (no shared jest dep in this mock file). */
+export let requestUrl: (req: any) => Promise<any> = () => Promise.reject(new Error('requestUrl not mocked'));
+export function __setMockRequestUrl(fn: (req: any) => Promise<any>): void { requestUrl = fn; }
 export function debounce<T extends (...args: any[]) => any>(fn: T, _ms: number, _i: boolean): T {
   return fn;
 }

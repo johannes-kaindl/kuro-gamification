@@ -32,9 +32,8 @@ import { XhrSseTransport } from './llm/XhrSseTransport';
 import { buildContext } from './llm/kuroContext';
 import { buildMessages, resolvePersona } from './llm/kuroPrompt';
 import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
-import { parseModelList } from './llm/modelList';
+import { probeModels, type ModelsTransport, type ProbeModelsResult } from './llm/probeEndpoint';
 import { activePersona } from './utils/packLibrary';
-import { normalizeEndpoint } from './vendor/kit/endpoint';
 
 export default class KuroPlugin extends Plugin {
   // public so views/modals/settings can read/mutate
@@ -47,6 +46,11 @@ export default class KuroPlugin extends Plugin {
   public chatSession = new ChatSession();
   /** Rohtext der heutigen Daily — nur gefüllt, wenn der Chat aktiv ist. */
   public lastDailyText: string | null = null;
+  /** Zuletzt vom Endpunkt gemeldete Modell-Ids, für das Dropdown in den
+   *  Einstellungen. Bewusst nicht persistiert — pro Sitzung frisch. */
+  public lastFetchedModels: string[] = [];
+  /** Umschalter Dropdown ↔ Handeintrag im Modell-Feld der Einstellungen. */
+  public chatModelManualEdit = false;
 
   private statusBarEl: HTMLElement | null = null;
   private debouncedRefresh!: () => void;
@@ -346,17 +350,25 @@ export default class KuroPlugin extends Plugin {
     this.syncChat();
   }
 
-  /** Modell-Liste vom konfigurierten Endpunkt; [] wenn nicht erreichbar. */
-  async fetchChatModels(): Promise<string[]> {
+  private readonly modelsTransport: ModelsTransport = {
+    async get(url, headers) {
+      const res = await requestUrl({ url, headers, throw: false });
+      return { status: res.status, body: res.json };
+    },
+  };
+
+  /** Modell-Liste + Erreichbarkeits-Diagnose vom konfigurierten Endpunkt.
+   *  Sendet den API-Key mit (KuroChatClient tat das schon immer, dieser
+   *  Pfad bislang nicht — ein Endpunkt mit Schlüssel-Pflicht scheiterte
+   *  hier immer, ohne dass der Chat selbst betroffen war). */
+  async fetchChatModels(): Promise<ProbeModelsResult> {
     const s = this.data.settings;
-    if (s.chatEndpoint === '') return [];
-    try {
-      const res = await requestUrl({ url: `${normalizeEndpoint(s.chatEndpoint)}/v1/models` });
-      return parseModelList(res.json);
-    } catch (err) {
-      this.logger.error('model list failed', err);
-      return [];
+    if (s.chatEndpoint.trim() === '') {
+      return { status: { reachable: false, kind: 'unknown', klartext: '' }, models: [] };
     }
+    const result = await probeModels({ endpoint: s.chatEndpoint, apiKey: s.chatApiKey }, this.modelsTransport);
+    if (!result.status.reachable) this.logger.error('model list failed', result.status.klartext);
+    return result;
   }
 
   /* ── Sidebar lifecycle ────────────────────────────────── */

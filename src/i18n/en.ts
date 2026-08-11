@@ -126,6 +126,8 @@ export const en: Record<string, string> = {
   'set.bonus75.name': 'Bonus on 75%+ daily completion',
   'set.bonus90.name': 'Bonus on 90%+ daily completion',
   'set.pomoKey.name': 'Pomodoro frontmatter key',
+  'set.pomoKey.mismatchHint': 'TaskNotes is writing pomodoro sessions to daily notes under "{key}" — different from the key above, so the bonus can never fire.',
+  'set.pomoKey.mismatchApply': 'Use "{key}"',
   'set.pomoThreshold.name': 'Pomodoro threshold',
   'set.pomoBonus.name': 'Pomodoro bonus',
 

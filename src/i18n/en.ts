@@ -126,6 +126,9 @@ export const en: Record<string, string> = {
   'set.bonus75.name': 'Bonus on 75%+ daily completion',
   'set.bonus90.name': 'Bonus on 90%+ daily completion',
   'set.pomoKey.name': 'Pomodoro frontmatter key',
+  'set.pomoKey.desc': 'Default "pomodoros" matches TaskNotes\' own default. Accepts either a plain '
+    + 'number or the session array TaskNotes writes when pomodoroStorageLocation is "daily-notes" '
+    + '— only completed work sessions are counted, breaks and interrupted sessions are ignored.',
   'set.pomoThreshold.name': 'Pomodoro threshold',
   'set.pomoBonus.name': 'Pomodoro bonus',
 

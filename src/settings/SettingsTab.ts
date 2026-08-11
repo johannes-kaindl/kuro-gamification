@@ -35,6 +35,7 @@ import { activeNames, activatePack, canActivatePack, deletePack, resetSection } 
 import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
 import { canAddNote, normalizeNote, MAX_NOTES } from '../llm/kuroNotes';
 import { downloadJson } from '../utils/fileIo';
+import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../utils/taskNotesPomodoro';
 
 /** A declarative group, tagged with the section key it was built from —
  *  `_section()` needs the key (i18n + persisted collapse state), which the
@@ -311,11 +312,34 @@ export class KuroSettingsTab extends PluginSettingTab {
         { name: t('set.bonus50.name', lang), control: { type: 'number', key: 'bonusFor50pct', min: 0, max: 999 } },
         { name: t('set.bonus75.name', lang), control: { type: 'number', key: 'bonusFor75pct', min: 0, max: 999 } },
         { name: t('set.bonus90.name', lang), control: { type: 'number', key: 'bonusFor90pct', min: 0, max: 999 } },
-        { name: t('set.pomoKey.name', lang), control: { type: 'text', key: 'pomodoroFrontmatterKey' } },
+        { name: t('set.pomoKey.name', lang), desc: t('set.pomoKey.desc', lang),
+          control: { type: 'text', key: 'pomodoroFrontmatterKey' } },
+        { name: '', render: (setting) => this._renderPomodoroFieldHint(this._hostFor(setting), lang) },
         { name: t('set.pomoThreshold.name', lang), control: { type: 'number', key: 'pomodoroThreshold', min: 1, max: 99 } },
         { name: t('set.pomoBonus.name', lang), control: { type: 'number', key: 'pomodoroBonus', min: 0, max: 999 } },
       ],
     };
+  }
+
+  /**
+   * Renders nothing when TaskNotes isn't installed or its field mapping
+   * already matches — only draws a hint (+ one-click fix) when the
+   * pomodoro bonus would otherwise silently never fire. Recomputed on
+   * every settings-tab render, so it clears itself after "Übernehmen".
+   */
+  private _renderPomodoroFieldHint(el: HTMLElement, lang: Lang): void {
+    const s = this.plugin.data.settings;
+    const info = readTaskNotesPomodoroInfo(this.app);
+    const mismatch = pomodoroFieldMismatch(info, s.pomodoroFrontmatterKey);
+    if (!mismatch) return;
+    new Setting(el)
+      .setDesc(t('set.pomoKey.mismatchHint', lang, { key: mismatch.suggestedKey }))
+      .addButton((b) => b.setButtonText(t('set.pomoKey.mismatchApply', lang, { key: mismatch.suggestedKey }))
+        .onClick(async () => {
+          s.pomodoroFrontmatterKey = mismatch.suggestedKey;
+          await this._save();
+          this._refreshUi();
+        }));
   }
 
   /* ── §4 Weekly ────────────────────────────────────────── */

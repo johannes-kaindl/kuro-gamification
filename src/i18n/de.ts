@@ -135,6 +135,12 @@ export const de: Record<string, string> = {
   'set.bonus75.name': 'Bonus bei 75%+ Tagesabschluss',
   'set.bonus90.name': 'Bonus bei 90%+ Tagesabschluss',
   'set.pomoKey.name': 'Pomodoro-Frontmatter-Key',
+  'set.pomoKey.desc': 'Default "pomodoros" passt zu TaskNotes\' eigenem Default. Akzeptiert sowohl '
+    + 'eine reine Zahl als auch das Session-Array, das TaskNotes bei '
+    + 'pomodoroStorageLocation "daily-notes" schreibt — gezählt werden nur abgeschlossene '
+    + 'Work-Sessions, Pausen und abgebrochene Sessions ignoriert Kuro.',
+  'set.pomoKey.mismatchHint': 'TaskNotes schreibt Pomodoro-Sessions in die Tagesnotizen unter „{key}" — abweichend vom Key oben, der Bonus kann also nie greifen.',
+  'set.pomoKey.mismatchApply': '„{key}" übernehmen',
   'set.pomoThreshold.name': 'Pomodoro-Schwelle',
   'set.pomoBonus.name': 'Pomodoro-Bonus',
 

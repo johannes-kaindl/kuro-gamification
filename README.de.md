@@ -130,7 +130,10 @@ In Einstellungen → Habits hinzufügen:
 - `draussen` → `🌳 Draußen` → 10 XP
 - `haushalt` → `🏠 Haushalt` → 10 XP
 
-Pomodoro-Bonus: automatisch wenn `pomodoros >= threshold` (Default ≥ 4 → +10 XP).
+Pomodoro-Bonus: automatisch wenn `pomodoros >= threshold` (Default ≥ 4 → +10 XP). Das
+Feld `pomodoros` akzeptiert auch das Session-Array, das [TaskNotes](https://github.com/callumalpass/tasknotes)
+schreibt, wenn `pomodoroStorageLocation` auf `"daily-notes"` steht — Kuro zählt daraus nur
+abgeschlossene Work-Sessions, Pausen und abgebrochene Sessions ignoriert es.
 
 ### Ästhetik-CSS
 

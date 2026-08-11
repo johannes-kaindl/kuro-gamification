@@ -29,6 +29,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
   Cozy, dark for Gothic) and can be overridden with your own text in the settings. Optional
   and length-capped; the pack format stays at `kuroPack: 1`.
 
+## [1.1.0] — 2026-08-11
+
+### Added
+
+- **TaskNotes pomodoro field-mismatch hint.** If the [TaskNotes](https://github.com/callumalpass/tasknotes)
+  community plugin is installed and stores pomodoro sessions in daily notes
+  (`pomodoroStorageLocation: "daily-notes"`) under a frontmatter key that differs from Kuro's
+  `pomodoroFrontmatterKey`, the settings tab now shows a hint with a one-click fix instead of the
+  bonus silently never firing. No warning if TaskNotes isn't installed, uses its own plugin
+  storage, or the keys already match.
+
 ### Changed
 
 - Destructive buttons no longer call the deprecated `setWarning()`. They go through the kit's
@@ -49,6 +60,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 - Nested `kuro-status` example in both READMEs was written with a three-backtick outer fence,
   which terminated the block early; it now uses a four-backtick fence.
+- **Pomodoro bonus XP was never awarded when [TaskNotes](https://github.com/callumalpass/tasknotes)
+  writes its session history to daily notes** (`pomodoroStorageLocation: "daily-notes"`). That
+  mode stores an array of session objects in the frontmatter field, but the XP engine only
+  understood a plain number there and silently treated the array as "no pomodoros". It now
+  counts completed work sessions from that array (breaks and interrupted sessions excluded);
+  a plain numeric field still works exactly as before. The two Pomodoro settings that had no
+  description at all now explain both accepted formats.
 
 ## [1.0.6] — 2026-07-25
 

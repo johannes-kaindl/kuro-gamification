@@ -84,7 +84,8 @@ export class XpEngine {
           });
         }
       }
-      const pomos = numFromFm(d.frontmatter[s.pomodoroFrontmatterKey]);
+      const rawPomos = d.frontmatter[s.pomodoroFrontmatterKey];
+      const pomos = Array.isArray(rawPomos) ? countCompletedPomodoros(rawPomos) : numFromFm(rawPomos);
       if (pomos !== null && pomos >= s.pomodoroThreshold) {
         xp += s.pomodoroBonus;
         rows.push({
@@ -185,6 +186,25 @@ export class XpEngine {
       : 1;
     return { current, next, xpToNext, pctToNext };
   }
+}
+
+/**
+ * Counts completed work sessions in a TaskNotes daily-notes pomodoro session array
+ * (`pomodoroStorageLocation: "daily-notes"`). Breaks and interrupted/unfinished
+ * sessions don't count.
+ */
+function countCompletedPomodoros(sessions: unknown[]): number {
+  let count = 0;
+  for (const entry of sessions) {
+    if (
+      typeof entry === 'object' && entry !== null
+      && (entry as Record<string, unknown>).type === 'work'
+      && (entry as Record<string, unknown>).completed === true
+    ) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function numFromFm(v: unknown): number | null {

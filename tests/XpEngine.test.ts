@@ -75,6 +75,65 @@ describe('XpEngine.computeDaily', () => {
     expect(r.xp).toBe(baseSettings.pomodoroBonus);
   });
 
+  it('counts completed work sessions from a TaskNotes daily-notes session array', () => {
+    const sessions = [
+      { type: 'work', completed: true },
+      { type: 'work', completed: true },
+      { type: 'work', completed: true },
+      { type: 'work', completed: true },
+    ];
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { pomodoros: sessions } },
+      baseSettings,
+    );
+    expect(r.xp).toBe(baseSettings.pomodoroBonus);
+  });
+
+  it('excludes breaks and interrupted sessions from the pomodoro session-array count', () => {
+    const sessions = [
+      { type: 'work', completed: true },
+      { type: 'work', completed: true },
+      { type: 'work', completed: true },
+      { type: 'work', completed: false },   // interrupted/unfinished
+      { type: 'short-break', completed: true },
+      { type: 'long-break', completed: true },
+    ];
+    // 6 entries total, but only 3 qualifying work sessions — below the default threshold of 4.
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { pomodoros: sessions } },
+      baseSettings,
+    );
+    expect(r.xp).toBe(0);
+  });
+
+  it('does not award pomodoro bonus for a session array below threshold', () => {
+    const sessions = [
+      { type: 'work', completed: true },
+      { type: 'work', completed: true },
+    ];
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { pomodoros: sessions } },
+      baseSettings,
+    );
+    expect(r.xp).toBe(0);
+  });
+
+  it('does not award pomodoro bonus for an empty session array', () => {
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { pomodoros: [] } },
+      baseSettings,
+    );
+    expect(r.xp).toBe(0);
+  });
+
+  it('does not award pomodoro bonus when the frontmatter field is absent', () => {
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: {} },
+      baseSettings,
+    );
+    expect(r.xp).toBe(0);
+  });
+
   it('does not award habits when disabled', () => {
     const settings = {
       ...baseSettings,

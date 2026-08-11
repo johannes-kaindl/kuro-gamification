@@ -21,6 +21,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 - Nested `kuro-status` example in both READMEs was written with a three-backtick outer fence,
   which terminated the block early; it now uses a four-backtick fence.
+- **Pomodoro bonus XP was never awarded when [TaskNotes](https://github.com/callumalpass/tasknotes)
+  writes its session history to daily notes** (`pomodoroStorageLocation: "daily-notes"`). That
+  mode stores an array of session objects in the frontmatter field, but the XP engine only
+  understood a plain number there and silently treated the array as "no pomodoros". It now
+  counts completed work sessions from that array (breaks and interrupted sessions excluded);
+  a plain numeric field still works exactly as before. The two Pomodoro settings that had no
+  description at all now explain both accepted formats.
 
 ## [1.0.6] — 2026-07-25
 

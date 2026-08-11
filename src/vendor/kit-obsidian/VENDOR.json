@@ -3,6 +3,8 @@
   "modules": [
     { "file": "confirm.ts", "source": "obsidian-kit", "version": "0.25.0", "sha": "1ca3861" },
     { "file": "folder-suggest.ts", "source": "obsidian-kit", "version": "0.18.0", "sha": "988f4fd" },
-    { "file": "clock.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" }
+    { "file": "clock.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
+    { "file": "endpoint-list.ts", "source": "obsidian-kit", "version": "0.26.0", "sha": "2a7b5d7", "note": "Importpfade ../pure/ -> ../kit/ angepasst (Vendor-Layout)." },
+    { "file": "model-picker.ts", "source": "obsidian-kit", "version": "0.26.0", "sha": "2a7b5d7", "note": "Importpfade ../pure/ -> ../kit/ angepasst (Vendor-Layout)." }
   ]
 }

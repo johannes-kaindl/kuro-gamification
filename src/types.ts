@@ -1,6 +1,7 @@
 /* ==========================================================
    Kuro Gamification — Type Definitions + Defaults
    ========================================================== */
+import type { EndpointConfig } from './vendor/kit/endpoint_config';
 
 export type KuroLootTier = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type Lang = 'de' | 'en';
@@ -153,8 +154,10 @@ export interface KuroSettings {
 
   /* Companion-Chat — off-by-default, gedacht für lokale Endpunkte */
   enableChat: boolean;
-  chatEndpoint: string;
-  chatApiKey: string;
+  /** Geordnete Fallback-Liste; der erste erreichbare Eintrag gewinnt (resolveActiveEndpointConfig).
+   *  Jede Zeile trägt ihren eigenen API-Schlüssel und optional ein Modell-Override. */
+  chatEndpoints: EndpointConfig[];
+  /** Globales Modell, das gilt, wenn der aktive Endpunkt keinen Override trägt. */
   chatModel: string;
   chatSuppressThinking: boolean;
   chatDailyContext: ChatDailyContext;
@@ -273,8 +276,7 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   uiCollapsed: {},
 
   enableChat: false,
-  chatEndpoint: '',
-  chatApiKey: '',
+  chatEndpoints: [],
   chatModel: '',
   chatSuppressThinking: true,
   chatDailyContext: 'tasks',

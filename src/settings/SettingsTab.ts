@@ -36,8 +36,14 @@ import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
 import { canAddNote, normalizeNote, MAX_NOTES } from '../llm/kuroNotes';
 import { downloadJson } from '../utils/fileIo';
 import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../utils/taskNotesPomodoro';
-import { endpointStatusText } from './endpointStatusText';
-import type { EndpointStatusKind } from '../vendor/kit/endpoint_diagnostics';
+import { buildEndpointList, type EndpointListStrings } from '../vendor/kit-obsidian/endpoint-list';
+import { renderModelPicker } from '../vendor/kit-obsidian/model-picker';
+import { resolveModelChoice, type ModelHintKey } from '../vendor/kit/model-choice';
+import { createModelListCache, type ModelListCache } from '../vendor/kit/model-list-cache';
+import { ENDPOINT_PRESETS } from '../vendor/kit/endpoint_diagnostics';
+import type { EndpointStatus, EndpointWarning, EndpointPreset } from '../vendor/kit/endpoint_diagnostics';
+import type { EndpointRole } from '../vendor/kit/endpoint_config';
+import { statusKindKey, warnRuleKey, roleKindKey } from './endpointListModel';
 
 /** A declarative group, tagged with the section key it was built from —
  *  `_section()` needs the key (i18n + persisted collapse state), which the
@@ -142,6 +148,14 @@ export class KuroSettingsTab extends PluginSettingTab {
       const el = this._section(group.key, lang);
       for (const item of group.items ?? []) this._renderItem(el, item);
     }
+  }
+
+  /** Obsidian ruft dies beim Schließen des Tabs. Der Modell-Cache hält Promises und
+   *  überlebt Tab-Neuaufbauten bewusst — ohne diesen Aufruf bliebe ein einmal als
+   *  "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so stehen. */
+  hide(): void {
+    this._modelCache.clear();
+    super.hide();
   }
 
   private _renderItem(containerEl: HTMLElement, item: SettingDefinitionItem): void {
@@ -598,12 +612,10 @@ export class KuroSettingsTab extends PluginSettingTab {
       items: [
         { name: t('set.enableChat.name', lang), desc: t('set.enableChat.desc', lang),
           control: { type: 'toggle', key: 'enableChat' } },
-        { name: t('set.chatEndpoint.name', lang), desc: t('set.chatEndpoint.desc', lang),
-          control: { type: 'text', key: 'chatEndpoint' } },
-        { name: t('set.chatApiKey.name', lang), desc: t('set.chatApiKey.desc', lang),
-          control: { type: 'text', key: 'chatApiKey' } },
+        { name: t('set.chatEndpoints.name', lang), desc: t('set.chatEndpoints.desc', lang),
+          render: (setting) => this._renderChatEndpoints(setting, lang) },
         { name: t('set.chatModel.name', lang), desc: t('set.chatModel.desc', lang),
-          render: (setting) => this._renderModelRow(this._hostFor(setting), lang) },
+          render: (setting) => this._renderGlobalModel(this._hostFor(setting), lang) },
         { name: t('set.chatSuppressThinking.name', lang), desc: t('set.chatSuppressThinking.desc', lang),
           control: { type: 'toggle', key: 'chatSuppressThinking' } },
         { name: t('set.chatDailyContext.name', lang), desc: t('set.chatDailyContext.desc', lang),
@@ -639,51 +651,123 @@ export class KuroSettingsTab extends PluginSettingTab {
     });
   }
 
-  /** Modell-Wahl: sobald eine Liste vorliegt, ein echtes Dropdown daraus —
-   *  vorher wurde hier stumm immer models[0] übernommen, ohne Auswahl zu
-   *  zeigen. Der Stift-Knopf schaltet auf Handeintrag zurück (die Desc
-   *  verspricht "oder von Hand eintragen" weiterhin, z. B. für ein Modell,
-   *  das der Endpunkt nicht in /v1/models listet). */
-  private _renderModelRow(containerEl: HTMLElement, lang: Lang): void {
-    const s = this.plugin.data.settings;
-    const known = this.plugin.lastFetchedModels;
-    const showDropdown = known.length > 0 && !this.plugin.chatModelManualEdit;
+  /** Modell-Listen je Endpunkt, geteilt von jeder Zeile des Kit-Editors — gehört der
+   *  Lebensdauer des Tabs, nicht eines einzelnen Render-Durchlaufs (sonst würde jede
+   *  Zeile ihre eigene /v1/models-Anfrage feuern). Geleert in hide() — sonst bliebe ein
+   *  einmal als "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so
+   *  stehen, selbst nachdem der Server gestartet wurde. */
+  private readonly _modelCache: ModelListCache = createModelListCache();
+  /** URL des Endpunkts, den der Resolver aktuell wählt — der Kit-Editor fragt das
+   *  SYNCHRON pro Zeile ab ("aktiv" vs. "erreichbar, Platz N"), während die Antwort
+   *  eine Netzwerk-Frage ist; deshalb einmal pro Render aufgelöst und hier abgelegt. */
+  private _activeChatEndpointUrl: string | null = null;
 
+  private _renderChatEndpoints(setting: Setting, lang: Lang): void {
+    buildEndpointList({
+      containerEl: this._hostFor(setting),
+      label: t('set.chatEndpoints.name', lang),
+      desc: t('set.chatEndpoints.desc', lang),
+      placeholder: ENDPOINT_PRESETS[0]?.url ?? '',
+      strings: this._endpointListStrings(lang),
+      cache: this._modelCache,
+      get: () => this.plugin.data.settings.chatEndpoints,
+      set: (eps) => { this.plugin.data.settings.chatEndpoints = eps; },
+      active: () => this._activeChatEndpointUrl,
+      // EIN Client je Zeile trägt sowohl die Erreichbarkeits-Probe (Status-Icon) als
+      // auch die Modell-Liste (Dropdown) — Status und Liste können so nie über
+      // verschiedene Endpunkte auseinanderlaufen.
+      clientFor: (cfg) => this.plugin.clientFor(cfg),
+      globalModel: () => this.plugin.data.settings.chatModel,
+      save: () => this._persistOnly(),
+      reconnect: () => {
+        this.plugin.endpointResolver.invalidate();
+        return this._syncActiveChatEndpoint().then(() => undefined);
+      },
+      rerender: () => this._refreshUi(),
+    });
+    // Erster Resolve dieses Render-Durchlaufs. Erneutes Rendern nur bei echter Änderung —
+    // terminiert, weil der Folge-Durchlauf denselben (gecachten) Wert liefert und dort stoppt.
+    void this._syncActiveChatEndpoint().then((changed) => { if (changed) this._refreshUi(); });
+  }
+
+  private async _syncActiveChatEndpoint(): Promise<boolean> {
+    const before = this._activeChatEndpointUrl;
+    const active = await this.plugin.endpointResolver.resolve();
+    this._activeChatEndpointUrl = active?.url ?? null;
+    return this._activeChatEndpointUrl !== before;
+  }
+
+  /** Jeder nutzersichtbare Text des Kit-Editors. Das Kit formuliert nichts selbst
+   *  (endpoint_diagnostics.klartext ist hart deutsch, dieses Plugin ist EN+DE) —
+   *  Übersetzung passiert ausschließlich hier, über dieselbe t()-Vokabel wie der Rest
+   *  des Tabs. */
+  private _endpointListStrings(lang: Lang): EndpointListStrings {
+    return {
+      addPlaceholder: t('set.chatEndpoints.addPlaceholder', lang),
+      apiKeyPlaceholder: t('set.chatEndpoints.keyPlaceholder', lang),
+      modelPlaceholder: t('set.chatEndpoints.modelPlaceholder', lang),
+      ariaUrl: t('set.chatEndpoints.ariaUrl', lang),
+      ariaAdd: t('set.chatEndpoints.ariaAdd', lang),
+      ariaApiKey: (url) => t('set.chatEndpoints.ariaKeyFor', lang, { 0: url }),
+      ariaModel: (url) => t('set.chatEndpoints.ariaModelFor', lang, { 0: url }),
+      // globalModel kann leer sein — "Globales Modell ()" wäre falsch, also hier den
+      // Ersatztext in der jeweiligen Sprache ausschreiben statt einen Kit-Fallback zu nutzen.
+      emptyModelLabel: (globalModel) => t('set.chatEndpoints.modelGlobal', lang,
+        { 0: globalModel || t('set.chatEndpoints.modelGlobalUnset', lang) }),
+      modelHint: (key: ModelHintKey) => (key ? t(`set.model.hint.${key}`, lang) : ''),
+      savedSuffix: t('set.model.saved', lang),
+      refreshModels: t('set.chatModel.refresh', lang),
+      moveToFront: t('set.chatEndpoints.moveToFront', lang),
+      remove: t('set.chatEndpoints.remove', lang),
+      thirdParty: t('set.chatEndpoints.thirdParty', lang),
+      probing: t('set.chatEndpoints.probing', lang),
+      // status.raw erscheint nur bei kind "unknown" — jeder andere Grund ist vollständig
+      // übersetzt; das Kit-eigene klartext (hart deutsch) geht nie in die UI.
+      statusTooltip: (status: EndpointStatus) => t(statusKindKey(status.kind), lang),
+      role: (role: EndpointRole) => t(roleKindKey(role), lang,
+        { 0: role.kind === 'standby' ? String(role.position) : '' }),
+      warnings: (warnings: EndpointWarning[]) => warnings.map((w) => t(warnRuleKey(w.rule), lang)).join(' · '),
+      presetTooltip: (preset: EndpointPreset) =>
+        t('set.chatEndpoints.presetTooltip', lang, { 0: preset.label, 1: preset.url }),
+      presetLabel: (preset: EndpointPreset) => t('set.chatEndpoints.addPreset', lang, { 0: preset.label }),
+      checkConnection: t('set.chatEndpoints.checkConnection', lang),
+      saveFailed: t('set.chatEndpoints.saveFailed', lang),
+    };
+  }
+
+  /** Globales Modell: gilt, wenn der aktive Endpunkt keinen Override trägt. Nutzt
+   *  denselben Picker wie das Override je Endpunkt-Zeile (resolveModelChoice +
+   *  renderModelPicker) — ein Dropdown aus der Liste des AKTIVEN Endpunkts, sobald
+   *  bekannt, sonst Freitext. Ein Refresh baut den ganzen Tab neu (wie beim
+   *  Zeilen-Editor) statt sich selbst neu zu zeichnen — zwei Zeichenpfade für
+   *  dieselbe Zeile wären eine zweite Wahrheit. */
+  private _renderGlobalModel(containerEl: HTMLElement, lang: Lang): void {
+    const s = this.plugin.data.settings;
     const setting = new Setting(containerEl)
       .setName(t('set.chatModel.name', lang))
       .setDesc(t('set.chatModel.desc', lang));
 
-    if (showDropdown) {
-      const choices = known.includes(s.chatModel) ? known : [s.chatModel, ...known];
-      setting.addDropdown((dd) => {
-        for (const m of choices) dd.addOption(m, m);
-        dd.setValue(s.chatModel).onChange(async (v) => { s.chatModel = v; await this._persistOnly(); });
+    void this._activeModelChoiceInputs().then(({ models, reachable }) => {
+      const choice = resolveModelChoice({ reachable, models, current: s.chatModel });
+      renderModelPicker({
+        setting,
+        choice,
+        ariaLabel: t('set.chatModel.name', lang),
+        placeholder: t('set.chatEndpoints.modelPlaceholder', lang),
+        hint: choice.hintKey ? t(`set.model.hint.${choice.hintKey}`, lang) : '',
+        hintAs: 'tooltip',
+        savedSuffix: t('set.model.saved', lang),
+        refreshTooltip: t('set.chatModel.refresh', lang),
+        onPick: (v) => { s.chatModel = v; void this._persistOnly(); },
+        onRefresh: () => { this._refreshUi(); },
       });
-      setting.addExtraButton((b) => b.setIcon('pencil').setTooltip(t('set.chatModel.editManually', lang))
-        .onClick(() => { this.plugin.chatModelManualEdit = true; this._refreshUi(); }));
-    } else {
-      setting.addText((tx) => tx.setValue(s.chatModel)
-        .onChange(async (v) => { s.chatModel = v.trim(); await this._persistOnly(); }));
-      if (known.length > 0) {
-        setting.addExtraButton((b) => b.setIcon('list').setTooltip(t('set.chatModel.chooseFromList', lang))
-          .onClick(() => { this.plugin.chatModelManualEdit = false; this._refreshUi(); }));
-      }
-    }
+    });
+  }
 
-    setting.addButton((b) => b.setButtonText(t('set.chatModel.refresh', lang)).onClick(async () => {
-      const result = await this.plugin.fetchChatModels();
-      if (!result.status.reachable) {
-        new Notice(endpointStatusText(result.status.kind as Exclude<EndpointStatusKind, 'ok'>, lang));
-        return;
-      }
-      if (result.models.length === 0) { new Notice(t('set.chatModel.noModels', lang)); return; }
-      this.plugin.lastFetchedModels = result.models;
-      this.plugin.chatModelManualEdit = false;
-      if (!result.models.includes(s.chatModel)) s.chatModel = result.models[0];
-      await this._persistOnly();
-      new Notice(t('set.chatModel.loaded', lang, { n: result.models.length }));
-      this._refreshUi();
-    }));
+  private async _activeModelChoiceInputs(): Promise<{ models: string[]; reachable: boolean }> {
+    const active = await this.plugin.endpointResolver.resolve();
+    if (!active) return { models: [], reachable: false };
+    return { models: await this.plugin.clientFor(active).listModels(), reachable: true };
   }
 
   /* ── §13 Merkzettel ───────────────────────────────────── */

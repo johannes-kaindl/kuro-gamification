@@ -135,8 +135,7 @@ describe('DataStore.merge — chat & notes', () => {
   it('defaults the chat settings to off and empty', () => {
     const s = ds.merge({}).settings;
     expect(s.enableChat).toBe(false);
-    expect(s.chatEndpoint).toBe('');
-    expect(s.chatApiKey).toBe('');
+    expect(s.chatEndpoints).toEqual([]);
     expect(s.chatModel).toBe('');
     expect(s.chatDailyContext).toBe('tasks');
     expect(s.chatSuppressThinking).toBe(true);
@@ -145,9 +144,17 @@ describe('DataStore.merge — chat & notes', () => {
 
   it('preserves user-overridden chat settings', () => {
     const merged = ds.merge({
-      settings: { ...DEFAULT_SETTINGS, enableChat: true, chatEndpoint: 'http://localhost:1234' },
+      settings: { ...DEFAULT_SETTINGS, enableChat: true, chatEndpoints: [{ url: 'http://localhost:1234' }] },
     });
     expect(merged.settings.enableChat).toBe(true);
-    expect(merged.settings.chatEndpoint).toBe('http://localhost:1234');
+    expect(merged.settings.chatEndpoints).toEqual([{ url: 'http://localhost:1234' }]);
+  });
+
+  it('migrates a pre-endpoint_config data.json (legacy chatEndpoint/chatApiKey) without losing the key', () => {
+    // Alte data.json-Form (vor dem Kit-endpoint_config-Umstieg): kein chatEndpoints-Feld,
+    // stattdessen die Alt-Felder — im aktuellen KuroSettings-Typ gar nicht mehr deklariert.
+    const legacy = { ...DEFAULT_SETTINGS, chatEndpoint: 'http://localhost:1234', chatApiKey: 'sk-secret' } as never;
+    const merged = ds.merge({ settings: legacy });
+    expect(merged.settings.chatEndpoints).toEqual([{ url: 'http://localhost:1234', apiKey: 'sk-secret' }]);
   });
 });

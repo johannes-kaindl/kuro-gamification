@@ -28,18 +28,25 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 - **`persona` field for packs** — the chat's voice follows the active lore pack (warm for
   Cozy, dark for Gothic) and can be overridden with your own text in the settings. Optional
   and length-capped; the pack format stays at `kuroPack: 1`.
+- **Endpoint fallback list.** The single endpoint field is now an ordered list — mix local
+  servers (LM Studio, Ollama) and hosted providers, each with its own optional API key and
+  model override; the first reachable one wins, and it re-resolves after any edit. Every row
+  shows a live status icon, a "in use / reachable, position N / not reachable" line, and a
+  connection warning (bad scheme, missing port, placeholder address) as you type — no more
+  guessing whether an address was even accepted. One-click presets for LM Studio and Ollama.
+  A saved endpoint migrates into the list automatically, key included.
 
 ### Fixed
 
-- **Endpoint setup gave no feedback when it failed.** The model row in settings was a text
-  field plus a refresh button that silently picked the first model on success and showed one
-  generic "unreachable" message on failure — no way to tell a refused connection from a wrong
-  path from a missing API key. The model list fetch also never sent the configured API key, so
-  any endpoint that requires one always failed there even though chat itself worked. Fixed: the
-  refresh button now shows a specific, localized reason (refused / timed out / wrong host /
-  unauthorized / not an OpenAI-compatible API), sends the API key like the chat client always
-  did, and — once a list loads — turns the model field into an actual dropdown instead of
-  guessing; a pencil button switches back to manual entry for a model the endpoint doesn't list.
+- **Endpoint setup gave no feedback when it failed.** The old model field was a text box plus
+  a refresh button that silently picked the first model on success and showed one generic
+  "unreachable" message on failure — no way to tell a refused connection from a wrong path
+  from a missing API key. The model list fetch also never sent the configured API key, so any
+  endpoint that requires one always failed there even though chat itself worked. Fixed by the
+  endpoint fallback list above: every row probes with its own key and reports a specific,
+  localized reason: refused / timed out / wrong host / unauthorized / not an OpenAI-compatible
+  API. The model field is a real dropdown once a list loads, with a manual-entry fallback for a
+  model the endpoint doesn't list.
 
 ## [1.1.0] — 2026-08-11
 

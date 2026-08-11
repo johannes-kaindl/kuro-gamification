@@ -105,7 +105,7 @@ export class KuroSidebarView extends ItemView {
   renderChat(): void {
     if (this.chatPanel === null) return;
     const s = this.plugin.data.settings;
-    if (s.chatEndpoint === '' || s.chatModel === '') {
+    if (s.chatEndpoints.length === 0) {
       this.chatPanel.showSetupHint();
       return;
     }

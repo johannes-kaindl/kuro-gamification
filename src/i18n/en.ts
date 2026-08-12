@@ -268,7 +268,6 @@ export const en: Record<string, string> = {
   'chat.send': 'Send',
   'chat.abort': 'Stop',
   'chat.clear': 'Clear history',
-  'chat.remember': 'Remember',
   'chat.remembered': 'Noted: {note}',
   'chat.notesFull': 'Notes are full ({max} entries) — delete one in the settings.',
   'chat.you': 'You',

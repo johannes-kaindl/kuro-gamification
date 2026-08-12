@@ -59,6 +59,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
   unreachable right as you needed it. The message log now scrolls in place; the input row and
   context toggle stay fixed at top/bottom of the chat panel.
 
+### Removed
+
+- **The 📌 pin button on your own chat messages.** It saved the raw message text verbatim into
+  the notes list, which made sense for a statement but not for a question — pinning "what
+  should I start with?" doesn't give Kuro anything useful to remember, and the tooltip ("Note
+  this") read like it would save the question as a reusable prompt, which it didn't. Type
+  `remember: …` in the chat, or add a note directly in settings — both make clear what's being
+  kept, unlike a button next to an arbitrary line.
+
 ## [1.1.0] — 2026-08-11
 
 ### Added

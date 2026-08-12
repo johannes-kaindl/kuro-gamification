@@ -15,14 +15,11 @@ import type { Lang } from '../types';
 import { t } from '../i18n';
 import type { ChatEntry, ChatSession } from '../llm/ChatSession';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
-import { MAX_NOTES } from '../llm/kuroNotes';
 
 export interface ChatPanelCallbacks {
   onAsk(question: string): void;
   onAbort(): void;
   onClear(): void;
-  onRemember(text: string): void;
-  canRemember(): boolean;
   contextInfo(): DailyExtract;
   openSettings(): void;
 }
@@ -118,24 +115,6 @@ export class KuroChatPanel {
 
     if (e.detail !== undefined) {
       line.createDiv({ cls: 'kuro-chat-detail', text: e.detail });
-    }
-
-    if (e.role === 'user') {
-      const full = !this.cb.canRemember();
-      const pin = line.createEl('button', {
-        cls: 'kuro-chat-pin',
-        attr: {
-          'aria-label': full
-            ? t('chat.notesFull', this.lang, { max: MAX_NOTES })
-            : t('chat.remember', this.lang),
-        },
-      });
-      setIcon(pin, 'pin');
-      pin.disabled = full;
-      pin.addEventListener('click', () => {
-        // Prädikat erneut prüfen: ein veralteter DOM-Klick darf nie durchschlagen.
-        if (this.cb.canRemember()) this.cb.onRemember(e.text);
-      });
     }
   }
 

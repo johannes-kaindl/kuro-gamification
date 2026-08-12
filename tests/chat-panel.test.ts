@@ -37,13 +37,11 @@ const extract = (over: Partial<DailyExtract> = {}): DailyExtract => ({
 
 function makePanel(session: ChatSession, over: Partial<ChatPanelCallbacks> = {}) {
   const host = makeHost();
-  const calls = { asked: [] as string[], remembered: [] as string[], cleared: 0, aborted: 0 };
+  const calls = { asked: [] as string[], cleared: 0, aborted: 0 };
   const cb: ChatPanelCallbacks = {
     onAsk: (q) => calls.asked.push(q),
     onAbort: () => { calls.aborted++; },
     onClear: () => { calls.cleared++; },
-    onRemember: (txt) => calls.remembered.push(txt),
-    canRemember: () => true,
     contextInfo: () => extract(),
     openSettings: () => {},
     ...over,
@@ -78,21 +76,13 @@ describe('KuroChatPanel', () => {
     expect(findAll(host, 'kuro-chat-detail')).toHaveLength(1);
   });
 
-  it('offers a pin button only on the user\'s own lines', () => {
+  it('renders no pin button — pinning a raw message text was confusing (removed 2026-08-12, Jay-Feedback)', () => {
     const s = new ChatSession();
     s.append({ role: 'user', text: 'frage' });
     s.append({ role: 'assistant', text: 'antwort' });
     const { panel, host } = makePanel(s);
     panel.render();
-    expect(findAll(host, 'kuro-chat-pin')).toHaveLength(1);
-  });
-
-  it('disables the pin button when the notes are full', () => {
-    const s = new ChatSession();
-    s.append({ role: 'user', text: 'frage' });
-    const { panel, host } = makePanel(s, { canRemember: () => false });
-    panel.render();
-    expect(findAll(host, 'kuro-chat-pin')[0].disabled).toBe(true);
+    expect(findAll(host, 'kuro-chat-pin')).toHaveLength(0);
   });
 
   it('shows a cursor while streaming', () => {

@@ -209,15 +209,6 @@
   margin-top: var(--size-2-1);
 }
 .kuro-chat-cursor { color: var(--text-accent); }
-.kuro-chat-pin {
-  background: none;
-  border: none;
-  color: var(--text-faint);
-  cursor: pointer;
-  padding: 0 var(--size-2-2);
-}
-.kuro-chat-pin:hover:not(:disabled) { color: var(--text-accent); }
-.kuro-chat-pin:disabled { opacity: 0.4; cursor: default; }
 .kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto; }
 .kuro-chat-input { flex: 1; min-width: 0; }
 

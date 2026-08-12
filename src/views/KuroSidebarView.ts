@@ -14,7 +14,6 @@ import type KuroPlugin from '../main';
 import { KuroStatusRenderer } from './KuroStatusRenderer';
 import { KuroChatPanel } from './KuroChatPanel';
 import { buildDailyExtract } from '../llm/kuroContext';
-import { canAddNote } from '../llm/kuroNotes';
 import { t } from '../i18n';
 
 export const VIEW_TYPE_KURO = 'kuro-status-view';
@@ -80,8 +79,6 @@ export class KuroSidebarView extends ItemView {
         onAsk: (q) => { void this.plugin.askKuro(q); },
         onAbort: () => this.plugin.abortChat(),
         onClear: () => this.plugin.clearChat(),
-        onRemember: (txt) => this.plugin.rememberNote(txt),
-        canRemember: () => canAddNote(this.plugin.data.kuroNotes),
         contextInfo: () => buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
         openSettings: () => this.plugin.openOwnSettings(),
       });

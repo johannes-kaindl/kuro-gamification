@@ -280,7 +280,6 @@ export const de: Record<string, string> = {
   'chat.send': 'Senden',
   'chat.abort': 'Abbrechen',
   'chat.clear': 'Verlauf leeren',
-  'chat.remember': 'Merken',
   'chat.remembered': 'Gemerkt: {note}',
   'chat.notesFull': 'Merkzettel voll ({max} Einträge) — lösche einen Eintrag in den Einstellungen.',
   'chat.you': 'Du',

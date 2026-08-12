@@ -11,9 +11,19 @@
 .kuro-hidden { display: none; }
 
 /* ── Sidebar root ─────────────────────────────────────── */
-.kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; }
-.kuro-view-body { display: flex; flex-direction: column; gap: 10px; }
-.kuro-toolbar   { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* height:100% + overflow:hidden bounds the panel to the leaf instead of the
+   content growing past it — without it, .kuro-view-body's flex:1+overflow-y
+   below has no box to actually scroll WITHIN, so long content (a growing
+   chat log) just pushes the input row off-screen instead of scrolling
+   internally (reported 2026-08-12, GUI smoke Schritt 6). */
+.kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; height: 100%; box-sizing: border-box; overflow: hidden; }
+/* min-height:0 is the load-bearing part: a flex item's default min-height is
+   `auto` (= its content's natural height), which silently defeats flex:1 +
+   overflow-y:auto — the item grows to fit its content instead of clipping
+   and scrolling it. Shared by the status body (scrolls as a whole) and the
+   chat body (delegates scrolling to .kuro-chat-log inside it, see below). */
+.kuro-view-body { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.kuro-toolbar   { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex: 0 0 auto; }
 .kuro-empty     { padding: 12px; opacity: 0.85; }
 
 /* ── Buttons ──────────────────────────────────────────── */
@@ -140,6 +150,7 @@
   display: flex;
   gap: var(--size-2-2);
   margin-bottom: var(--size-4-2);
+  flex: 0 0 auto;
 }
 .kuro-tab {
   flex: 1;
@@ -159,8 +170,13 @@
 .kuro-hidden { display: none; }
 
 /* ── Companion-Chat: Panel ────────────────────────────── */
-.kuro-chat-body { display: flex; flex-direction: column; height: 100%; }
+/* Inherits flex:1+min-height:0 from .kuro-view-body (shared with the status
+   body) — overflow-y goes back to hidden here because THIS body has its own
+   nested scroll region (.kuro-chat-log below), not the whole body at once;
+   context + input row stay fixed at their natural size via flex:0 0 auto. */
+.kuro-chat-body { overflow-y: hidden; }
 .kuro-chat-context {
+  flex: 0 0 auto;
   margin-bottom: var(--size-4-2);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
@@ -171,10 +187,14 @@
   max-height: 12em;
   overflow-y: auto;
   background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
   padding: var(--size-2-2);
 }
-.kuro-chat-log { flex: 1; overflow-y: auto; margin-bottom: var(--size-4-2); }
+/* min-height:0 is the actual fix (Schritt 6, 2026-08-12): flex:1 alone did
+   not stop this from growing to fit the whole conversation — the input row
+   and abort button then scrolled along with it, past the visible viewport. */
+.kuro-chat-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-bottom: var(--size-4-2); }
 .kuro-chat-line { margin-bottom: var(--size-4-2); }
 .kuro-chat-who {
   color: var(--text-accent);
@@ -198,7 +218,7 @@
 }
 .kuro-chat-pin:hover:not(:disabled) { color: var(--text-accent); }
 .kuro-chat-pin:disabled { opacity: 0.4; cursor: default; }
-.kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; }
+.kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto; }
 .kuro-chat-input { flex: 1; min-width: 0; }
 
 /* ── Companion-Chat: Kontext-Vorschau in den Einstellungen ── */
@@ -213,6 +233,7 @@
   overflow-y: auto;
   font-size: var(--font-ui-smaller);
   background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
   padding: var(--size-2-2);
   margin: 0;

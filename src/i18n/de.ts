@@ -289,7 +289,7 @@ export const de: Record<string, string> = {
   'chat.contextNone': 'Kuro sieht gerade nur deinen Fortschritt — nichts aus der Notiz.',
   'chat.contextFull': 'Kuro sieht gerade die vollständige heutige Notiz.',
   'chat.setup.title': 'Chat einrichten',
-  'chat.setup.body': 'Trage einen Endpunkt und ein Modell ein, dann kannst du mit Kuro reden.',
+  'chat.setup.body': 'Trage in den Einstellungen unter „Endpunkte" die Adresse eines lokalen KI-Servers ein — z. B. LM Studio oder Ollama, Adresse etwa http://localhost:1234. Danach kannst du mit Kuro reden.',
   'chat.setup.openSettings': 'Einstellungen öffnen',
   'chat.err.network': 'Keine Verbindung zum Endpunkt.',
   'chat.err.http': 'Der Endpunkt hat mit einem Fehler geantwortet.',
@@ -359,7 +359,7 @@ export const de: Record<string, string> = {
 
   /* Merkzettel */
   'settings.section.notes': '📌 Merkzettel',
-  'notes.desc': 'Sätze, die Kuro dauerhaft im Kontext hat. Höchstens {max} Einträge.',
+  'notes.desc': 'Sätze, die Kuro dauerhaft im Kontext hat und in jeder Antwort berücksichtigt. Neu hinzufügen: im Chat „merk dir: …" schreiben (z. B. „merk dir: keine Streak-Hinweise"), oder unten hier eintragen. Höchstens {max} Einträge.',
   'notes.placeholder': 'z. B. „Erinnere mich nicht ungefragt an Streaks."',
   'notes.add': 'Eintrag hinzufügen',
   'notes.delete': 'Eintrag löschen',

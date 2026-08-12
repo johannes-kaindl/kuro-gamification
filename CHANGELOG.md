@@ -47,6 +47,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
   localized reason: refused / timed out / wrong host / unauthorized / not an OpenAI-compatible
   API. The model field is a real dropdown once a list loads, with a manual-entry fallback for a
   model the endpoint doesn't list.
+- **"Enable chat" didn't save.** The toggle looked switched on but never actually wrote the
+  setting — no case for it existed in the settings-control switch, so the click was silently
+  dropped. The chat tab never appeared, and after restarting Obsidian the toggle was back off
+  even though the endpoint you'd configured was still there. Present since the very first
+  version of the chat feature; only surfaced now because settings rendering can't be
+  unit-tested and this was the first real run against Obsidian.
+- **The chat panel's input row could scroll off-screen.** A long conversation grew the message
+  log without bound instead of scrolling inside its own space, eventually pushing the input
+  field and the abort button past the visible area — mid-stream, the abort button became
+  unreachable right as you needed it. The message log now scrolls in place; the input row and
+  context toggle stay fixed at top/bottom of the chat panel.
 
 ## [1.1.0] — 2026-08-11
 

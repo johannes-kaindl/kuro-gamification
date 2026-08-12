@@ -277,7 +277,7 @@ export const en: Record<string, string> = {
   'chat.contextNone': 'Kuro currently sees only your progress — nothing from the note.',
   'chat.contextFull': 'Kuro currently sees the full note for today.',
   'chat.setup.title': 'Set up chat',
-  'chat.setup.body': 'Add an endpoint and a model, then you can talk to Kuro.',
+  'chat.setup.body': 'In settings under "Endpoints", add the address of a local AI server — e.g. LM Studio or Ollama, address like http://localhost:1234. Then you can talk to Kuro.',
   'chat.setup.openSettings': 'Open settings',
   'chat.err.network': 'Could not reach the endpoint.',
   'chat.err.http': 'The endpoint responded with an error.',
@@ -347,7 +347,7 @@ export const en: Record<string, string> = {
 
   /* Notes */
   'settings.section.notes': '📌 Notes',
-  'notes.desc': 'Sentences Kuro keeps in context permanently. At most {max} entries.',
+  'notes.desc': 'Sentences Kuro keeps in context permanently and factors into every answer. Add one by typing "remember: …" in the chat (e.g. "remember: don\'t remind me about streaks"), or enter it below. At most {max} entries.',
   'notes.placeholder': 'e.g. "Don\'t remind me about streaks unprompted."',
   'notes.add': 'Add entry',
   'notes.delete': 'Delete entry',

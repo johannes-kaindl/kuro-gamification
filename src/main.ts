@@ -259,6 +259,15 @@ export default class KuroPlugin extends Plugin {
 
   /* ── Companion-Chat ───────────────────────────────────── */
 
+  /** Baut die Tab-Leiste jeder offenen Sidebar-View neu auf — onOpen() liest
+   *  enableChat nur EINMAL beim ersten Aufbau; ohne diesen Aufruf bliebe eine
+   *  schon offene Seitenleiste stumm, bis sie geschlossen und neu geöffnet wird. */
+  syncChatUI(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_KURO)) {
+      if (leaf.view instanceof KuroSidebarView) void leaf.view.onOpen();
+    }
+  }
+
   /** Offene Sidebar-Views, deren Chat-Tab neu gezeichnet werden soll. */
   private chatViews(): KuroSidebarView[] {
     const out: KuroSidebarView[] = [];

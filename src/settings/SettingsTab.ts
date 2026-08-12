@@ -91,6 +91,14 @@ export class KuroSettingsTab extends PluginSettingTab {
         this.plugin.syncSidebar();
         return;
       case 'openSidebarOnStartup': s.openSidebarOnStartup = Boolean(value); break;
+      case 'enableChat':
+        s.enableChat = Boolean(value);
+        await this._save();
+        // onOpen() liest enableChat nur EINMAL beim Bau der Tab-Leiste — ohne diesen
+        // Aufruf bleibt eine schon offene Seitenleiste stumm, bis sie geschlossen und
+        // neu geöffnet (oder Obsidian neu gestartet) wird.
+        this.plugin.syncChatUI();
+        return;
 
       case 'dailyFolder': s.dailyFolder = String(value).trim(); break;
       case 'weeklyFolder': s.weeklyFolder = String(value).trim(); break;

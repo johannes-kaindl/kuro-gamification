@@ -167,10 +167,9 @@ builds the prompt, so the preview cannot drift from reality.
 **Notes (📌).** Kuro has no memory of past conversations by design — the history is not
 saved and is gone when Obsidian closes. What does persist is a short list of sentences you
 ask it to remember: *"Don't remind me about streaks unprompted."* Add them by writing
-`remember: …` in the chat, with the 📌 button next to your own messages, or directly in
-Settings → 📌 Notes, where you can edit and delete them at any time. The list holds 20
-entries; when it's full the add button is disabled rather than silently dropping the
-oldest one.
+`remember: …` in the chat, or directly in Settings → 📌 Notes, where you can edit and delete
+them at any time. The list holds 20 entries; when it's full the add button is disabled
+rather than silently dropping the oldest one.
 
 **Voice.** The tone comes from the active lore pack (`persona` field) — the Cozy pack speaks
 warmly, the Gothic pack darkly — or from your own text in the settings, which overrides it.

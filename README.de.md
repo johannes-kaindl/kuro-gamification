@@ -168,10 +168,10 @@ die auch den Prompt baut, die Vorschau kann also nicht von der Wirklichkeit abwe
 **Merkzettel (📌).** Kuro hat bewusst kein Gedächtnis für vergangene Gespräche — der Verlauf
 wird nicht gespeichert und ist mit dem Schließen von Obsidian weg. Was bleibt, ist eine kurze
 Liste von Sätzen, die du dir merken lässt: *„Erinnere mich nicht ungefragt an Streaks."*
-Einträge legst du mit `merk dir: …` im Chat an, über den 📌-Knopf neben deinen eigenen
-Nachrichten oder direkt unter Einstellungen → 📌 Merkzettel, wo du sie jederzeit ändern und
-löschen kannst. Die Liste fasst 20 Einträge; ist sie voll, wird der Hinzufügen-Knopf
-deaktiviert, statt still den ältesten Eintrag zu verwerfen.
+Einträge legst du mit `merk dir: …` im Chat an oder direkt unter Einstellungen →
+📌 Merkzettel, wo du sie jederzeit ändern und löschen kannst. Die Liste fasst 20 Einträge;
+ist sie voll, wird der Hinzufügen-Knopf deaktiviert, statt still den ältesten Eintrag zu
+verwerfen.
 
 **Stimme.** Der Ton kommt aus dem aktiven Lore-Pack (Feld `persona`) — das Cozy-Pack spricht
 warm, das Gothic-Pack düster — oder aus deinem eigenen Text in den Einstellungen, der ihn

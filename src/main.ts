@@ -2,7 +2,7 @@
    Kuro Gamification — main plugin entrypoint.
    ========================================================== */
 import {
-  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice,
+  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice, requestUrl,
 } from 'obsidian';
 
 import {
@@ -26,6 +26,16 @@ import { todayIso, isIsoDate, isIsoWeek } from './utils/dateUtils';
 import { fmtNum } from './utils/progressBar';
 import { t, detectLang } from './i18n';
 import { defaultHabits } from './data/default-habits';
+import { ChatSession } from './llm/ChatSession';
+import { KuroChatClient } from './llm/KuroChatClient';
+import { XhrSseTransport } from './llm/XhrSseTransport';
+import { buildContext } from './llm/kuroContext';
+import { buildMessages, resolvePersona } from './llm/kuroPrompt';
+import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
+import { KuroLlmClient, type KuroLlmHttpJson } from './llm/KuroLlmClient';
+import { ChatEndpointResolver } from './llm/ChatEndpointResolver';
+import { effectiveModel, type EndpointConfig } from './vendor/kit/endpoint_config';
+import { activePersona } from './utils/packLibrary';
 
 export default class KuroPlugin extends Plugin {
   // public so views/modals/settings can read/mutate
@@ -34,10 +44,35 @@ export default class KuroPlugin extends Plugin {
   public vaultReader!: VaultReader;
   public logger!: Logger;
 
+  /** Companion-Chat: Verlauf einer Obsidian-Sitzung, bewusst nicht persistiert. */
+  public chatSession = new ChatSession();
+  /** Rohtext der heutigen Daily — nur gefüllt, wenn der Chat aktiv ist. */
+  public lastDailyText: string | null = null;
+  /** Erster erreichbarer Eintrag aus chatEndpoints, gecacht — invalidate() nach jeder
+   *  Listen-Änderung (buildEndpointList's reconnect-Callback). */
+  public endpointResolver = new ChatEndpointResolver(
+    () => this.data.settings.chatEndpoints,
+    (cfg) => this.clientFor(cfg).ping(),
+  );
+
   private statusBarEl: HTMLElement | null = null;
   private debouncedRefresh!: () => void;
   private debouncedSave!: () => void;
   private midnightTimeout: number | null = null;
+  private chatClient = new KuroChatClient(new XhrSseTransport());
+  private chatAbort: AbortController | null = null;
+
+  private readonly httpJson: KuroLlmHttpJson = async (url, headers) => {
+    const res = await requestUrl({ url, headers, throw: false });
+    return { status: res.status, json: res.json };
+  };
+
+  /** EIN Client je Endpunkt-Eintrag trägt sowohl die Erreichbarkeits-Probe als auch die
+   *  Modell-Liste — Status-Icon und Modell-Dropdown können so nie über verschiedene
+   *  Einträge auseinanderlaufen (Kit-Vorgabe, s. EndpointListOptions.clientFor). */
+  clientFor(cfg: EndpointConfig): KuroLlmClient {
+    return new KuroLlmClient(cfg, this.httpJson);
+  }
 
   async onload(): Promise<void> {
     this.dataStore = new DataStore(this);
@@ -157,6 +192,13 @@ export default class KuroPlugin extends Plugin {
 
       const lvl = XpEngine.levelForXp(agg.totalXp, this.data.settings.levels);
       const todayDaily = dailies.find((d) => d.date === todayStr) ?? null;
+
+      // Rohtext nur lesen, wenn der Chat ihn überhaupt brauchen kann —
+      // ein ausgeschalteter Chat kostet keinen zusätzlichen Lesevorgang.
+      this.lastDailyText = this.data.settings.enableChat
+        ? await this.vaultReader.readDailyRaw(opts, todayStr)
+        : null;
+
       const todayCalc = todayDaily
         ? XpEngine.computeDaily(todayDaily, this.data.settings)
         : { date: todayStr, xp: 0, rows: [] };
@@ -213,6 +255,132 @@ export default class KuroPlugin extends Plugin {
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_KURO)) {
       if (leaf.view instanceof KuroSidebarView) leaf.view.renderSnapshot();
     }
+  }
+
+  /* ── Companion-Chat ───────────────────────────────────── */
+
+  /** Baut die Tab-Leiste jeder offenen Sidebar-View neu auf — onOpen() liest
+   *  enableChat nur EINMAL beim ersten Aufbau; ohne diesen Aufruf bliebe eine
+   *  schon offene Seitenleiste stumm, bis sie geschlossen und neu geöffnet wird. */
+  syncChatUI(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_KURO)) {
+      if (leaf.view instanceof KuroSidebarView) void leaf.view.onOpen();
+    }
+  }
+
+  /** Offene Sidebar-Views, deren Chat-Tab neu gezeichnet werden soll. */
+  private chatViews(): KuroSidebarView[] {
+    const out: KuroSidebarView[] = [];
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_KURO)) {
+      if (leaf.view instanceof KuroSidebarView) out.push(leaf.view);
+    }
+    return out;
+  }
+
+  /** Chat-Tab neu zeichnen. No-op bei geschlossener Seitenleiste. */
+  syncChat(): void {
+    for (const view of this.chatViews()) view.renderChat();
+  }
+
+  /**
+   * Eine Frage an Kuro. Baut den Kontext aus Snapshot + heutiger Notiz,
+   * löst die Stimme auf (Settings → Pack → Default) und streamt die Antwort.
+   */
+  async askKuro(question: string): Promise<void> {
+    const s = this.data.settings;
+    const lang = s.language;
+
+    // "merk dir: …" ist ein Merkzettel-Eintrag, keine Frage ans Modell.
+    const note = extractNoteFromMessage(question);
+    if (note !== null) { this.rememberNote(note); return; }
+
+    const history = this.chatSession.historyForPrompt();
+    this.chatSession.append({ role: 'user', text: question });
+    this.chatSession.busy = true;
+    this.chatSession.streaming = '';
+    this.syncChat();
+
+    const messages = buildMessages({
+      lang,
+      persona: resolvePersona({
+        override: s.chatPersonaOverride,
+        packPersona: activePersona(s),
+        lang,
+      }),
+      context: buildContext(this.data.lastSnapshot, this.lastDailyText, s),
+      notes: this.data.kuroNotes,
+      history,
+      question,
+    });
+
+    const active = await this.endpointResolver.resolve();
+    if (active === null) {
+      this.chatSession.busy = false;
+      this.chatSession.streaming = null;
+      this.chatSession.append({ role: 'error', text: t('chat.err.noEndpoint', lang) });
+      this.syncChat();
+      return;
+    }
+
+    this.chatAbort = new AbortController();
+    const outcome = await this.chatClient.stream(
+      {
+        endpoint: active.url,
+        apiKey: active.apiKey ?? '',
+        model: effectiveModel(active, s.chatModel),
+        suppressThinking: s.chatSuppressThinking,
+      },
+      messages,
+      (token) => {
+        for (const view of this.chatViews()) view.appendChatToken(token);
+        this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
+      },
+      this.chatAbort.signal,
+    );
+
+    this.chatSession.busy = false;
+    this.chatSession.streaming = null;
+    this.chatAbort = null;
+
+    if (outcome.ok) {
+      this.chatSession.append({ role: 'assistant', text: outcome.content });
+    } else {
+      // Teiltext bleibt stehen, statt beim Fehler zu verschwinden.
+      if (outcome.partial !== '') {
+        this.chatSession.append({ role: 'assistant', text: outcome.partial });
+      }
+      this.chatSession.append({
+        role: 'error',
+        text: t(`chat.err.${outcome.kind}`, lang, { seconds: 120 }),
+        detail: outcome.detail,
+      });
+      this.logger.error('chat stream failed', outcome.kind, outcome.detail);
+    }
+    this.syncChat();
+  }
+
+  abortChat(): void { this.chatAbort?.abort(); }
+
+  clearChat(): void {
+    this.chatSession.reset();
+    this.syncChat();
+  }
+
+  /** Merkzettel-Eintrag anlegen. Kappt hart, statt still zu vergessen. */
+  rememberNote(text: string): void {
+    const lang = this.data.settings.language;
+    const before = this.data.kuroNotes.length;
+    this.data.kuroNotes = addNote(this.data.kuroNotes, text);
+
+    if (this.data.kuroNotes.length === before) {
+      new Notice(t('chat.notesFull', lang, { max: MAX_NOTES }));
+      return;
+    }
+    void this.persist();
+    new Notice(t('chat.remembered', lang, {
+      note: this.data.kuroNotes[this.data.kuroNotes.length - 1],
+    }));
+    this.syncChat();
   }
 
   /* ── Sidebar lifecycle ────────────────────────────────── */

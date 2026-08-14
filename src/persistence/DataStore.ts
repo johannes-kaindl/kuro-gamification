@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { migrateToLibrary } from '../utils/packLibrary';
 import { GOTHIC_LORE, COZY_LORE } from '../data/default-lore';
+import { migrateChatEndpoints } from '../llm/migrateChatEndpoints';
 
 export class DataStore {
   constructor(private readonly plugin: Plugin) {}
@@ -31,6 +32,7 @@ export class DataStore {
       redeemedDrops: Array.isArray(raw.redeemedDrops) ? raw.redeemedDrops : [],
       manualXpAdjustments: Array.isArray(raw.manualXpAdjustments) ? raw.manualXpAdjustments : [],
       unlockedLore: Array.isArray(raw.unlockedLore) ? raw.unlockedLore : [],
+      kuroNotes: Array.isArray(raw.kuroNotes) ? raw.kuroNotes : [],
       lastSnapshot: raw.lastSnapshot ?? null,
     };
     return this.migrate(merged);
@@ -40,6 +42,11 @@ export class DataStore {
     return {
       ...DEFAULT_SETTINGS,
       ...raw,
+      // chatEndpoint/chatApiKey sind Alt-Felder (vor dem Kit-endpoint_config-Umstieg) — im Typ
+      // längst weg, aber in gespeicherten data.json-Dateien noch vorhanden. Ohne diese Migration
+      // verschwindet ein bestehender API-Schlüssel beim ersten Laden stillschweigend
+      // (migrateEndpointList allein trägt nur die URL weiter).
+      chatEndpoints: migrateChatEndpoints(raw),
       habits: Array.isArray(raw.habits) ? raw.habits : DEFAULT_SETTINGS.habits,
       streakBonus: Array.isArray(raw.streakBonus) && raw.streakBonus.length > 0
         ? raw.streakBonus

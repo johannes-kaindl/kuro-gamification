@@ -11,9 +11,19 @@
 .kuro-hidden { display: none; }
 
 /* ── Sidebar root ─────────────────────────────────────── */
-.kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; }
-.kuro-view-body { display: flex; flex-direction: column; gap: 10px; }
-.kuro-toolbar   { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* height:100% + overflow:hidden bounds the panel to the leaf instead of the
+   content growing past it — without it, .kuro-view-body's flex:1+overflow-y
+   below has no box to actually scroll WITHIN, so long content (a growing
+   chat log) just pushes the input row off-screen instead of scrolling
+   internally (reported 2026-08-12, GUI smoke Schritt 6). */
+.kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; height: 100%; box-sizing: border-box; overflow: hidden; }
+/* min-height:0 is the load-bearing part: a flex item's default min-height is
+   `auto` (= its content's natural height), which silently defeats flex:1 +
+   overflow-y:auto — the item grows to fit its content instead of clipping
+   and scrolling it. Shared by the status body (scrolls as a whole) and the
+   chat body (delegates scrolling to .kuro-chat-log inside it, see below). */
+.kuro-view-body { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.kuro-toolbar   { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex: 0 0 auto; }
 .kuro-empty     { padding: 12px; opacity: 0.85; }
 
 /* ── Buttons ──────────────────────────────────────────── */
@@ -134,3 +144,161 @@
 .okit-collapsible-chevron { display: inline-flex; color: var(--text-muted); }
 .okit-collapsible-body { padding-top: var(--size-4-2); }
 .okit-collapsible-body.is-collapsed { display: none; }
+
+/* ── Companion-Chat: Tabs ─────────────────────────────── */
+.kuro-tabbar {
+  display: flex;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-4-2);
+  flex: 0 0 auto;
+}
+.kuro-tab {
+  flex: 1;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+}
+.kuro-tab:hover { color: var(--text-normal); }
+.kuro-tab-active {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+.kuro-hidden { display: none; }
+
+/* ── Companion-Chat: Panel ────────────────────────────── */
+/* Inherits flex:1+min-height:0 from .kuro-view-body (shared with the status
+   body) — overflow-y goes back to hidden here because THIS body has its own
+   nested scroll region (.kuro-chat-log below), not the whole body at once;
+   context + input row stay fixed at their natural size via flex:0 0 auto. */
+.kuro-chat-body { overflow-y: hidden; }
+.kuro-chat-context {
+  flex: 0 0 auto;
+  margin-bottom: var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+.kuro-chat-context summary { cursor: pointer; }
+.kuro-chat-context-body {
+  white-space: pre-wrap;
+  max-height: 12em;
+  overflow-y: auto;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2);
+}
+/* min-height:0 is the actual fix (Schritt 6, 2026-08-12): flex:1 alone did
+   not stop this from growing to fit the whole conversation — the input row
+   and abort button then scrolled along with it, past the visible viewport. */
+.kuro-chat-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-bottom: var(--size-4-2); }
+.kuro-chat-line { margin-bottom: var(--size-4-2); }
+.kuro-chat-who {
+  color: var(--text-accent);
+  margin-right: var(--size-2-2);
+  font-weight: var(--font-semibold);
+}
+.kuro-chat-text { white-space: pre-wrap; }
+.kuro-chat-error .kuro-chat-text { color: var(--text-error); }
+.kuro-chat-detail {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin-top: var(--size-2-1);
+}
+.kuro-chat-cursor { color: var(--text-accent); }
+.kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto; }
+.kuro-chat-input { flex: 1; min-width: 0; }
+
+/* ── Companion-Chat: Kontext-Vorschau in den Einstellungen ── */
+.kuro-settings-label {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  margin-bottom: var(--size-2-2);
+}
+.kuro-context-preview {
+  white-space: pre-wrap;
+  max-height: 12em;
+  overflow-y: auto;
+  font-size: var(--font-ui-smaller);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2);
+  margin: 0;
+}
+
+/* ── Companion-Chat: Endpunkt-Zeilen-Editor ──
+   Verbatim aus obsidian-kit@0.26.0 (2a7b5d7) ENDPOINT_LIST_CSS. Das Kit liefert die Regeln als
+   exportierten String statt als .css-Datei (ein CSS-Import wäre eine Annahme über den Bundler)
+   und überlässt jedem Consumer, sie hier einzufügen — dasselbe Muster wie COLLAPSIBLE_CSS.
+   Bei jedem Re-Vendoring von endpoint-list.ts neu kopieren; das Klassen-Präfix ist das
+   Kit-eigene `okit-`, nicht `kuro-`. */
+/* Pro-Zeile-Status der Endpunkt-Fallback-Liste: Form trägt die Bedeutung, Farbe sekundär (WCAG 1.4.1). */
+.okit-ep-status { display: inline-flex; align-items: center; margin-right: 8px; vertical-align: middle; color: var(--text-muted); }
+.okit-ep-status svg { width: 14px; height: 14px; }
+.okit-ep-status.is-ok { color: var(--text-success); }
+.okit-ep-status.is-error { color: var(--text-error); }
+.okit-ep-warn { display: inline-flex; align-items: center; margin-right: 8px; vertical-align: middle; color: var(--text-warning); }
+.okit-ep-warn svg { width: 14px; height: 14px; }
+/* Drittanbieter-Hinweis (Schlüssel gesetzt): sachlicher Hinweis, keine Fehler-Warnung — bewusst
+   gedämpfter als .okit-ep-warn, Bedeutung trägt das Dreieck + der Tooltip, nicht die Farbe. */
+.okit-ep-thirdparty { display: inline-flex; align-items: center; margin-right: 8px; vertical-align: middle; color: var(--text-muted); }
+.okit-ep-thirdparty svg { width: 14px; height: 14px; }
+/* Rolle der Zeile als Text unter den Feldern: „aktiv" / „erreichbar, aber Platz N" / … .
+   Erreichbarkeit trägt das Icon (Form), die Rolle dieser Text — keins von beiden über Farbe
+   allein (WCAG 1.4.1). Die frühere Auszeichnung saß auf dem Icon-Container und war wirkungslos:
+   font-weight greift auf einem SVG nicht.
+   flex-basis: 100% erzwingt den Umbruch im ohnehin umbrechenden .setting-item-control.
+   stateEl wird VOR warnIcon/thirdPartyIcon angelegt (Erst-Render-Reihenfolge in
+   buildEndpointList) — ohne order würden die beiden Icons hinter die volle-Breite-Zeile
+   rutschen statt in der Feldreihe zu bleiben. order:1 hält die Rolle visuell zuletzt,
+   unabhängig davon, was später noch an controlEl angehängt wird. */
+.okit-ep-row .setting-item-control .okit-ep-state {
+  flex: 0 0 100%;
+  order: 1;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.okit-ep-row .setting-item-control .okit-ep-state.is-active {
+  color: var(--text-normal);
+  font-weight: var(--font-bold);
+}
+/* Speicher-/Lösch-Fenster: die gerenderten Zeilen-Indizes sind stale, bis der Re-Render kommt —
+   Eingaben und Icon-Buttons (divs, kein disabled) sind solange gesperrt. */
+.okit-ep-busy { pointer-events: none; opacity: 0.6; }
+/* Endpunkt-Zeile: drei Felder (Adresse · Schlüssel · Modell) brauchen die volle Breite.
+   Die Beschriftung steht als eigene Zeile darüber, deshalb ist der Info-Block hier leer und
+   darf keinen Platz beanspruchen — sonst quetscht er die Felder (gemeldet 2026-08-04). */
+.okit-ep-row .setting-item-info {
+  display: none;
+}
+.okit-ep-row .setting-item-control {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: var(--size-4-2);
+  width: 100%;
+}
+.okit-ep-row .setting-item-control input[type="text"],
+.okit-ep-row .setting-item-control input[type="password"] {
+  flex: 1 1 12em;
+  min-width: 8em;
+}
+/* Reservierter Platz für das Modell-Dropdown (Auffüllen der Zeile erst nach dem geladenen
+   Promise, siehe buildEndpointList). Selbst ein Flex-Container, damit Dropdown/Freitext + der
+   „Modelle abrufen"-Knopf innerhalb genauso mitwachsen wie URL/Schlüssel daneben. */
+.okit-ep-row .setting-item-control .okit-model-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  flex: 1 1 12em;
+  min-width: 10em;
+}
+.okit-ep-row .setting-item-control .okit-model-slot select,
+.okit-ep-row .setting-item-control .okit-model-slot input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}

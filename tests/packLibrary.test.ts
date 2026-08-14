@@ -1,4 +1,4 @@
-import { canActivatePack } from '../src/utils/packLibrary';
+import { canActivatePack, activePersona } from '../src/utils/packLibrary';
 import { installPack, resolvePackName, sameLore, activatePack, deletePack, resetSection, activeNames, migrateToLibrary, importPack } from '../src/utils/packLibrary';
 import { DEFAULT_SETTINGS } from '../src/types';
 import { GOTHIC_LORE, COZY_LORE } from '../src/data/default-lore';
@@ -241,5 +241,33 @@ describe('canActivatePack', () => {
 
   it('is false for a pack carrying neither lore nor loot (nothing to activate)', () => {
     expect(canActivatePack(base, { id: 'e', name: 'E' })).toBe(false);
+  });
+});
+
+describe('persona in the library', () => {
+  it('installPack carries a persona into the entry', () => {
+    const next = installPack(DEFAULT_SETTINGS, { kuroPack: 1, name: 'P', persona: 'Ruhig.' }, 'p1', deps);
+    expect(next.packLibrary[0].persona).toBe('Ruhig.');
+  });
+
+  it('installPack leaves persona absent when the pack has none', () => {
+    const next = installPack(DEFAULT_SETTINGS, { kuroPack: 1, name: 'P' }, 'p1', deps);
+    expect(next.packLibrary[0].persona).toBeUndefined();
+  });
+
+  it('activePersona returns undefined when no lore pack is active', () => {
+    expect(activePersona(DEFAULT_SETTINGS)).toBeUndefined();
+  });
+
+  it('activePersona follows the lore-active pack', () => {
+    let s = installPack(DEFAULT_SETTINGS, { kuroPack: 1, name: 'G', persona: 'Dunkel.', lore: GOTHIC_LORE }, 'g', deps);
+    s = installPack(s, { kuroPack: 1, name: 'C', persona: 'Warm.', lore: COZY_LORE }, 'c', deps);
+    expect(activePersona(activatePack(s, 'g'))).toBe('Dunkel.');
+    expect(activePersona(activatePack(s, 'c'))).toBe('Warm.');
+  });
+
+  it('activePersona is undefined when the active pack has no persona', () => {
+    const s = installPack(DEFAULT_SETTINGS, { kuroPack: 1, name: 'X', lore: GOTHIC_LORE }, 'x', deps);
+    expect(activePersona(activatePack(s, 'x'))).toBeUndefined();
   });
 });

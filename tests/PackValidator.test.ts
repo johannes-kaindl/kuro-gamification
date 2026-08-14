@@ -90,3 +90,38 @@ describe('PackValidator — habits section', () => {
     if (!r.ok) expect(r.errors.some((e) => e.code === 'emptyPack')).toBe(true);
   });
 });
+
+describe('validatePack — persona', () => {
+  const withLore = { kuroPack: 1, lore: [{ level: 1, title: 'A', text: 'b' }] };
+
+  it('accepts a pack without persona', () => {
+    expect(validatePack(withLore).ok).toBe(true);
+  });
+
+  it('accepts a string persona', () => {
+    expect(validatePack({ ...withLore, persona: 'Sprich ruhig.' }).ok).toBe(true);
+  });
+
+  it('rejects a non-string persona', () => {
+    const r = validatePack({ ...withLore, persona: 42 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => e.code === 'personaNotString')).toBe(true);
+  });
+
+  it('rejects an over-long persona', () => {
+    const r = validatePack({ ...withLore, persona: 'x'.repeat(2001) });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => e.code === 'personaTooLong')).toBe(true);
+  });
+
+  it('accepts a persona exactly at the limit', () => {
+    expect(validatePack({ ...withLore, persona: 'x'.repeat(2000) }).ok).toBe(true);
+  });
+
+  it('does not make persona alone a valid pack', () => {
+    // persona ist ein Zusatzfeld, kein Inhalt — emptyPack bleibt unverändert.
+    const r = validatePack({ kuroPack: 1, persona: 'Nur eine Stimme' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => e.code === 'emptyPack')).toBe(true);
+  });
+});

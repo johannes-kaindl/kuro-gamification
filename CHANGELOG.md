@@ -5,6 +5,69 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **Companion chat (off by default).** Kuro can now talk to you — asking what to start with,
+  saying you're stuck, thinking the day through out loud. It adds a body-doubling layer on top
+  of the existing scaffolding. Streams from an OpenAI-compatible endpoint you configure
+  yourself (built for local servers like LM Studio or Ollama); no preset provider, no cloud
+  default. While `Enable chat` is off, the plugin makes no network connection at all and the
+  sidebar looks exactly as before.
+- The sidebar gained **tabs** (Status · Chat) when the chat is enabled. Both bodies stay in the
+  DOM; the 800 ms snapshot refresh only redraws the status one, so an in-flight conversation
+  and a half-typed question survive editing any note.
+- **Notes (📌)** — a short, persistent list of sentences Kuro keeps in context ("Don't remind
+  me about streaks unprompted"). Added via `remember: …` in the chat, a pin button next to
+  your own messages, or the settings; editable and deletable there at any time. Capped at 20
+  entries, and when full the add button is disabled rather than silently dropping the oldest.
+  The conversation history itself is deliberately **not** persisted.
+- **Transparency about what is sent.** `From today's note` chooses between nothing, the
+  checkbox and habit lines (default), or the whole note; journal prose stays out unless you
+  ask for it. Both the settings and the chat tab show a live preview of exactly what would go
+  out, rendered by the same function that builds the prompt.
+- **`persona` field for packs** — the chat's voice follows the active lore pack (warm for
+  Cozy, dark for Gothic) and can be overridden with your own text in the settings. Optional
+  and length-capped; the pack format stays at `kuroPack: 1`.
+- **Endpoint fallback list.** The single endpoint field is now an ordered list — mix local
+  servers (LM Studio, Ollama) and hosted providers, each with its own optional API key and
+  model override; the first reachable one wins, and it re-resolves after any edit. Every row
+  shows a live status icon, a "in use / reachable, position N / not reachable" line, and a
+  connection warning (bad scheme, missing port, placeholder address) as you type — no more
+  guessing whether an address was even accepted. One-click presets for LM Studio and Ollama.
+  A saved endpoint migrates into the list automatically, key included.
+
+### Fixed
+
+- **Endpoint setup gave no feedback when it failed.** The old model field was a text box plus
+  a refresh button that silently picked the first model on success and showed one generic
+  "unreachable" message on failure — no way to tell a refused connection from a wrong path
+  from a missing API key. The model list fetch also never sent the configured API key, so any
+  endpoint that requires one always failed there even though chat itself worked. Fixed by the
+  endpoint fallback list above: every row probes with its own key and reports a specific,
+  localized reason: refused / timed out / wrong host / unauthorized / not an OpenAI-compatible
+  API. The model field is a real dropdown once a list loads, with a manual-entry fallback for a
+  model the endpoint doesn't list.
+- **"Enable chat" didn't save.** The toggle looked switched on but never actually wrote the
+  setting — no case for it existed in the settings-control switch, so the click was silently
+  dropped. The chat tab never appeared, and after restarting Obsidian the toggle was back off
+  even though the endpoint you'd configured was still there. Present since the very first
+  version of the chat feature; only surfaced now because settings rendering can't be
+  unit-tested and this was the first real run against Obsidian.
+- **The chat panel's input row could scroll off-screen.** A long conversation grew the message
+  log without bound instead of scrolling inside its own space, eventually pushing the input
+  field and the abort button past the visible area — mid-stream, the abort button became
+  unreachable right as you needed it. The message log now scrolls in place; the input row and
+  context toggle stay fixed at top/bottom of the chat panel.
+
+### Removed
+
+- **The 📌 pin button on your own chat messages.** It saved the raw message text verbatim into
+  the notes list, which made sense for a statement but not for a question — pinning "what
+  should I start with?" doesn't give Kuro anything useful to remember, and the tooltip ("Note
+  this") read like it would save the question as a reusable prompt, which it didn't. Type
+  `remember: …` in the chat, or add a note directly in settings — both make clear what's being
+  kept, unlike a button next to an arbitrary line.
+
 ## [1.1.0] — 2026-08-11
 
 ### Added
@@ -18,6 +81,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Changed
 
+- Destructive buttons no longer call the deprecated `setWarning()`. They go through the kit's
+  `applyDestructive()`, which uses `setDestructive()` on Obsidian 1.13+ and falls back to the
+  native `mod-warning` class below it — so the store review stops flagging it without raising
+  `minAppVersion` above 1.8.7. Vendored `confirm.ts` re-copied from obsidian-kit@0.25.0.
 - README (EN + DE) restructured to the workspace README gold standard
   (`_docs/templates/README-obsidian-plugin.md`): features first, context paragraph under the
   badge row, install in three ways (Community · Manual · From source), a Contributing section,

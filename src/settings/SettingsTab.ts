@@ -27,13 +27,23 @@ import { ImportPackModal } from '../modals/PackIoModal';
 import { ResetDataModal } from '../modals/ResetDataModal';
 import { WelcomeModal } from '../modals/WelcomeModal';
 import { HelpModal } from '../modals/HelpModal';
-import { confirmAction } from '../vendor/kit-obsidian/confirm';
+import { applyDestructive, confirmAction } from '../vendor/kit-obsidian/confirm';
 import { FolderSuggest } from '../vendor/kit-obsidian/folder-suggest';
 import { collapsibleSection, type CollapsibleStorage } from '../vendor/kit-obsidian/collapsible';
 import { buildUnitPack, resetUnit, type PackUnit } from '../utils/packSections';
 import { activeNames, activatePack, canActivatePack, deletePack, resetSection } from '../utils/packLibrary';
+import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
+import { canAddNote, normalizeNote, MAX_NOTES } from '../llm/kuroNotes';
 import { downloadJson } from '../utils/fileIo';
 import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../utils/taskNotesPomodoro';
+import { buildEndpointList, type EndpointListStrings } from '../vendor/kit-obsidian/endpoint-list';
+import { renderModelPicker } from '../vendor/kit-obsidian/model-picker';
+import { resolveModelChoice, type ModelHintKey } from '../vendor/kit/model-choice';
+import { createModelListCache, type ModelListCache } from '../vendor/kit/model-list-cache';
+import { ENDPOINT_PRESETS } from '../vendor/kit/endpoint_diagnostics';
+import type { EndpointStatus, EndpointWarning, EndpointPreset } from '../vendor/kit/endpoint_diagnostics';
+import type { EndpointRole } from '../vendor/kit/endpoint_config';
+import { statusKindKey, warnRuleKey, roleKindKey } from './endpointListModel';
 
 /** A declarative group, tagged with the section key it was built from —
  *  `_section()` needs the key (i18n + persisted collapse state), which the
@@ -81,6 +91,14 @@ export class KuroSettingsTab extends PluginSettingTab {
         this.plugin.syncSidebar();
         return;
       case 'openSidebarOnStartup': s.openSidebarOnStartup = Boolean(value); break;
+      case 'enableChat':
+        s.enableChat = Boolean(value);
+        await this._save();
+        // onOpen() liest enableChat nur EINMAL beim Bau der Tab-Leiste — ohne diesen
+        // Aufruf bleibt eine schon offene Seitenleiste stumm, bis sie geschlossen und
+        // neu geöffnet (oder Obsidian neu gestartet) wird.
+        this.plugin.syncChatUI();
+        return;
 
       case 'dailyFolder': s.dailyFolder = String(value).trim(); break;
       case 'weeklyFolder': s.weeklyFolder = String(value).trim(); break;
@@ -138,6 +156,14 @@ export class KuroSettingsTab extends PluginSettingTab {
       const el = this._section(group.key, lang);
       for (const item of group.items ?? []) this._renderItem(el, item);
     }
+  }
+
+  /** Obsidian ruft dies beim Schließen des Tabs. Der Modell-Cache hält Promises und
+   *  überlebt Tab-Neuaufbauten bewusst — ohne diesen Aufruf bliebe ein einmal als
+   *  "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so stehen. */
+  hide(): void {
+    this._modelCache.clear();
+    super.hide();
   }
 
   private _renderItem(containerEl: HTMLElement, item: SettingDefinitionItem): void {
@@ -201,6 +227,14 @@ export class KuroSettingsTab extends PluginSettingTab {
     else this.display();
   }
 
+  /** Nur speichern, ohne Neuberechnung — für Änderungen, die den
+   *  Snapshot nicht berühren (z. B. Merkzettel-Einträge). Ein voller
+   *  Vault-Scan pro Tastendruck wäre hier reine Verschwendung. */
+  private async _persistOnly(): Promise<void> {
+    await this.plugin.persist();
+    this.plugin.syncChat();
+  }
+
   private async _save(): Promise<void> {
     await this.plugin.persist();
     await this.plugin.refreshStatus(true);
@@ -242,6 +276,8 @@ export class KuroSettingsTab extends PluginSettingTab {
       this._lootGroup(lang),
       this._habitsGroup(lang),
       this._packsGroup(lang),
+      this._chatGroup(lang),
+      this._notesGroup(lang),
       this._advancedGroup(lang),
       this._aboutGroup(lang),
     ];
@@ -432,7 +468,7 @@ export class KuroSettingsTab extends PluginSettingTab {
           const pack = buildUnitPack(unit, this.plugin.data.settings);
           try { await navigator.clipboard.writeText(JSON.stringify(pack, null, 2)); new Notice(t('modal.pack.export.copied', lang)); } catch { /* clipboard unavailable */ }
         }))
-      .addButton((b) => b.setButtonText(t('pack.action.reset', lang)).setWarning()
+      .addButton((b) => applyDestructive(b.setButtonText(t('pack.action.reset', lang)))
         .onClick(() => { void this._resetUnitConfirmed(unit, lang); }));
   }
 
@@ -509,7 +545,7 @@ export class KuroSettingsTab extends PluginSettingTab {
             if (this.plugin.data.settings.enableNotices) new Notice(t('notice.pack.activated', lang, { name: pack.name }));
             this._refreshUi();
           }))
-        .addButton((b) => b.setButtonText(t('set.packs.delete', lang)).setWarning().onClick(async () => {
+        .addButton((b) => applyDestructive(b.setButtonText(t('set.packs.delete', lang))).onClick(async () => {
           const ok = await confirmAction(this.app, {
             title: t('modal.pack.delete.title', lang),
             message: t('modal.pack.delete.body', lang, { name: pack.name }),
@@ -552,7 +588,7 @@ export class KuroSettingsTab extends PluginSettingTab {
           render: (setting) => { setting.addButton((b) => b.setButtonText(t('btn.import', lang))
             .onClick(() => new ImportDataModal(this.app, this.plugin).open())); } },
         { name: t('set.advanced.reset', lang),
-          render: (setting) => { setting.addButton((b) => b.setButtonText(t('btn.reset', lang)).setWarning()
+          render: (setting) => { setting.addButton((b) => applyDestructive(b.setButtonText(t('btn.reset', lang)))
             .onClick(() => new ResetDataModal(this.app, this.plugin).open())); } },
       ],
     };
@@ -577,6 +613,214 @@ export class KuroSettingsTab extends PluginSettingTab {
    *  row. Empties settingEl — the item's own name/desc (already applied by
    *  `_renderItem` before calling `render`) is discarded along with it,
    *  which is fine here since these bodies draw their own headings/text. */
+  /* ── §12 Companion-Chat ───────────────────────────────── */
+  private _chatGroup(lang: Lang): KuroGroup {
+    return {
+      type: 'group', key: 'chat', heading: this._heading('chat', lang),
+      items: [
+        { name: t('set.enableChat.name', lang), desc: t('set.enableChat.desc', lang),
+          control: { type: 'toggle', key: 'enableChat' } },
+        { name: t('set.chatEndpoints.name', lang), desc: t('set.chatEndpoints.desc', lang),
+          render: (setting) => this._renderChatEndpoints(setting, lang) },
+        { name: t('set.chatModel.name', lang), desc: t('set.chatModel.desc', lang),
+          render: (setting) => this._renderGlobalModel(this._hostFor(setting), lang) },
+        { name: t('set.chatSuppressThinking.name', lang), desc: t('set.chatSuppressThinking.desc', lang),
+          control: { type: 'toggle', key: 'chatSuppressThinking' } },
+        { name: t('set.chatDailyContext.name', lang), desc: t('set.chatDailyContext.desc', lang),
+          control: { type: 'dropdown', key: 'chatDailyContext', options: {
+            none: t('set.chatDailyContext.none', lang),
+            tasks: t('set.chatDailyContext.tasks', lang),
+            full: t('set.chatDailyContext.full', lang),
+          } } },
+        { name: t('set.chatDailyContext.preview', lang),
+          render: (setting) => this._renderContextPreview(this._hostFor(setting), lang) },
+        { name: t('set.chatPersona.name', lang), desc: t('set.chatPersona.desc', lang),
+          control: { type: 'text', key: 'chatPersonaOverride' } },
+      ],
+    };
+  }
+
+  /**
+   * Transparenz-Vorschau: ruft DIESELBE Funktion wie der Prompt-Bau
+   * (buildDailyExtract → renderDailyExtract). Eine nachgebaute Vorschau
+   * würde driften und beruhigend etwas anderes zeigen, als gesendet wird.
+   */
+  private _renderContextPreview(containerEl: HTMLElement, lang: Lang): void {
+    const text = renderDailyExtract(
+      buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
+    );
+    containerEl.createDiv({
+      cls: 'kuro-settings-label',
+      text: t('set.chatDailyContext.preview', lang),
+    });
+    containerEl.createEl('pre', {
+      cls: 'kuro-context-preview',
+      text: text === '' ? t('set.chatDailyContext.previewEmpty', lang) : text,
+    });
+  }
+
+  /** Modell-Listen je Endpunkt, geteilt von jeder Zeile des Kit-Editors — gehört der
+   *  Lebensdauer des Tabs, nicht eines einzelnen Render-Durchlaufs (sonst würde jede
+   *  Zeile ihre eigene /v1/models-Anfrage feuern). Geleert in hide() — sonst bliebe ein
+   *  einmal als "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so
+   *  stehen, selbst nachdem der Server gestartet wurde. */
+  private readonly _modelCache: ModelListCache = createModelListCache();
+  /** URL des Endpunkts, den der Resolver aktuell wählt — der Kit-Editor fragt das
+   *  SYNCHRON pro Zeile ab ("aktiv" vs. "erreichbar, Platz N"), während die Antwort
+   *  eine Netzwerk-Frage ist; deshalb einmal pro Render aufgelöst und hier abgelegt. */
+  private _activeChatEndpointUrl: string | null = null;
+
+  private _renderChatEndpoints(setting: Setting, lang: Lang): void {
+    buildEndpointList({
+      containerEl: this._hostFor(setting),
+      label: t('set.chatEndpoints.name', lang),
+      desc: t('set.chatEndpoints.desc', lang),
+      placeholder: ENDPOINT_PRESETS[0]?.url ?? '',
+      strings: this._endpointListStrings(lang),
+      cache: this._modelCache,
+      get: () => this.plugin.data.settings.chatEndpoints,
+      set: (eps) => { this.plugin.data.settings.chatEndpoints = eps; },
+      active: () => this._activeChatEndpointUrl,
+      // EIN Client je Zeile trägt sowohl die Erreichbarkeits-Probe (Status-Icon) als
+      // auch die Modell-Liste (Dropdown) — Status und Liste können so nie über
+      // verschiedene Endpunkte auseinanderlaufen.
+      clientFor: (cfg) => this.plugin.clientFor(cfg),
+      globalModel: () => this.plugin.data.settings.chatModel,
+      save: () => this._persistOnly(),
+      reconnect: () => {
+        this.plugin.endpointResolver.invalidate();
+        return this._syncActiveChatEndpoint().then(() => undefined);
+      },
+      rerender: () => this._refreshUi(),
+    });
+    // Erster Resolve dieses Render-Durchlaufs. Erneutes Rendern nur bei echter Änderung —
+    // terminiert, weil der Folge-Durchlauf denselben (gecachten) Wert liefert und dort stoppt.
+    void this._syncActiveChatEndpoint().then((changed) => { if (changed) this._refreshUi(); });
+  }
+
+  private async _syncActiveChatEndpoint(): Promise<boolean> {
+    const before = this._activeChatEndpointUrl;
+    const active = await this.plugin.endpointResolver.resolve();
+    this._activeChatEndpointUrl = active?.url ?? null;
+    return this._activeChatEndpointUrl !== before;
+  }
+
+  /** Jeder nutzersichtbare Text des Kit-Editors. Das Kit formuliert nichts selbst
+   *  (endpoint_diagnostics.klartext ist hart deutsch, dieses Plugin ist EN+DE) —
+   *  Übersetzung passiert ausschließlich hier, über dieselbe t()-Vokabel wie der Rest
+   *  des Tabs. */
+  private _endpointListStrings(lang: Lang): EndpointListStrings {
+    return {
+      addPlaceholder: t('set.chatEndpoints.addPlaceholder', lang),
+      apiKeyPlaceholder: t('set.chatEndpoints.keyPlaceholder', lang),
+      modelPlaceholder: t('set.chatEndpoints.modelPlaceholder', lang),
+      ariaUrl: t('set.chatEndpoints.ariaUrl', lang),
+      ariaAdd: t('set.chatEndpoints.ariaAdd', lang),
+      ariaApiKey: (url) => t('set.chatEndpoints.ariaKeyFor', lang, { 0: url }),
+      ariaModel: (url) => t('set.chatEndpoints.ariaModelFor', lang, { 0: url }),
+      // globalModel kann leer sein — "Globales Modell ()" wäre falsch, also hier den
+      // Ersatztext in der jeweiligen Sprache ausschreiben statt einen Kit-Fallback zu nutzen.
+      emptyModelLabel: (globalModel) => t('set.chatEndpoints.modelGlobal', lang,
+        { 0: globalModel || t('set.chatEndpoints.modelGlobalUnset', lang) }),
+      modelHint: (key: ModelHintKey) => (key ? t(`set.model.hint.${key}`, lang) : ''),
+      savedSuffix: t('set.model.saved', lang),
+      refreshModels: t('set.chatModel.refresh', lang),
+      moveToFront: t('set.chatEndpoints.moveToFront', lang),
+      remove: t('set.chatEndpoints.remove', lang),
+      thirdParty: t('set.chatEndpoints.thirdParty', lang),
+      probing: t('set.chatEndpoints.probing', lang),
+      // status.raw erscheint nur bei kind "unknown" — jeder andere Grund ist vollständig
+      // übersetzt; das Kit-eigene klartext (hart deutsch) geht nie in die UI.
+      statusTooltip: (status: EndpointStatus) => t(statusKindKey(status.kind), lang),
+      role: (role: EndpointRole) => t(roleKindKey(role), lang,
+        { 0: role.kind === 'standby' ? String(role.position) : '' }),
+      warnings: (warnings: EndpointWarning[]) => warnings.map((w) => t(warnRuleKey(w.rule), lang)).join(' · '),
+      presetTooltip: (preset: EndpointPreset) =>
+        t('set.chatEndpoints.presetTooltip', lang, { 0: preset.label, 1: preset.url }),
+      presetLabel: (preset: EndpointPreset) => t('set.chatEndpoints.addPreset', lang, { 0: preset.label }),
+      checkConnection: t('set.chatEndpoints.checkConnection', lang),
+      saveFailed: t('set.chatEndpoints.saveFailed', lang),
+    };
+  }
+
+  /** Globales Modell: gilt, wenn der aktive Endpunkt keinen Override trägt. Nutzt
+   *  denselben Picker wie das Override je Endpunkt-Zeile (resolveModelChoice +
+   *  renderModelPicker) — ein Dropdown aus der Liste des AKTIVEN Endpunkts, sobald
+   *  bekannt, sonst Freitext. Ein Refresh baut den ganzen Tab neu (wie beim
+   *  Zeilen-Editor) statt sich selbst neu zu zeichnen — zwei Zeichenpfade für
+   *  dieselbe Zeile wären eine zweite Wahrheit. */
+  private _renderGlobalModel(containerEl: HTMLElement, lang: Lang): void {
+    const s = this.plugin.data.settings;
+    const setting = new Setting(containerEl)
+      .setName(t('set.chatModel.name', lang))
+      .setDesc(t('set.chatModel.desc', lang));
+
+    void this._activeModelChoiceInputs().then(({ models, reachable }) => {
+      const choice = resolveModelChoice({ reachable, models, current: s.chatModel });
+      renderModelPicker({
+        setting,
+        choice,
+        ariaLabel: t('set.chatModel.name', lang),
+        placeholder: t('set.chatEndpoints.modelPlaceholder', lang),
+        hint: choice.hintKey ? t(`set.model.hint.${choice.hintKey}`, lang) : '',
+        hintAs: 'tooltip',
+        savedSuffix: t('set.model.saved', lang),
+        refreshTooltip: t('set.chatModel.refresh', lang),
+        onPick: (v) => { s.chatModel = v; void this._persistOnly(); },
+        onRefresh: () => { this._refreshUi(); },
+      });
+    });
+  }
+
+  private async _activeModelChoiceInputs(): Promise<{ models: string[]; reachable: boolean }> {
+    const active = await this.plugin.endpointResolver.resolve();
+    if (!active) return { models: [], reachable: false };
+    return { models: await this.plugin.clientFor(active).listModels(), reachable: true };
+  }
+
+  /* ── §13 Merkzettel ───────────────────────────────────── */
+  private _notesGroup(lang: Lang): KuroGroup {
+    return {
+      type: 'group', key: 'notes', heading: this._heading('notes', lang),
+      items: [
+        { name: t('settings.section.notes', lang), desc: t('notes.desc', lang, { max: MAX_NOTES }),
+          render: (setting) => this._renderNotesList(this._hostFor(setting), lang) },
+      ],
+    };
+  }
+
+  private _renderNotesList(containerEl: HTMLElement, lang: Lang): void {
+    const notes = this.plugin.data.kuroNotes;
+
+    notes.forEach((note, idx) => {
+      new Setting(containerEl)
+        .addText((tx) => tx.setPlaceholder(t('notes.placeholder', lang)).setValue(note)
+          .onChange(async (v) => { notes[idx] = normalizeNote(v); await this._persistOnly(); }))
+        .addExtraButton((b) => b.setIcon('trash').setTooltip(t('notes.delete', lang))
+          .onClick(async () => {
+            notes.splice(idx, 1);
+            await this._persistOnly();
+            this._refreshUi();
+          }));
+    });
+
+    // Voll heisst voll: der Knopf wird deaktiviert, statt still den ältesten
+    // Eintrag zu verwerfen. Ein Merkzettel, der heimlich vergisst, ist
+    // schlimmer als einer, der voll ist.
+    const addable = canAddNote(notes);
+    const row = new Setting(containerEl);
+    if (!addable) row.setDesc(t('notes.full', lang));
+    row.addButton((b) => {
+      b.setButtonText(t('notes.add', lang)).setDisabled(!addable).onClick(async () => {
+        // Prädikat erneut prüfen: ein veralteter DOM-Klick darf nie durchschlagen.
+        if (!canAddNote(this.plugin.data.kuroNotes)) return;
+        this.plugin.data.kuroNotes.push('');
+        await this._persistOnly();
+        this._refreshUi();
+      });
+    });
+  }
+
   private _hostFor(setting: Setting): HTMLElement {
     setting.settingEl.empty();
     setting.settingEl.removeClass('setting-item');

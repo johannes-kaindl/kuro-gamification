@@ -141,6 +141,43 @@ Das Plugin funktioniert ohne externes Styling — es bringt sinnvolles Struktur-
 
 Das Snippet stylt `pre.kuro-status`, `pre.kuro-loot` und die Callouts `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]`. Es hat keine harte Abhängigkeit zum Kuro-Theme (läuft unter jedem Theme, das CSS-Custom-Properties respektiert).
 
+### Companion-Chat (optional, standardmäßig aus)
+
+Kuro kann mit dir reden: fragen, womit du anfangen sollst, sagen, dass du feststeckst, oder
+den Tag laut durchdenken. Der Chat ist **standardmäßig aus** — solange `Chat aktiv` aus ist,
+baut das Plugin überhaupt keine Netzwerkverbindung auf und die Seitenleiste sieht aus wie
+zuvor.
+
+Der Chat spricht mit einem **OpenAI-kompatiblen Endpunkt, den du selbst einträgst**. Es gibt
+keinen voreingestellten Anbieter und keinen Cloud-Default; gedacht ist er für einen lokalen
+Server wie [LM Studio](https://lmstudio.ai) (`http://localhost:1234`) oder
+[Ollama](https://ollama.com) (`http://localhost:11434`).
+
+**Was wann gesendet wird.** Vor deiner ersten Frage gar nichts. Mit jeder Frage gehen mit:
+
+| Immer | Je nach `Aus der heutigen Notiz` |
+|---|---|
+| Level, XP, Streak, Freeze-Tokens, Tagesfortschritt, offene Drops, zuletzt freigeschalteter Lore-Titel | `Nichts` — kein Notiz-Inhalt · `Aufgaben und Habits` (Standard) — die Checkbox-Zeilen und deine konfigurierten Habit-Felder · `Die ganze Notiz` |
+| Dein Merkzettel (s. u.) | |
+
+Der Standard lässt Journal-Prosa bewusst außen vor. Einstellungen → 💬 Kuro-Chat zeigt eine
+**Live-Vorschau genau dessen, was aus der heutigen Notiz gesendet würde**, und der Chat-Tab
+hat dieselbe Vorschau hinter einem Aufklapp-Dreieck — beide laufen durch dieselbe Funktion,
+die auch den Prompt baut, die Vorschau kann also nicht von der Wirklichkeit abweichen.
+
+**Merkzettel (📌).** Kuro hat bewusst kein Gedächtnis für vergangene Gespräche — der Verlauf
+wird nicht gespeichert und ist mit dem Schließen von Obsidian weg. Was bleibt, ist eine kurze
+Liste von Sätzen, die du dir merken lässt: *„Erinnere mich nicht ungefragt an Streaks."*
+Einträge legst du mit `merk dir: …` im Chat an oder direkt unter Einstellungen →
+📌 Merkzettel, wo du sie jederzeit ändern und löschen kannst. Die Liste fasst 20 Einträge;
+ist sie voll, wird der Hinzufügen-Knopf deaktiviert, statt still den ältesten Eintrag zu
+verwerfen.
+
+**Stimme.** Der Ton kommt aus dem aktiven Lore-Pack (Feld `persona`) — das Cozy-Pack spricht
+warm, das Gothic-Pack düster — oder aus deinem eigenen Text in den Einstellungen, der ihn
+überschreibt. Kuro ist angewiesen, deine Zahlen nur zu kommentieren, wenn du danach fragst,
+und nicht den Therapeuten zu spielen.
+
 ## Funktionsweise
 
 Das Plugin beobachtet `vault.modify`-Events (800 ms debounced) auf deinen Daily-/Weekly-Notes. Bei jedem Trigger liest es die relevanten Notes (Checkboxen und Frontmatter) neu ein, und pure-function Engines berechnen das Ergebnis komplett neu — XP-Summe, Level, Streak-Status und (bei neuem Level) einen deterministischen Loot-Drop:

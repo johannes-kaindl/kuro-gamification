@@ -141,6 +141,41 @@ This plugin works without external styling — it ships with sane structural CSS
 
 The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]` callouts. It has no hard dependency on the Kuro theme (works under any theme that respects CSS custom properties).
 
+### Companion chat (optional, off by default)
+
+Kuro can talk to you: ask what to start with, say you're stuck, or think out loud about the
+day. It is **off by default** — while `Enable chat` is off, the plugin makes no network
+connection at all and the sidebar looks exactly as before.
+
+The chat talks to an **OpenAI-compatible endpoint you configure yourself**. There is no
+preset provider and no cloud default; it is meant for a local server such as
+[LM Studio](https://lmstudio.ai) (`http://localhost:1234`) or
+[Ollama](https://ollama.com) (`http://localhost:11434`).
+
+**What is sent, and when.** Nothing is sent until you ask a question. With each question go:
+
+| Always | Depending on `From today's note` |
+|---|---|
+| Level, XP, streak, freeze tokens, today's progress, open drops, last unlocked lore title | `Nothing` — no note content at all · `Tasks and habits` (default) — the checkbox lines and your configured habit fields · `The whole note` |
+| Your notes list (see below) | |
+
+The default deliberately leaves journal prose out of it. Settings → 💬 Kuro chat shows a
+**live preview of exactly what would be sent** from today's note, and the chat tab has the
+same preview behind a disclosure triangle — both render through the same function that
+builds the prompt, so the preview cannot drift from reality.
+
+**Notes (📌).** Kuro has no memory of past conversations by design — the history is not
+saved and is gone when Obsidian closes. What does persist is a short list of sentences you
+ask it to remember: *"Don't remind me about streaks unprompted."* Add them by writing
+`remember: …` in the chat, or directly in Settings → 📌 Notes, where you can edit and delete
+them at any time. The list holds 20 entries; when it's full the add button is disabled
+rather than silently dropping the oldest one.
+
+**Voice.** The tone comes from the active lore pack (`persona` field) — the Cozy pack speaks
+warmly, the Gothic pack darkly — or from your own text in the settings, which overrides it.
+Kuro is instructed not to comment on your numbers unless you ask, and not to act as a
+therapist.
+
 ## How it works
 
 The plugin watches `vault.modify` events (800 ms debounced) on your daily/weekly notes. On each trigger it re-reads the relevant notes' checkboxes and frontmatter, and pure-function engines compute the result from scratch — XP totals, level, streak state, and (once a new level is reached) a deterministic loot drop:

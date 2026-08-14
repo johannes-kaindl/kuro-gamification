@@ -1,11 +1,14 @@
 /* ==========================================================
    Kuro Gamification — Type Definitions + Defaults
    ========================================================== */
+import type { EndpointConfig } from './vendor/kit/endpoint_config';
 
 export type KuroLootTier = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type Lang = 'de' | 'en';
 export type LogLevel = 'off' | 'error' | 'info' | 'debug';
 export type StatusBlockMode = 'full' | 'compact' | 'minimal';
+/** Wieviel der heutigen Daily-Note in den Chat-Kontext geht. */
+export type ChatDailyContext = 'none' | 'tasks' | 'full';
 
 export interface KuroHabit {
   /** Frontmatter field name (e.g. "qigong"). */
@@ -45,6 +48,8 @@ export interface KuroPack {
   lore?: KuroLoreFragment[];
   /** Maps onto KuroSettings.habits (replaces the habit list wholesale). */
   habits?: KuroHabit[];
+  /** Optionale Stimme für den Companion-Chat. Max. 2000 Zeichen. */
+  persona?: string;
 }
 
 /** One installed pack in the library. Carries the sections it was imported with. */
@@ -53,6 +58,8 @@ export interface InstalledPack {
   name: string;
   lore?: KuroLoreFragment[];
   loot?: Partial<Record<KuroLootTier, KuroLootDrop[]>>;
+  /** Optionale Stimme für den Companion-Chat, aus dem importierten Pack. */
+  persona?: string;
 }
 
 export interface KuroDropEntry {
@@ -144,6 +151,17 @@ export interface KuroSettings {
   logLevel: LogLevel;
   /** Collapsed state per settings section key (persisted). */
   uiCollapsed: Record<string, boolean>;
+
+  /* Companion-Chat — off-by-default, gedacht für lokale Endpunkte */
+  enableChat: boolean;
+  /** Geordnete Fallback-Liste; der erste erreichbare Eintrag gewinnt (resolveActiveEndpointConfig).
+   *  Jede Zeile trägt ihren eigenen API-Schlüssel und optional ein Modell-Override. */
+  chatEndpoints: EndpointConfig[];
+  /** Globales Modell, das gilt, wenn der aktive Endpunkt keinen Override trägt. */
+  chatModel: string;
+  chatSuppressThinking: boolean;
+  chatDailyContext: ChatDailyContext;
+  chatPersonaOverride: string;
 }
 
 export interface KuroPluginData {
@@ -158,6 +176,8 @@ export interface KuroPluginData {
   unlockedLore: number[];
   /** Last-rendered status snapshot — used to render before vault scan completes. */
   lastSnapshot: KuroSnapshot | null;
+  /** Merkzettel: kurze Sätze, die Kuro dauerhaft im Chat-Kontext hat. */
+  kuroNotes: string[];
   settings: KuroSettings;
 }
 
@@ -254,6 +274,13 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   reduceAnimations: false,
   logLevel: 'error',
   uiCollapsed: {},
+
+  enableChat: false,
+  chatEndpoints: [],
+  chatModel: '',
+  chatSuppressThinking: true,
+  chatDailyContext: 'tasks',
+  chatPersonaOverride: '',
 };
 
 export const DEFAULT_PLUGIN_DATA: KuroPluginData = {
@@ -265,5 +292,6 @@ export const DEFAULT_PLUGIN_DATA: KuroPluginData = {
   manualXpAdjustments: [],
   unlockedLore: [],
   lastSnapshot: null,
+  kuroNotes: [],
   settings: DEFAULT_SETTINGS,
 };

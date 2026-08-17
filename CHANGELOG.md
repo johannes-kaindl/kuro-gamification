@@ -36,6 +36,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
   guessing whether an address was even accepted. One-click presets for LM Studio and Ollama.
   A saved endpoint migrates into the list automatically, key included.
 
+- **The README now shows the plugin.** Five screenshots — the sidebar panel next to a note,
+  the companion chat, the loot dialog, the `kuro-status` code block, and the full settings tab
+  — taken reproducibly against a real Obsidian (`npm run shots`, recording contract in
+  `docs/images/README.md`). The numbers in them are computed by the plugin from a generated
+  demo vault, not written by hand.
+
 ### Fixed
 
 - **Endpoint setup gave no feedback when it failed.** The old model field was a text box plus

@@ -19,3 +19,7 @@ coverage/
 
 # OS
 .DS_Store
+
+# GUI-Smoke-Bundle (esbuild, maintainer-lokal)
+.gui-smoke.mjs
+.shots.mjs

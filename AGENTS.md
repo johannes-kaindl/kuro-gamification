@@ -44,7 +44,14 @@ Arbeitsverzeichnis: **Repo-Root**.
   `eslint-plugin-obsidianmd` ist das akut: es führt die store-relevanten Regeln als `warning`, und der
   Store-Scanner ist derselbe Linter.
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
-- gate: `npm run gate` (lint → lint:obsidian → typecheck → test → build; **die** Gate-Definition —
+- typecheck:scripts: `npm run typecheck:scripts` (tsc auf `tsconfig.scripts.json` — die beiden
+  CDP-Treiber unter `scripts/`; überspringt sich selbst, wenn das Dach fehlt)
+- smoke:gui: `npm run smoke:gui -- --vault <name>` (GUI-Smoke gegen ein **laufendes** Obsidian,
+  s. `docs/SMOKE.md`; setzt `--remote-debugging-port=9222` voraus)
+- shots: `STAGING_VAULTS_DIR=<dir> npm run shots` (README-Bilder aufnehmen; `-- --setup` baut den
+  Aufnahme-Vault aus `docs/images/fixture/`, s. `docs/images/README.md`) ·
+  `npm run shots:check` prüft Vertrag ↔ Dateien ↔ README
+- gate: `npm run gate` (lint → lint:obsidian → typecheck → typecheck:scripts → test → build; **die** Gate-Definition —
   `.github/workflows/release.yml` ruft nur diesen Befehl, damit lokal und CI nie auseinanderlaufen)
 - version-bump: `npm run version-bump <ver>` (3-File-Sync package/manifest/versions)
 - release: `npm run release <ver>` (Ein-Befehl-Release: bump → changelog → preflight → commit →
@@ -89,6 +96,11 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   `Co-Authored-By: …` bei substanziellem AI-Beitrag. Details: `CONTRIBUTING.md`.
 
 ## Gotchas
+- **Zwei CDP-Treiber unter `scripts/`** (`gui-smoke.ts`, `shots.ts`) arbeiten gegen ein laufendes
+  Obsidian. Die Brücke dazu wird **importiert, nicht vendored**: `../tools/obsidian-cdp/` im Dach.
+  Fehlt ihr etwas, wird sie **dort** ergänzt (als Parameter, nicht als Sonderfall) — eine lokale
+  `scripts/lib/cdp.ts` meldet `tools/template_drift_check.py` als Rückstand. Beide Treiber laufen
+  nie in CI; `typecheck:scripts` überspringt sich ohne Dach-Checkout selbst.
 - **Release-Tooling ist zentral** (`../tools/release/{release,version-bump,preflight}.mjs`) — kein
   vendored `scripts/release.mjs` mehr im Repo. Voraussetzung: dieses Repo muss im Dach-Verzeichnis
   `obsidian-plugins/` neben `tools/` liegen (ein Clone ohne Dach ist nicht release-fähig, die

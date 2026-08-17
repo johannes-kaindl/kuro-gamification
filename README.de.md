@@ -27,6 +27,14 @@ Deine Daily-Notes halten längst fest, was du getan hast — dieses Plugin liest
 - **Export / Import / Reset** — volle Daten-Portabilität via JSON, plus Loot/Lore-**Pack**-Import/-Export
 - **Zweisprachig** — Deutsch und Englisch; folgt beim ersten Start deiner Obsidian-UI-Sprache
 
+<img src="docs/images/hero.png" width="600" alt="Kuro sidebar panel next to a note">
+
+<sub>Das Seitenleisten-Panel neben einer gewöhnlichen Notiz — Level, Gesamt-XP, Fortschritt, Streak mit Freeze-Tokens und der heutige Stand, alles aus den Tagesnotizen gerechnet.</sub>
+
+<img src="docs/images/loot-redeem.png" width="560" alt="Redeem loot dialog with three options">
+
+<sub>Ein Loot-Drop wird eingelöst: drei deterministische Optionen, eine Wahl.</sub>
+
 ## Warum dieses Plugin?
 
 Die meisten Gamification-Plugins für Note-Apps sind für neurotypische Gehirne gebaut: harte Streaks, die dich für einen verpassten Tag bestrafen, exponentielle XP-Kurven, die Konsistenz statt echtes Leben belohnen, Push-Notifications, die nerven. Dieses Plugin ist für ADHS und Autismus:
@@ -85,6 +93,11 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 
 ## Konfiguration
 
+<a href="docs/images/settings.png"><img src="docs/images/thumbs/settings.png" width="380" alt="Kuro-Einstellungen, alle elf Abschnitte"></a>
+
+<sub>Für den vollständigen Einstellungs-Tab (elf Abschnitte) auf die Vorschau klicken.</sub>
+
+
 | Sektion | Was sie steuert |
 |---|---|
 | 🎮 Allgemein | Sprache (DE/EN), Reduce-Animations, Statusleisten-Item, Aktions-Hinweise, Verbose-Aufschlüsselung, Sidebar an/aus |
@@ -111,6 +124,10 @@ lore: show          # show | hide
 breakdown: hide     # show | hide
 ```
 ````
+
+<img src="docs/images/status-block.png" width="600" alt="kuro-status code block rendered in a note">
+
+<sub>Der `kuro-status`-Codeblock, gerendert in einer Notiz.</sub>
 
 ### Empfohlenes Habit-Setup (ADHS-tauglich)
 
@@ -142,6 +159,10 @@ Das Plugin funktioniert ohne externes Styling — es bringt sinnvolles Struktur-
 Das Snippet stylt `pre.kuro-status`, `pre.kuro-loot` und die Callouts `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]`. Es hat keine harte Abhängigkeit zum Kuro-Theme (läuft unter jedem Theme, das CSS-Custom-Properties respektiert).
 
 ### Companion-Chat (optional, standardmäßig aus)
+
+<img src="docs/images/chat.png" width="600" alt="Companion chat in der Kuro-Seitenleiste">
+
+<sub>Der Companion-Chat in der Seitenleiste; der Ausklapper zeigt, was tatsächlich gesendet wird.</sub>
 
 Kuro kann mit dir reden: fragen, womit du anfangen sollst, sagen, dass du feststeckst, oder
 den Tag laut durchdenken. Der Chat ist **standardmäßig aus** — solange `Chat aktiv` aus ist,

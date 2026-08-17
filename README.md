@@ -27,6 +27,14 @@ Your daily notes already record what you did — this plugin reads them and turn
 - **Export / import / reset** — full data portability via JSON, plus loot/lore **pack** import/export
 - **Bilingual** — English and German; follows your Obsidian UI language on first launch
 
+<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.png" width="600" alt="Kuro sidebar panel next to a note">
+
+<sub>The sidebar panel next to an ordinary note — level, total XP, progress, streak with freeze tokens, and today's score, all computed from your daily notes.</sub>
+
+<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/loot-redeem.png" width="560" alt="Redeem loot dialog with three options">
+
+<sub>Redeeming a loot drop: three deterministic options, one pick.</sub>
+
 ## Why this exists
 
 Most gamification plugins for note apps are built for neurotypical brains: hard streaks that punish you for missing one day, exponential XP curves that reward consistency over actual life, push notifications that nag you. This one was built for ADHD and autism:
@@ -85,6 +93,11 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 
 ## Configuration
 
+<a href="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/settings.png"><img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/thumbs/settings.png" width="380" alt="Kuro settings tab, all eleven sections"></a>
+
+<sub>Click the preview for the full settings tab (eleven sections).</sub>
+
+
 | Section | What it controls |
 |---|---|
 | 🎮 General | Language (DE/EN), reduce-animations, status-bar item, action notices, verbose breakdown, sidebar enable/disable |
@@ -111,6 +124,10 @@ lore: show          # show | hide
 breakdown: hide     # show | hide
 ```
 ````
+
+<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/status-block.png" width="600" alt="kuro-status code block rendered in a note">
+
+<sub>The `kuro-status` code block rendered inside a note.</sub>
 
 ### Recommended habits (example for an ADHD-friendly daily)
 
@@ -142,6 +159,10 @@ This plugin works without external styling — it ships with sane structural CSS
 The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]` callouts. It has no hard dependency on the Kuro theme (works under any theme that respects CSS custom properties).
 
 ### Companion chat (optional, off by default)
+
+<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/chat.png" width="600" alt="Companion chat in the Kuro sidebar">
+
+<sub>The companion chat in the sidebar, with the context disclosure showing exactly what gets sent.</sub>
 
 Kuro can talk to you: ask what to start with, say you're stuck, or think out loud about the
 day. It is **off by default** — while `Enable chat` is off, the plugin makes no network

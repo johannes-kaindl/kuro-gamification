@@ -48,7 +48,7 @@ Most gamification plugins for note apps are built for neurotypical brains: hard 
 
 ## Requirements
 
-- **Obsidian ≥ 1.8.7**, desktop or mobile (`isDesktopOnly: false`).
+- **Obsidian ≥ 1.13.0**, desktop or mobile (`isDesktopOnly: false`).
 - No external services, accounts, or network access — all XP/streak/loot/lore logic runs locally against your vault's daily notes.
 - No runtime dependencies.
 

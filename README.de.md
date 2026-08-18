@@ -48,7 +48,7 @@ Die meisten Gamification-Plugins für Note-Apps sind für neurotypische Gehirne 
 
 ## Voraussetzungen
 
-- **Obsidian ≥ 1.8.7**, Desktop oder Mobile (`isDesktopOnly: false`).
+- **Obsidian ≥ 1.13.0**, Desktop oder Mobile (`isDesktopOnly: false`).
 - Keine externen Dienste, Accounts oder Netzwerkzugriff — die gesamte XP-/Streak-/Loot-/Lore-Logik läuft lokal gegen deine Daily-Notes.
 - Keine Runtime-Abhängigkeiten.
 

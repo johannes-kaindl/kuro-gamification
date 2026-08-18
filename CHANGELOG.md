@@ -5,6 +5,25 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **Requires Obsidian 1.13.0 or newer.** The settings tab is now rendered declaratively by
+  Obsidian itself from `getSettingDefinitions()`, which is the only render path left. If you
+  are on an older Obsidian, stay on 1.2.0 — it keeps working; you just will not receive
+  further updates until you upgrade the app.
+
+### Removed
+
+- The imperative `display()` fallback for Obsidian < 1.13, along with the collapsible,
+  collapsed-by-default settings sections it drew. The declarative settings API has no
+  equivalent for collapsing a group, so those sections are gone. On Obsidian 1.13 they were
+  already gone in practice: the framework stops calling `display()` as soon as
+  `getSettingDefinitions()` returns anything, so nothing that was still visible was removed.
+  In exchange the settings are now indexed by Obsidian's global settings search.
+- The `uiCollapsed` setting (it only stored which sections were collapsed) and the vendored
+  `collapsible.ts` / `folder-suggest.ts` modules, which lost their only caller. Folder fields
+  keep their suggestions — Obsidian's own `folder` control provides them.
+
 ## [1.2.0] — 2026-08-18
 
 ### Added

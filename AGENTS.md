@@ -77,18 +77,26 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   prüft (2026-07-25 eingeführt, nachdem ein manueller Review-Auftrag reale Findings zutage
   förderte, die biome/SubmissionGate blind waren: doppeltes Command-Präfix, `minAppVersion` zu
   niedrig für tatsächlich genutzte APIs, `globalThis`/`console.info`/`element.style`-Verstöße).
-  `setWarning()` ist in `eslint.config.mjs` für `SettingsTab.ts`/`vendor/kit-obsidian/confirm.ts` bewusst von
-  `no-deprecated` ausgenommen — die Alternative `setDestructive()` verlangt `minAppVersion` 1.13+,
-  was `preflight.mjs` als "Catalyst-only"-Floor explizit verbietet. `getSettingDefinitions()` ist
-  dagegen **implementiert** (2026-07-25): `SettingsTab.ts` hat eine einzige deklarative
-  Gruppen-Definition (`_groups()`), die sowohl `getSettingDefinitions()` (Obsidian ≥ 1.13, native
-  Rendering + Auffindbarkeit über die globale Settings-Suche) als auch `display()` (< 1.13, läuft
-  über dieselben Gruppen mit der klassischen `Setting`-API) speist — kein zweiter
-  Wahrheits-Baum, `minAppVersion` bleibt 1.8.7 (nur die `obsidian`-Types wurden auf 1.13.1
-  angehoben, rein Compile-Zeit, kein Laufzeit-Effekt). **Bewusster Trade-off:** der native
-  ≥ 1.13-Renderer kennt unsere Collapsible-Sections nicht — dort erscheinen alle 11 Abschnitte
-  flach & aufgeklappt statt eingeklappt (Overload-Reduktion für die ADHS/Autismus-Zielgruppe
-  geht auf neueren Obsidian-Versionen zugunsten der Auffindbarkeit verloren). `SubmissionGate`
+  **Der Einstellungs-Tab ist seit 2026-08-18 rein deklarativ** (`minAppVersion` 1.13.0):
+  `getSettingDefinitions()` ist die einzige Wahrheit, `display()` und die ganze imperative
+  Fallback-Maschinerie (`_renderItem`/`_renderControl`/`_section`) sind gelöscht. Damit ist
+  auch die letzte `no-deprecated`-Ausnahme aus `eslint.overrides.mjs` verschwunden —
+  `eslint.overrides.mjs` trägt jetzt nur noch die `parserOptions`.
+  **Anlass war eine Messung, keine Meinung:** der Guard in `preflight.mjs` verbot 1.13+ als
+  „Catalyst-only"-Floor, aber `latestVersion` im **public** Kanal von `desktop-releases.json`
+  stand am 2026-08-18 auf **1.13.7**, identisch mit `beta.latestVersion` — 1.13 war längst
+  öffentlich, die hartkodierte Konstante (1.12.7) war schlicht veraltet. Sie ist im Dach
+  nachgezogen worden, mitsamt Mess-Datum und Quelle im Kommentar.
+  **Was das gekostet hat:** die Collapsible-Sections. Der deklarative Gruppentyp kennt
+  `heading`/`cls`/`search`/`visible` — **kein** Collapse. Die eingeklappten Abschnitte
+  (Overload-Reduktion für die ADHS/Autismus-Zielgruppe) sind damit endgültig weg. Sie waren
+  es faktisch aber schon vorher: auf jedem 1.13-Host ruft das Framework `display()` nie auf,
+  sobald `getSettingDefinitions()` ein nichtleeres Array liefert — die Löschung hat niemandem
+  etwas genommen, was er noch sah. Wer die Reduktion zurückholen will, muss sie mit den
+  Mitteln der API bauen (`search` auf Gruppenebene, `type: 'page'` für Unterseiten), nicht
+  mit einem zweiten Renderpfad. Mit `display()` fiel auch das damit tot gewordene Vendoring
+  (`collapsible.ts`, `folder-suggest.ts`) und das Settings-Feld `uiCollapsed`; den Ordner-
+  Vorschlag zieht jetzt Obsidians eigener `folder`-Control. `SubmissionGate`
   (`src/engine/SubmissionGate.ts`, verdrahtet über
   `tests/submission-gate.test.ts`) deckt ergänzend `manifest.json`/`LICENSE` test-seitig ab — die
   echten Dateien laufen durchs Gate, ein kaputtes Manifest failt `npm test`.

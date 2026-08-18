@@ -2,20 +2,19 @@
    KuroSettingsTab — Settings UI organized by section.
    Every escalating feature is individually toggleable.
 
-   Dual-mode (Obsidian guideline: getSettingDefinitions() next to a
-   display() fallback, no minAppVersion bump — see AGENTS.md "Store-Gate").
-   getSettingDefinitions() is the single source of truth (one array of
-   groups); display() walks the SAME array with the classic Setting API
-   for Obsidian < 1.13, which never calls getSettingDefinitions(). On
-   ≥ 1.13 the framework renders declaratively and display() is never
-   invoked — its rendering there is flat (no collapsible sections); the
-   collapsible/collapsed-by-default UX (deliberate overload-reduction for
-   the plugin's neurodivergent audience) is therefore < 1.13-only, a known,
-   accepted trade-off against search-discoverability on newer Obsidian.
+   Declarative-only (minAppVersion 1.13.0): getSettingDefinitions() is the
+   single source of truth — one array of groups that Obsidian renders itself.
+   The imperative display() fallback was dropped with the floor bump; with it
+   went the collapsible/collapsed-by-default sections, because the declarative
+   group type has no equivalent (it knows heading, cls, search, visible — not
+   collapse). That UX was already unreachable on every 1.13 host before the
+   deletion: the framework never calls display() once getSettingDefinitions()
+   returns a non-empty array. Overload-reduction on ≥ 1.13 therefore has to
+   come from the API's own means (search, `type: 'page'`), not from us.
    ========================================================== */
 import {
   type App, PluginSettingTab, Setting, Notice,
-  type SettingDefinitionItem, type SettingDefinitionGroup, type SettingControl,
+  type SettingDefinitionItem, type SettingDefinitionGroup,
 } from 'obsidian';
 import type KuroPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../types';
@@ -28,8 +27,6 @@ import { ResetDataModal } from '../modals/ResetDataModal';
 import { WelcomeModal } from '../modals/WelcomeModal';
 import { HelpModal } from '../modals/HelpModal';
 import { applyDestructive, confirmAction } from '../vendor/kit-obsidian/confirm';
-import { FolderSuggest } from '../vendor/kit-obsidian/folder-suggest';
-import { collapsibleSection, type CollapsibleStorage } from '../vendor/kit-obsidian/collapsible';
 import { buildUnitPack, resetUnit, type PackUnit } from '../utils/packSections';
 import { activeNames, activatePack, canActivatePack, deletePack, resetSection } from '../utils/packLibrary';
 import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
@@ -45,13 +42,9 @@ import type { EndpointStatus, EndpointWarning, EndpointPreset } from '../vendor/
 import type { EndpointRole } from '../vendor/kit/endpoint_config';
 import { statusKindKey, warnRuleKey, roleKindKey } from './endpointListModel';
 
-/** A declarative group, tagged with the section key it was built from —
- *  `_section()` needs the key (i18n + persisted collapse state), which the
- *  Obsidian type itself has no field for. Kept out of the returned
- *  `SettingDefinitionItem[]` structurally (extra properties on a typed
- *  variable, not a literal, so no excess-property error), read back only by
- *  `display()`'s own iteration over `_groups()`. */
-type KuroGroup = SettingDefinitionGroup & { key: string };
+/** Local alias for the one group shape this tab builds — every `_*Group()`
+ *  returns it, and `_groups()` hands the array straight to Obsidian. */
+type KuroGroup = SettingDefinitionGroup;
 
 export class KuroSettingsTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: KuroPlugin) {
@@ -142,22 +135,6 @@ export class KuroSettingsTab extends PluginSettingTab {
     await this._save();
   }
 
-  /* ── Imperative fallback (Obsidian < 1.13, which never calls
-     getSettingDefinitions()) — walks the SAME group array, rendering each
-     group into a collapsible section (unlike the native ≥ 1.13 renderer,
-     which has no notion of our collapse behavior). ─────────────────── */
-
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.addClass('kuro-settings');
-    const lang = this.plugin.data.settings.language;
-    for (const group of this._groups(lang)) {
-      const el = this._section(group.key, lang);
-      for (const item of group.items ?? []) this._renderItem(el, item);
-    }
-  }
-
   /** Obsidian ruft dies beim Schließen des Tabs. Der Modell-Cache hält Promises und
    *  überlebt Tab-Neuaufbauten bewusst — ohne diesen Aufruf bliebe ein einmal als
    *  "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so stehen. */
@@ -166,65 +143,10 @@ export class KuroSettingsTab extends PluginSettingTab {
     super.hide();
   }
 
-  private _renderItem(containerEl: HTMLElement, item: SettingDefinitionItem): void {
-    const def = item as unknown as {
-      name?: string; desc?: string;
-      render?: (s: Setting) => void;
-      control?: SettingControl;
-    };
-    const setting = new Setting(containerEl);
-    if (def.name) setting.setName(def.name);
-    if (def.desc) setting.setDesc(def.desc);
-    if (typeof def.render === 'function') { def.render(setting); return; }
-    if (def.control) this._renderControl(setting, def.control);
-  }
-
-  private _renderControl(setting: Setting, c: SettingControl): void {
-    const key = c.key;
-    const cur = this.getControlValue(key) as string | number | boolean | undefined;
-    const save = (v: unknown): void => { void this.setControlValue(key, v); };
-    switch (c.type) {
-      case 'toggle':
-        setting.addToggle((tg) => tg.setValue(Boolean(cur)).onChange(save));
-        break;
-      case 'dropdown':
-        setting.addDropdown((dd) => {
-          for (const [k, v] of Object.entries(c.options ?? {})) dd.addOption(k, v);
-          dd.setValue(String(cur ?? '')).onChange(save);
-        });
-        break;
-      case 'number':
-        setting.addText((tx) => {
-          tx.inputEl.type = 'number';
-          tx.setValue(String(cur ?? ''));
-          if (c.placeholder) tx.setPlaceholder(c.placeholder);
-          tx.onChange(save);
-        });
-        break;
-      case 'folder':
-        setting.addText((tx) => {
-          if (c.placeholder) tx.setPlaceholder(c.placeholder);
-          tx.setValue(String(cur ?? '')).onChange(save);
-          new FolderSuggest(this.app, tx.inputEl);
-        });
-        break;
-      default:
-        setting.addText((tx) => {
-          if ('placeholder' in c && c.placeholder) tx.setPlaceholder(c.placeholder);
-          tx.setValue(String(cur ?? '')).onChange(save);
-        });
-        break;
-    }
-  }
-
-  /** Re-render the tab. ≥ 1.13 exposes `update()` on the declarative
-   *  framework; the < 1.13 fallback has no such method, so re-run
-   *  `display()`. The cast keeps `obsidianmd/no-unsupported-api` from
-   *  flagging `update` (1.13-only). */
+  /** Re-render the tab: `update()` re-reads getSettingDefinitions() and
+   *  redraws the whole tab from the returned definitions. */
   private _refreshUi(): void {
-    const self = this as unknown as { update?: () => void };
-    if (typeof self.update === 'function') self.update();
-    else this.display();
+    this.update();
   }
 
   /** Nur speichern, ohne Neuberechnung — für Änderungen, die den
@@ -240,31 +162,8 @@ export class KuroSettingsTab extends PluginSettingTab {
     await this.plugin.refreshStatus(true);
   }
 
-  /**
-   * Renders a collapsible settings section and returns its body container.
-   * Only used by the < 1.13 imperative fallback — the native ≥ 1.13
-   * renderer draws its own (non-collapsible) group headings.
-   * `key` doubles as the i18n suffix (`settings.section.<key>`) and the
-   * persisted collapse key, so every section behaves the same way.
-   */
-  private _section(key: string, lang: Lang): HTMLElement {
-    return collapsibleSection(this.containerEl, {
-      title: t(`settings.section.${key}`, lang),
-      key,
-      storage: this._collapseStore,
-    });
-  }
-
-  private get _collapseStore(): CollapsibleStorage {
-    const s = this.plugin.data.settings;
-    return {
-      getCollapsed: (k) => s.uiCollapsed[k],
-      setCollapsed: (k, v) => { s.uiCollapsed[k] = v; void this.plugin.persist(); },
-    };
-  }
-
-  /* ── Group definitions — one per section, single source of truth for
-     both the declarative (≥ 1.13) and imperative (< 1.13) render paths. */
+  /* ── Group definitions — one per section, the single source of
+     truth Obsidian renders the settings tab from. */
   private _groups(lang: Lang): KuroGroup[] {
     return [
       this._generalGroup(lang),
@@ -288,7 +187,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §1 General ───────────────────────────────────────── */
   private _generalGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'general', heading: this._heading('general', lang),
+      type: 'group', heading: this._heading('general', lang),
       items: [
         { name: t('set.lang.name', lang), desc: t('set.lang.desc', lang),
           control: { type: 'dropdown', key: 'language', options: { de: 'Deutsch', en: 'English' } } },
@@ -311,7 +210,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §2 Paths ─────────────────────────────────────────── */
   private _pathsGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'paths', heading: this._heading('paths', lang),
+      type: 'group', heading: this._heading('paths', lang),
       items: [
         { name: t('set.dailyFolder.name', lang), desc: t('set.dailyFolder.desc', lang),
           control: { type: 'folder', key: 'dailyFolder' } },
@@ -328,7 +227,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §3 XP sources ────────────────────────────────────── */
   private _xpGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'xp', heading: this._heading('xp', lang),
+      type: 'group', heading: this._heading('xp', lang),
       items: [
         { name: t('set.xpFromCheckboxes.name', lang), desc: t('set.xpFromCheckboxes.desc', lang),
           control: { type: 'toggle', key: 'enableXpFromCheckboxes' } },
@@ -369,7 +268,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §4 Weekly ────────────────────────────────────────── */
   private _weeklyGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'weekly', heading: this._heading('weekly', lang),
+      type: 'group', heading: this._heading('weekly', lang),
       items: [
         { name: t('set.xpFromWeekly.name', lang), desc: t('set.xpFromWeekly.desc', lang),
           control: { type: 'toggle', key: 'enableXpFromWeekly' } },
@@ -384,7 +283,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §5 Streak ────────────────────────────────────────── */
   private _streakGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'streak', heading: this._heading('streak', lang),
+      type: 'group', heading: this._heading('streak', lang),
       items: [
         { name: t('set.streakEnabled.name', lang), control: { type: 'toggle', key: 'enableStreaks' } },
         { name: t('set.streakThreshold.name', lang), desc: t('set.streakThreshold.desc', lang),
@@ -398,7 +297,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §6 Lore ──────────────────────────────────────────── */
   private _loreGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'lore', heading: this._heading('lore', lang),
+      type: 'group', heading: this._heading('lore', lang),
       items: [
         { name: t('set.loreEnabled.name', lang), control: { type: 'toggle', key: 'enableLore' } },
       ],
@@ -408,7 +307,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §6b Loot ─────────────────────────────────────────── */
   private _lootGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'loot', heading: this._heading('loot', lang),
+      type: 'group', heading: this._heading('loot', lang),
       items: [
         { name: t('set.lootEnabled.name', lang), control: { type: 'toggle', key: 'enableLoot' } },
         { name: t('set.lootCount.name', lang), control: { type: 'number', key: 'lootOptionsCount', min: 1, max: 9 } },
@@ -421,7 +320,7 @@ export class KuroSettingsTab extends PluginSettingTab {
      only the on/off toggle is a plain control. ─────────────────────── */
   private _habitsGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'habits', heading: this._heading('habits', lang),
+      type: 'group', heading: this._heading('habits', lang),
       items: [
         { name: t('set.xpFromHabits.name', lang), desc: t('set.xpFromHabits.desc', lang),
           control: { type: 'toggle', key: 'enableXpFromHabits' } },
@@ -502,7 +401,7 @@ export class KuroSettingsTab extends PluginSettingTab {
      single opaque render block. ────────────────────────────────────── */
   private _packsGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'packs', heading: this._heading('packs', lang),
+      type: 'group', heading: this._heading('packs', lang),
       items: [
         { name: this._heading('packs', lang),
           render: (setting) => this._renderPacksBody(this._hostFor(setting), lang) },
@@ -571,7 +470,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §9 Advanced ──────────────────────────────────────── */
   private _advancedGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'advanced', heading: this._heading('advanced', lang),
+      type: 'group', heading: this._heading('advanced', lang),
       items: [
         { name: t('set.advanced.showWelcome', lang),
           render: (setting) => { setting.addButton((b) => b.setButtonText(t('set.advanced.showWelcomeBtn', lang))
@@ -598,7 +497,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   private _aboutGroup(lang: Lang): KuroGroup {
     const v = this.plugin.manifest.version;
     return {
-      type: 'group', key: 'about', heading: this._heading('about', lang),
+      type: 'group', heading: this._heading('about', lang),
       items: [
         { name: t('set.about.version', lang, { v }),
           render: (setting) => { setting.addButton((b) => b.setButtonText(t('set.about.docs', lang))
@@ -607,16 +506,10 @@ export class KuroSettingsTab extends PluginSettingTab {
     };
   }
 
-  /** Makes the row Obsidian hands a `render` callback into a neutral block
-   *  container: a render block that draws several rows (habit list, packs
-   *  hub) must not end up nested inside the two-column `.setting-item` flex
-   *  row. Empties settingEl — the item's own name/desc (already applied by
-   *  `_renderItem` before calling `render`) is discarded along with it,
-   *  which is fine here since these bodies draw their own headings/text. */
   /* ── §12 Companion-Chat ───────────────────────────────── */
   private _chatGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'chat', heading: this._heading('chat', lang),
+      type: 'group', heading: this._heading('chat', lang),
       items: [
         { name: t('set.enableChat.name', lang), desc: t('set.enableChat.desc', lang),
           control: { type: 'toggle', key: 'enableChat' } },
@@ -781,7 +674,7 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── §13 Merkzettel ───────────────────────────────────── */
   private _notesGroup(lang: Lang): KuroGroup {
     return {
-      type: 'group', key: 'notes', heading: this._heading('notes', lang),
+      type: 'group', heading: this._heading('notes', lang),
       items: [
         { name: t('settings.section.notes', lang), desc: t('notes.desc', lang, { max: MAX_NOTES }),
           render: (setting) => this._renderNotesList(this._hostFor(setting), lang) },
@@ -821,6 +714,12 @@ export class KuroSettingsTab extends PluginSettingTab {
     });
   }
 
+  /** Makes the row Obsidian hands a `render` callback into a neutral block
+   *  container: a render block that draws several rows (habit list, packs
+   *  hub) must not end up nested inside the two-column `.setting-item` flex
+   *  row. Empties settingEl — the item's own name/desc (already applied by
+   *  Obsidian's renderer before it calls `render`) is discarded along with
+   *  it, which is fine here since these bodies draw their own headings. */
   private _hostFor(setting: Setting): HTMLElement {
     setting.settingEl.empty();
     setting.settingEl.removeClass('setting-item');

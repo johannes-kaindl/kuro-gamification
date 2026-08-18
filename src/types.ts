@@ -149,8 +149,6 @@ export interface KuroSettings {
   statusVerbose: boolean;
   reduceAnimations: boolean;
   logLevel: LogLevel;
-  /** Collapsed state per settings section key (persisted). */
-  uiCollapsed: Record<string, boolean>;
 
   /* Companion-Chat — off-by-default, gedacht für lokale Endpunkte */
   enableChat: boolean;
@@ -273,7 +271,6 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   statusVerbose: false,
   reduceAnimations: false,
   logLevel: 'error',
-  uiCollapsed: {},
 
   enableChat: false,
   chatEndpoints: [],

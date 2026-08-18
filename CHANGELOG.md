@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-08-18
+
 ### Added
 
 - **Companion chat (off by default).** Kuro can now talk to you — asking what to start with,

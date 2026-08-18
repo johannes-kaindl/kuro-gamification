@@ -1,7 +1,7 @@
 {
   "id": "kuro-gamification",
   "name": "Kuro Gamification",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "minAppVersion": "1.13.0",
   "description": "Neurodivergence-friendly gamification: XP, levels, streaks with freeze tokens, deterministic loot, and lore. Off-by-default for anything that could escalate.",
   "author": "Jay",

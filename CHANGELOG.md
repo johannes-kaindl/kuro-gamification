@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-08-18
+
 ### Changed
 
 - **Requires Obsidian 1.13.0 or newer.** The settings tab is now rendered declaratively by

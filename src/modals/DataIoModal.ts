@@ -6,6 +6,7 @@ import { Modal, type App, Notice } from 'obsidian';
 import type KuroPlugin from '../main';
 import type { KuroPluginData } from '../types';
 import { t } from '../i18n';
+import { copyToClipboard } from '../vendor/kit-obsidian/clipboard';
 
 export class ExportDataModal extends Modal {
   constructor(app: App, private readonly plugin: KuroPlugin) {
@@ -24,14 +25,15 @@ export class ExportDataModal extends Modal {
 
     const footer = this.contentEl.createDiv({ cls: 'kuro-modal-footer' });
     const copyBtn = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.export.copy', lang) });
-    copyBtn.addEventListener('click', () => { void (async () => {
-      try {
-        await navigator.clipboard.writeText(ta.value);
-        new Notice(t('modal.export.copied', lang));
-      } catch {
-        ta.select();
-      }
-    })(); });
+    copyBtn.addEventListener('click', () => {
+      void copyToClipboard(ta.value, {
+        copiedMessage: t('modal.export.copied', lang),
+        // Keine Fehler-Notice: `ta.select()` ist die ortsnahe, bessere Quittung —
+        // der Text steht markiert da und kann von Hand kopiert werden.
+        failedMessage: null,
+        onFailed: () => ta.select(),
+      });
+    });
     const closeBtn = footer.createEl('button', { cls: 'kuro-btn', text: t('modal.lore.close', lang) });
     closeBtn.addEventListener('click', () => this.close());
   }

@@ -1,7 +1,10 @@
+import { Notice } from 'obsidian';
 import { parseSSE } from '../src/vendor/kit/sse';
 import { ThinkSplitter } from '../src/vendor/kit/think-splitter';
 import { normalizeEndpoint } from '../src/vendor/kit/endpoint';
 import { suppressParams } from '../src/vendor/kit/reasoning';
+import { writeClipboard } from '../src/vendor/kit/clipboard';
+import { copyToClipboard } from '../src/vendor/kit-obsidian/clipboard';
 
 /* Smoke-Test für die vendored Kit-Module: sichert ab, dass die Kopien
    importierbar sind und sich so verhalten, wie KuroChatClient es annimmt.
@@ -46,5 +49,60 @@ describe('vendored kit modules', () => {
 
   it('suppressParams returns parameters when suppression is on', () => {
     expect(Object.keys(suppressParams(true)).length).toBeGreaterThan(0);
+  });
+});
+
+/* Clipboard: die Faelle, die die drei Aufrufstellen (DataIoModal, PackIoModal,
+   SettingsTab) tatsaechlich treffen koennen.
+
+   Testumgebung ist `node` (jest.config.js): `navigator` gibt es dort global (Node >= 21),
+   `navigator.clipboard` ist `undefined`. Erreichbar ist damit der Falsy-Guard des Kits
+   (pure/clipboard.ts), NICHT der catch um den Property-Read — wer den pruefen will, muss
+   `navigator` im Test selbst entfernen. Der Erfolgspfad braucht eine echte Clipboard-API
+   und ist hier nicht darstellbar; er gehoert in den GUI-Smoke. */
+describe('vendored clipboard modules', () => {
+  beforeEach(() => { Notice.instances.length = 0; });
+
+  it('navigator.clipboard fehlt hier — die Voraussetzung aller folgenden Faelle', () => {
+    expect(navigator.clipboard).toBeUndefined();
+  });
+
+  it('writeClipboard meldet "unavailable" SYNCHRON und resolved false', async () => {
+    const seen: Array<{ reason: string; error: unknown }> = [];
+    const pending = writeClipboard('x', {
+      onFailed: (reason, error) => seen.push({ reason, error }),
+    });
+    // Noch vor jedem await: der unavailable-Pfad ruft onFailed synchron. Das ist
+    // load-bearing (Kit-Modulkopf) — ein Deferred-Aufruf braeche im Kit einen fremden
+    // Test still, und hier stuende `ta.select()` erst nach dem Klick-Tick.
+    expect(seen).toHaveLength(1);
+    expect(seen[0].reason).toBe('unavailable');
+    expect(seen[0].error).toBeInstanceOf(Error); // `error` ist IMMER gesetzt
+    await expect(pending).resolves.toBe(false);
+  });
+
+  it('writeClipboard ruft onCopied nicht, wenn nicht kopiert wurde', async () => {
+    let copied = false;
+    await writeClipboard('x', { onCopied: () => { copied = true; } });
+    expect(copied).toBe(false);
+  });
+
+  it('copyToClipboard zeigt ohne failedMessage den englischen Kit-Default', async () => {
+    // Dokumentiert, wogegen `failedMessage: null` an allen drei Stellen entscheidet:
+    // eine englische Notice in einer sonst zweisprachigen Oberflaeche.
+    await copyToClipboard('x');
+    expect(Notice.instances).toEqual(['Copy failed']);
+  });
+
+  it('copyToClipboard mit failedMessage: null bleibt still und meldet ortsnah', async () => {
+    let selected = false;
+    const ok = await copyToClipboard('x', {
+      copiedMessage: 'Kopiert',
+      failedMessage: null,
+      onFailed: () => { selected = true; },
+    });
+    expect(ok).toBe(false);
+    expect(Notice.instances).toEqual([]); // weder Erfolgs- noch Fehler-Notice
+    expect(selected).toBe(true);          // stattdessen das ta.select() der Aufrufstelle
   });
 });

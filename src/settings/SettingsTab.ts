@@ -19,6 +19,7 @@ import {
 import type KuroPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../types';
 import { clampInt } from '../vendor/kit/num';
+import { copyToClipboard } from '../vendor/kit-obsidian/clipboard';
 import type { Lang, LogLevel } from '../types';
 import { t } from '../i18n';
 import { ExportDataModal, ImportDataModal } from '../modals/DataIoModal';
@@ -363,9 +364,18 @@ export class KuroSettingsTab extends PluginSettingTab {
           downloadJson(containerEl.ownerDocument, `kuro-${unit}.kuro.json`, pack);
         }))
       .addButton((b) => b.setButtonText(t('pack.action.copy', lang))
-        .onClick(async () => {
+        .onClick(() => {
           const pack = buildUnitPack(unit, this.plugin.data.settings);
-          try { await navigator.clipboard.writeText(JSON.stringify(pack, null, 2)); new Notice(t('modal.pack.export.copied', lang)); } catch { /* clipboard unavailable */ }
+          // `failedMessage: null` = weiterhin still im Fehlerfall. Das ist KEINE
+          // Verbesserung, sondern der unveraenderte Ist-Zustand: hier gibt es weder
+          // ein Textfeld zum Markieren noch einen i18n-Key fuer einen Kopier-
+          // Fehlschlag, und der englische Kit-Default ("Copy failed") waere in einer
+          // sonst durchgaengig uebersetzten Oberflaeche ein sichtbarer Rueckschritt.
+          // Ablose braucht zwei neue i18n-Keys (en + de) — eigene UI-Aufgabe.
+          void copyToClipboard(JSON.stringify(pack, null, 2), {
+            copiedMessage: t('modal.pack.export.copied', lang),
+            failedMessage: null,
+          });
         }))
       .addButton((b) => applyDestructive(b.setButtonText(t('pack.action.reset', lang)))
         .onClick(() => { void this._resetUnitConfirmed(unit, lang); }));

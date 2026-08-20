@@ -47,7 +47,14 @@ export class Modal {
 }
 
 export class Notice {
-  constructor(_msg: string) {}
+  /** Mitschrift aller gezeigten Notices — additiv, kein Bestandstest liest sie.
+   *  Gebraucht von tests/vendor-kit.test.ts: der Kit-Clipboard-Vertrag ist genau
+   *  „welche Notice erscheint wann", und ohne Mitschrift ist „keine Notice" nicht
+   *  von „irgendeine Notice" unterscheidbar. Praezedenz: json_viewer, vault-crews. */
+  static instances: string[] = [];
+  constructor(msg: string) {
+    Notice.instances.push(msg);
+  }
 }
 
 export class AbstractInputSuggest<T> {

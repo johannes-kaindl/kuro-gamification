@@ -6,6 +6,7 @@
 import { Modal, type App, Notice } from 'obsidian';
 import type KuroPlugin from '../main';
 import { t } from '../i18n';
+import { copyToClipboard } from '../vendor/kit-obsidian/clipboard';
 import { validatePack, type PackIssue } from '../engine/PackValidator';
 import { importPack } from '../utils/packLibrary';
 import { readJsonFile } from '../utils/fileIo';
@@ -120,10 +121,14 @@ export class ExportPackModal extends Modal {
 
     const footer = c.createDiv({ cls: 'kuro-modal-footer' });
     const copy = footer.createEl('button', { cls: 'kuro-btn kuro-btn-primary', text: t('modal.pack.export.copy', lang) });
-    copy.addEventListener('click', () => { void (async () => {
-      try { await navigator.clipboard.writeText(ta.value); new Notice(t('modal.pack.export.copied', lang)); }
-      catch { ta.select(); }
-    })(); });
+    copy.addEventListener('click', () => {
+      void copyToClipboard(ta.value, {
+        copiedMessage: t('modal.pack.export.copied', lang),
+        // s. DataIoModal: `ta.select()` statt einer Fehler-Notice.
+        failedMessage: null,
+        onFailed: () => ta.select(),
+      });
+    });
     footer.createEl('button', { cls: 'kuro-btn', text: t('modal.pack.close', lang) })
       .addEventListener('click', () => this.close());
   }

@@ -1,14 +1,7 @@
 {
-  "note": "Verbatim snapshots aus obsidian-kit/src/pure. Never hand-edit. Re-copy from obsidian-kit to update.",
-  "modules": [
-    { "file": "num.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
-    { "file": "sse.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
-    { "file": "think-splitter.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
-    { "file": "endpoint.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
-    { "file": "reasoning.ts", "source": "obsidian-kit", "version": "0.21.0", "sha": "6dccb70" },
-    { "file": "endpoint_diagnostics.ts", "source": "obsidian-kit", "version": "0.26.0", "sha": "2a7b5d7" },
-    { "file": "endpoint_config.ts", "source": "obsidian-kit", "version": "0.26.0", "sha": "2a7b5d7" },
-    { "file": "model-choice.ts", "source": "obsidian-kit", "version": "0.26.0", "sha": "2a7b5d7" },
-    { "file": "model-list-cache.ts", "source": "obsidian-kit", "version": "0.26.0", "sha": "2a7b5d7" }
-  ]
+  "source": "obsidian-kit",
+  "version": "0.27.0",
+  "sha": "548041b",
+  "vendored": "clipboard.ts, endpoint.ts, endpoint_config.ts, endpoint_diagnostics.ts, model-choice.ts, model-list-cache.ts, num.ts, reasoning.ts, sse.ts, think-splitter.ts",
+  "note": "Verbatim snapshot. Never hand-edit. Re-vendor via tools/sync-kit.sh. kit-obsidian/ siehe dortige VENDOR.json."
 }

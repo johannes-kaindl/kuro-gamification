@@ -1,31 +1,7 @@
 {
-  "note": "Verbatim snapshots. Never hand-edit. Re-copy from obsidian-kit to update.",
-  "modules": [
-    {
-      "file": "confirm.ts",
-      "source": "obsidian-kit",
-      "version": "0.25.0",
-      "sha": "1ca3861"
-    },
-    {
-      "file": "clock.ts",
-      "source": "obsidian-kit",
-      "version": "0.21.0",
-      "sha": "6dccb70"
-    },
-    {
-      "file": "endpoint-list.ts",
-      "source": "obsidian-kit",
-      "version": "0.26.0",
-      "sha": "2a7b5d7",
-      "note": "Importpfade ../pure/ -> ../kit/ angepasst (Vendor-Layout)."
-    },
-    {
-      "file": "model-picker.ts",
-      "source": "obsidian-kit",
-      "version": "0.26.0",
-      "sha": "2a7b5d7",
-      "note": "Importpfade ../pure/ -> ../kit/ angepasst (Vendor-Layout)."
-    }
-  ]
+  "source": "obsidian-kit",
+  "version": "0.27.0",
+  "sha": "548041b",
+  "vendored": "clipboard.ts, clock.ts, confirm.ts, endpoint-list.ts, model-picker.ts",
+  "note": "Verbatim snapshot. Never hand-edit. Re-vendor via tools/sync-kit.sh. clipboard.ts, endpoint-list.ts und model-picker.ts tragen EINE mechanische Abweichung: Importpfade ../pure/ -> ../kit/ angepasst (Vendor-Layout). Bei jedem Re-Vendoring reproduzieren; sonst darf nichts abweichen. Praezedenz: vim-dojo, markdown-presentation, vault-crews."
 }

@@ -370,7 +370,10 @@ function null2rect(box: Rect | null): Rect | null {
 
 /**
  * Der Einstellungs-Tab. Ab Obsidian 1.13 ist das ein **eigenes Fenster** ohne Workspace —
- * über die Sache wählen (`attachTo("settings")`), nie über den lokalisierten Titel.
+ * die ART wählt `attachTo("settings", …)` über die Sache, nie über das erste Wort des
+ * Titels ("Settings"/"Einstellungen" ist lokalisiert und wechselt mit der UI-Sprache).
+ * Den VAULT wählt es seit 2026-08-30 dagegen über den Titel (" - <vault> - Obsidian",
+ * nicht lokalisiert) — dafür ist der dritte Parameter da.
  *
  * Der Ausschnitt endet am Tab-INHALT, nicht am Fenster: die Kategorien-Spalte links
  * gehört Obsidian und trägt dessen Sprache. Und die Höhe kommt vom letzten Kind, nicht

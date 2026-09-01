@@ -540,6 +540,93 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
   await cdp.evaluate(`app.setting.close?.(); return true;`);
 }
 
+
+/**
+ * Abschnitt 8 — Herkunfts-Panel.
+ *
+ * Warum das hier steht und nicht in den Unit-Tests: die Abbildung Zustand → Klasse
+ * ist dort belegt (tests/settings-source-panel.test.ts), aber NICHT, dass die Zeilen
+ * im echten Einstellungs-Tab ankommen. Genau diese Sorte Anzeige kann grün sein, ohne
+ * ihren Gegenstand je berührt zu haben (_docs/LESSONS.md 2026-08-30).
+ */
+async function sektionHerkunft(cdp: Cdp): Promise<void> {
+  await cdp.evaluate(`
+    app.setting.open();
+    app.setting.openTabById(${JSON.stringify(PLUGIN_ID)});
+    await new Promise((r) => setTimeout(r, 900));
+    return true;
+  `);
+
+  const messen = (wurzel: string) => `
+    const root = ${wurzel};
+    if (!root) return null;
+    const rows = Array.from(root.querySelectorAll('.kuro-src-row'));
+    if (rows.length === 0) return null;
+    const stati = Array.from(root.querySelectorAll('.kuro-src-status'));
+    return {
+      zeilen: rows.length,
+      mitGenauEinerKlasse: stati.filter((el) => {
+        const treffer = ['is-ok', 'is-warning', 'is-error'].filter((k) => el.classList.contains(k));
+        return treffer.length === 1;
+      }).length,
+      mitLabel: stati.filter((el) => !!el.getAttribute('aria-label')).length,
+      status: stati.length,
+      texte: Array.from(root.querySelectorAll('.kuro-src-detail')).map((el) => el.textContent).join(' | '),
+      namen: Array.from(root.querySelectorAll('.kuro-src-name')).map((el) => el.textContent),
+    };
+  `;
+
+  interface Panel {
+    zeilen: number;
+    mitGenauEinerKlasse: number;
+    mitLabel: number;
+    status: number;
+    texte: string;
+    namen: string[];
+  }
+
+  let mess = await pollUntil<Panel>(cdp, messen('document.querySelector(".modal.mod-settings")'), 3000);
+  let quelle = 'Modal im Hauptfenster';
+  let fenster: Cdp | null = null;
+
+  if (!mess) {
+    fenster = await attachTo('settings', PORT);
+    if (fenster) {
+      mess = await pollUntil<Panel>(fenster, messen('document.body'), 6000);
+      quelle = 'eigenes Einstellungen-Fenster (Obsidian ≥ 1.13)';
+    }
+  }
+
+  if (!mess) {
+    skipped('herkunft/panel-vorhanden', 'Einstellungen-DOM nicht erreichbar');
+  } else {
+    // Erst den Gegenstand belegen: alle folgenden Punkte wären über null Zeilen grün.
+    record(
+      'herkunft/panel-vorhanden',
+      mess.zeilen === 4,
+      `${quelle}: ${mess.zeilen} Zeilen (${mess.namen.join(', ')})`,
+    );
+    record(
+      'herkunft/genau-eine-zustandsklasse',
+      mess.status > 0 && mess.mitGenauEinerKlasse === mess.status,
+      `${mess.mitGenauEinerKlasse}/${mess.status} mit genau einer aus is-ok/is-warning/is-error`,
+    );
+    record(
+      'herkunft/aria-label',
+      mess.status > 0 && mess.mitLabel === mess.status,
+      `${mess.mitLabel}/${mess.status} mit aria-label (WCAG 1.4.1: Farbe nie allein)`,
+    );
+    record(
+      'herkunft/kein-roher-code',
+      !/src\.reason\./.test(mess.texte),
+      mess.texte.slice(0, 110),
+    );
+  }
+
+  fenster?.close();
+  await cdp.evaluate(`app.setting.close?.(); return true;`);
+}
+
 /* -------------------------------------------------------------------- main */
 
 let PORT = 9222;
@@ -624,6 +711,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 7 · Destruktive Knöpfe');
     await sektionDestruktiv(cdp);
+    console.log('');
+    console.log('── 8 · Herkunfts-Panel');
+    await sektionHerkunft(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

@@ -105,6 +105,14 @@ export class KuroSettingsTab extends PluginSettingTab {
       case 'bonusFor75pct': s.bonusFor75pct = clampInt(String(value), 0, 999, DEFAULT_SETTINGS.bonusFor75pct); break;
       case 'bonusFor90pct': s.bonusFor90pct = clampInt(String(value), 0, 999, DEFAULT_SETTINGS.bonusFor90pct); break;
       case 'pomodoroFrontmatterKey': s.pomodoroFrontmatterKey = String(value).trim() || DEFAULT_SETTINGS.pomodoroFrontmatterKey; break;
+      case 'taskMatchField': s.taskMatchField = String(value).trim(); break;
+      case 'taskMatchValue': s.taskMatchValue = String(value).trim(); break;
+      case 'taskStatusField': s.taskStatusField = String(value).trim() || DEFAULT_SETTINGS.taskStatusField; break;
+      case 'taskDoneValues': s.taskDoneValues = String(value).trim(); break;
+      case 'xpPerCompletedTask': s.xpPerCompletedTask = clampInt(String(value), 0, 999, DEFAULT_SETTINGS.xpPerCompletedTask); break;
+      case 'xpPerWorkSession': s.xpPerWorkSession = clampInt(String(value), 0, 999, DEFAULT_SETTINGS.xpPerWorkSession); break;
+      case 'xpPerBreakSession': s.xpPerBreakSession = clampInt(String(value), 0, 999, DEFAULT_SETTINGS.xpPerBreakSession); break;
+      case 'notifyXpGain': s.notifyXpGain = Boolean(value); break;
       case 'pomodoroThreshold': s.pomodoroThreshold = clampInt(String(value), 1, 99, DEFAULT_SETTINGS.pomodoroThreshold); break;
       case 'pomodoroBonus': s.pomodoroBonus = clampInt(String(value), 0, 999, DEFAULT_SETTINGS.pomodoroBonus); break;
 

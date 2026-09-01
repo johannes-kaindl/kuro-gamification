@@ -119,6 +119,28 @@ export interface KuroSettings {
   pomodoroThreshold: number;
   pomodoroBonus: number;
 
+  /* Aufgaben-Erkennung: Kuros EIGENE Regel. TaskNotes' Konfiguration ist dazu
+     hoechstens ein Vorschlag — gemessen am 2026-09-01 passte sie auf 17 Notizen,
+     waehrend 1194 Aufgaben nach einem anderen Schema danebenlagen. Wer hier dem
+     Fremdplugin folgt, baut eine Quelle, die korrekt rechnet und nichts findet. */
+  /** Frontmatter-Feld, an dem eine Aufgabe erkannt wird. Leer = Quelle aus. */
+  taskMatchField: string;
+  /** Wert darin. Bei einem Listenfeld (z. B. `tags`) genuegt ein Treffer. */
+  taskMatchValue: string;
+  /** Feld, das den Status traegt. */
+  taskStatusField: string;
+  /** Kommagetrennte Statuswerte, die "erledigt" bedeuten. */
+  taskDoneValues: string;
+
+  /** XP je abgeschlossener Aufgabe. 0 = Quelle aus. */
+  xpPerCompletedTask: number;
+  /** XP je abgeschlossener Arbeitssession (Pomodoro, type 'work'). 0 = aus. */
+  xpPerWorkSession: number;
+  /** XP je abgeschlossener Pause (short-break/long-break). 0 = aus. */
+  xpPerBreakSession: number;
+  /** Gedrosselte Rueckmeldung beim Zuwachs. Zeigt nur, veraendert nichts — deshalb an. */
+  notifyXpGain: boolean;
+
   habits: KuroHabit[];
 
   weeklyReviewKey: string;
@@ -246,6 +268,15 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   pomodoroFrontmatterKey: 'pomodoros',
   pomodoroThreshold: 4,
   pomodoroBonus: 10,
+
+  taskMatchField: 'tags',
+  taskMatchValue: 'task',
+  taskStatusField: 'status',
+  taskDoneValues: 'done',
+  xpPerCompletedTask: 0,
+  xpPerWorkSession: 0,
+  xpPerBreakSession: 0,
+  notifyXpGain: true,
 
   habits: [],   // user-defined; see README for examples
 

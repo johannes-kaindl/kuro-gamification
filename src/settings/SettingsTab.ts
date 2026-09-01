@@ -13,7 +13,7 @@
    come from the API's own means (search, `type: 'page'`), not from us.
    ========================================================== */
 import {
-  type App, PluginSettingTab, Setting, Notice,
+  type App, PluginSettingTab, Setting, Notice, setIcon,
   type SettingDefinitionItem, type SettingDefinitionGroup,
 } from 'obsidian';
 import type KuroPlugin from '../main';
@@ -34,6 +34,10 @@ import { buildDailyExtract, renderDailyExtract } from '../llm/kuroContext';
 import { canAddNote, normalizeNote, MAX_NOTES } from '../llm/kuroNotes';
 import { downloadJson } from '../utils/fileIo';
 import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../utils/taskNotesPomodoro';
+import { taskRuleFromSettings, readTaskNotesConfig } from '../utils/taskNotesBridge';
+import {
+  diagnoseSources, sourceStateClass, sourceStateIcon, taskRuleSuggestion,
+} from '../engine/TaskNotesXp';
 import { buildEndpointList, type EndpointListStrings } from '../vendor/kit-obsidian/endpoint-list';
 import { renderModelPicker } from '../vendor/kit-obsidian/model-picker';
 import { resolveModelChoice, type ModelHintKey } from '../vendor/kit/model-choice';
@@ -178,6 +182,7 @@ export class KuroSettingsTab extends PluginSettingTab {
       this._generalGroup(lang),
       this._pathsGroup(lang),
       this._xpGroup(lang),
+      this._taskNotesGroup(lang),
       this._weeklyGroup(lang),
       this._streakGroup(lang),
       this._loreGroup(lang),
@@ -272,6 +277,87 @@ export class KuroSettingsTab extends PluginSettingTab {
           await this._save();
           this._refreshUi();
         }));
+  }
+
+  /* ── §3b Aufgaben & Pomodoro (TaskNotes-Quellen) ──────── */
+  private _taskNotesGroup(lang: Lang): KuroGroup {
+    return {
+      type: 'group', heading: t('set.tn.heading', lang),
+      items: [
+        { name: t('set.tn.matchField.name', lang), desc: t('set.tn.matchField.desc', lang),
+          control: { type: 'text', key: 'taskMatchField' } },
+        { name: t('set.tn.matchValue.name', lang),
+          control: { type: 'text', key: 'taskMatchValue' } },
+        { name: t('set.tn.statusField.name', lang),
+          control: { type: 'text', key: 'taskStatusField' } },
+        { name: t('set.tn.doneValues.name', lang), desc: t('set.tn.doneValues.desc', lang),
+          control: { type: 'text', key: 'taskDoneValues' } },
+        { name: '', render: (setting) => this._renderTaskRuleSuggestion(this._hostFor(setting), lang) },
+        { name: t('set.tn.task.name', lang), desc: t('set.tn.task.desc', lang),
+          control: { type: 'number', key: 'xpPerCompletedTask', min: 0, max: 999 } },
+        { name: t('set.tn.work.name', lang), desc: t('set.tn.work.desc', lang),
+          control: { type: 'number', key: 'xpPerWorkSession', min: 0, max: 999 } },
+        { name: t('set.tn.break.name', lang), desc: t('set.tn.break.desc', lang),
+          control: { type: 'number', key: 'xpPerBreakSession', min: 0, max: 999 } },
+        { name: t('set.tn.notify.name', lang), desc: t('set.tn.notify.desc', lang),
+          control: { type: 'toggle', key: 'notifyXpGain' } },
+        { name: '', render: (setting) => this._renderSourcePanel(this._hostFor(setting), lang) },
+      ],
+    };
+  }
+
+  /**
+   * Bietet TaskNotes' Konfiguration als Uebernahme an — aber nur als Vorschlag.
+   * Die Wahrheit bleibt die eigene Regel: gemessen am 2026-09-01 fand TaskNotes'
+   * Standard 4 erledigte Aufgaben im Vault, das tatsaechlich genutzte Schema 340.
+   */
+  private _renderTaskRuleSuggestion(el: HTMLElement, lang: Lang): void {
+    const s = this.plugin.data.settings;
+    const suggestion = taskRuleSuggestion(
+      readTaskNotesConfig(this.app), taskRuleFromSettings(s),
+    );
+    if (!suggestion) return;
+    new Setting(el)
+      .setDesc(t('set.tn.suggest', lang, {
+        field: suggestion.field, value: suggestion.value, done: suggestion.doneValues,
+      }))
+      .addButton((b) => b.setButtonText(t('set.tn.suggestApply', lang))
+        .onClick(async () => {
+          s.taskMatchField = suggestion.field;
+          s.taskMatchValue = suggestion.value;
+          s.taskStatusField = suggestion.statusField;
+          s.taskDoneValues = suggestion.doneValues;
+          await this._save();
+          this._refreshUi();
+        }));
+  }
+
+  /**
+   * Zeigt fuer jede Quelle, ob sie zaehlt — und wenn nicht, warum. Bewusst OHNE
+   * Schalter davor: genau die Zeile "kann nie feuern" ist der Grund, warum es
+   * dieses Panel gibt. Die Zustaende kommen aus derselben diagnoseSources()-
+   * Funktion, auf der auch die Rechnung beruht; eine zweite Beurteilung wuerde
+   * driften und beruhigend etwas anderes zeigen als das, was passiert.
+   */
+  private _renderSourcePanel(el: HTMLElement, lang: Lang): void {
+    const wrap = el.createDiv({ cls: 'kuro-src-panel' });
+    // setHeading() statt eines eigenen <h4>: der Store-Lint verbietet manuelle
+    // Ueberschriften im Einstellungs-Tab (UI-STANDARD §8).
+    new Setting(wrap).setName(t('src.heading', lang)).setHeading();
+    const list = wrap.createDiv({ cls: 'kuro-src-list' });
+
+    void this.plugin.collectTaskNotesInput().then((input) => {
+      list.empty();
+      for (const d of diagnoseSources(input)) {
+        const detail = t(`src.reason.${d.reason}`, lang, d.facts);
+        const row = list.createDiv({ cls: 'kuro-src-row' });
+        const icon = row.createSpan({ cls: `kuro-src-status ${sourceStateClass(d.state)}` });
+        setIcon(icon, sourceStateIcon(d.state));
+        icon.setAttribute('aria-label', detail);
+        row.createSpan({ cls: 'kuro-src-name', text: t(`src.${d.id}`, lang) });
+        row.createSpan({ cls: 'kuro-src-detail', text: detail });
+      }
+    });
   }
 
   /* ── §4 Weekly ────────────────────────────────────────── */

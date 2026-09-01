@@ -142,3 +142,62 @@ export function shouldNotifyGain(
 ): boolean {
   return x.enabled && x.eventPending && x.delta > 0;
 }
+
+/** UI-STANDARD §8: die Klassenvokabel ist fest — is-checking/is-ok/is-error/is-warning. */
+export function sourceStateClass(state: SourceState): string {
+  switch (state) {
+    case 'ok': return 'is-ok';
+    case 'unavailable': return 'is-error';
+    default: return 'is-warning';
+  }
+}
+
+/** UI-STANDARD §8: feste Icon-Vokabel loader/circle-check/circle-x/alert-triangle. */
+export function sourceStateIcon(state: SourceState): string {
+  switch (state) {
+    case 'ok': return 'circle-check';
+    case 'unavailable': return 'circle-x';
+    default: return 'alert-triangle';
+  }
+}
+
+export interface TaskRuleSuggestion {
+  field: string;
+  value: string;
+  statusField: string;
+  /** Kommagetrennt, in der Form, die das Einstellungsfeld erwartet. */
+  doneValues: string;
+}
+
+/**
+ * Was TaskNotes stattdessen vorschlaegt — oder null, wenn es nichts hergibt oder
+ * die eigene Regel bereits dasselbe sagt.
+ *
+ * Bewusst nur ein VORSCHLAG: die eigene Regel bleibt die Wahrheit, und der Nutzer
+ * entscheidet per Klick. Dasselbe Muster wie beim pomodoroFrontmatterKey.
+ */
+export function taskRuleSuggestion(
+  config: TaskNotesConfig | null,
+  rule: TaskRule,
+): TaskRuleSuggestion | null {
+  if (!config) return null;
+  const suggestion: TaskRuleSuggestion = config.identification.method === 'property'
+    ? {
+      field: config.identification.property,
+      value: config.identification.value,
+      statusField: config.statusField,
+      doneValues: config.completedStatusValues.join(', '),
+    }
+    : {
+      field: 'tags',
+      value: config.identification.tag,
+      statusField: config.statusField,
+      doneValues: config.completedStatusValues.join(', '),
+    };
+
+  const same = suggestion.field === rule.matchField
+    && suggestion.value === rule.matchValue
+    && suggestion.statusField === rule.statusField
+    && suggestion.doneValues === rule.doneValues.join(', ');
+  return same ? null : suggestion;
+}

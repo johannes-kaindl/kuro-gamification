@@ -131,3 +131,14 @@ export function pomodoroBonusSuppressed(inp: TaskNotesInput | undefined): boolea
     (d) => d.id === 'frontmatterPomodoro' && d.reason === 'superseded',
   );
 }
+
+/**
+ * Wann eine Rueckmeldung erscheint. Pur, damit die Regel testbar ist statt in
+ * main.ts verstreut: nur nach einem echten Ereignis, nur bei positivem Zuwachs,
+ * nie beim blossen Nachrechnen aus anderem Anlass.
+ */
+export function shouldNotifyGain(
+  x: { eventPending: boolean; delta: number; enabled: boolean },
+): boolean {
+  return x.enabled && x.eventPending && x.delta > 0;
+}

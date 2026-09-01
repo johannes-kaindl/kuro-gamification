@@ -154,3 +154,58 @@ describe('taskRuleFromSettings', () => {
     }).doneValues).toEqual(['6_erledigt_✅', 'done']);
   });
 });
+
+import { subscribeTaskNotes } from '../src/utils/taskNotesBridge';
+
+describe('subscribeTaskNotes', () => {
+  function emitterApp() {
+    const handlers: Record<string, ((p: unknown) => void)[]> = {};
+    const refs: unknown[] = [];
+    const off: unknown[] = [];
+    const emitter = {
+      on: (ev: string, cb: (p: unknown) => void) => {
+        if (!handlers[ev]) handlers[ev] = [];
+        handlers[ev].push(cb);
+        const ref = { ev };
+        refs.push(ref);
+        return ref;
+      },
+      offref: (ref: unknown) => { off.push(ref); },
+      trigger: (ev: string, payload?: unknown) => { for (const h of handlers[ev] ?? []) h(payload); },
+    };
+    return { app: { plugins: { plugins: { tasknotes: { emitter } } } } as never, emitter, refs, off };
+  }
+
+  it('meldet sich auf die vier relevanten Ereignisse an', () => {
+    const { app, refs } = emitterApp();
+    subscribeTaskNotes(app, () => {});
+    expect(refs).toHaveLength(4);
+  });
+
+  it('ruft den Handler bei einer abgeschlossenen Session', () => {
+    const { app, emitter } = emitterApp();
+    const seen: string[] = [];
+    subscribeTaskNotes(app, (kind) => seen.push(kind));
+    emitter.trigger('pomodoro-complete', { session: { type: 'work' } });
+    expect(seen).toEqual(['session']);
+  });
+
+  it('ruft ihn beim UEBERGANG nach erledigt — nicht bei jeder Beruehrung', () => {
+    const { app, emitter } = emitterApp();
+    const seen: string[] = [];
+    subscribeTaskNotes(app, (kind) => seen.push(kind));
+    emitter.trigger('task-updated', { originalTask: { status: 'open' }, updatedTask: { status: 'done' } });
+    emitter.trigger('task-updated', { originalTask: { status: 'done' }, updatedTask: { status: 'done' } });
+    expect(seen).toEqual(['task']);
+  });
+
+  it('meldet alles wieder ab', () => {
+    const { app, refs, off } = emitterApp();
+    subscribeTaskNotes(app, () => {})();
+    expect(off).toEqual(refs);
+  });
+
+  it('liefert eine no-op-Abmeldung, wenn TaskNotes fehlt — kein Wurf beim Laden', () => {
+    expect(() => subscribeTaskNotes({ plugins: { plugins: {} } } as never, () => {})()).not.toThrow();
+  });
+});

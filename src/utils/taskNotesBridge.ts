@@ -41,7 +41,7 @@ function rawSettings(app: App | null | undefined): RawSettings | null {
     plugins?: { plugins?: Record<string, { settings?: unknown }> };
   } | null | undefined)?.plugins;
   const s = plugins?.plugins?.tasknotes?.settings;
-  return s && typeof s === 'object' ? (s as RawSettings) : null;
+  return s && typeof s === 'object' ? s : null;
 }
 
 function str(v: unknown, fallback: string): string {
@@ -221,4 +221,59 @@ function completedAtOf(fm: Record<string, unknown>): string | null {
     if (typeof v === 'string' && v.trim() !== '') return v.trim();
   }
   return null;
+}
+
+export type TaskNotesEventKind = 'session' | 'task';
+
+interface MinimalEmitter {
+  on: (name: string, cb: (payload: unknown) => void) => unknown;
+  offref: (ref: unknown) => void;
+}
+
+/**
+ * Meldet sich an TaskNotes' Ereignisbus an. Rueckgabe ist die Abmeldung — sie MUSS
+ * in onunload laufen, sonst haelt ein entladenes Kuro Handler auf einem fremden
+ * Emitter.
+ *
+ * `task-updated` feuert bei JEDER Beruehrung einer Aufgabe. Gemeldet wird nur der
+ * UEBERGANG (originalTask.status !== updatedTask.status), sonst laeuft die
+ * Rueckmeldung bei jedem Tippen im Aufgaben-Frontmatter los.
+ *
+ * `pomodoro-interrupt` und `task-deleted` loesen Neuberechnung aus, aber nie einen
+ * positiven Zuwachs — sie stehen hier, damit die Anzeige nach einem Abbruch stimmt,
+ * nicht um zu bestrafen.
+ */
+export function subscribeTaskNotes(
+  app: App | null | undefined,
+  onEvent: (kind: TaskNotesEventKind) => void,
+): () => void {
+  const noop = () => { /* nichts angemeldet */ };
+  try {
+    const emitter = (app as unknown as {
+      plugins?: { plugins?: Record<string, { emitter?: MinimalEmitter }> };
+    } | null | undefined)?.plugins?.plugins?.tasknotes?.emitter;
+    if (typeof emitter?.on !== 'function' || typeof emitter?.offref !== 'function') return noop;
+
+    const refs: unknown[] = [
+      emitter.on('pomodoro-complete', () => onEvent('session')),
+      emitter.on('pomodoro-interrupt', () => onEvent('session')),
+      emitter.on('task-deleted', () => onEvent('task')),
+      emitter.on('task-updated', (payload: unknown) => {
+        const p = payload as {
+          originalTask?: { status?: unknown }; updatedTask?: { status?: unknown };
+        } | null;
+        if (!p) return;
+        if (p.originalTask?.status === p.updatedTask?.status) return;
+        onEvent('task');
+      }),
+    ];
+
+    return () => {
+      for (const ref of refs) {
+        try { emitter.offref(ref); } catch { /* Anbieter schon weg */ }
+      }
+    };
+  } catch {
+    return noop;
+  }
 }

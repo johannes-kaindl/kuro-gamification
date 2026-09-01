@@ -22,6 +22,13 @@ import { WelcomeModal } from './modals/WelcomeModal';
 import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
 import { readCoreDailyNotesConfig } from './utils/coreDailyNotes';
+import {
+  readTaskNotesConfig, readPomodoroSessions, readCompletedTasks, taskRuleFromSettings,
+  subscribeTaskNotes,
+} from './utils/taskNotesBridge';
+import {
+  pomodoroBonusSuppressed, shouldNotifyGain, type TaskNotesInput,
+} from './engine/TaskNotesXp';
 import { todayIso, isIsoDate, isIsoWeek } from './utils/dateUtils';
 import { fmtNum } from './utils/progressBar';
 import { t, detectLang } from './i18n';
@@ -57,6 +64,9 @@ export default class KuroPlugin extends Plugin {
 
   private statusBarEl: HTMLElement | null = null;
   private debouncedRefresh!: () => void;
+  private taskNotesUnsubscribe: (() => void) | null = null;
+  /** Ein TaskNotes-Ereignis lag an — von refreshStatus konsumiert und zurueckgesetzt. */
+  private xpEventPending = false;
   private debouncedSave!: () => void;
   private midnightTimeout: number | null = null;
   private chatClient = new KuroChatClient(new XhrSseTransport());
@@ -85,6 +95,13 @@ export default class KuroPlugin extends Plugin {
     // branch fires (lastRegen '' → current month) and calls debouncedSave().
     this.debouncedRefresh = debounce(() => this.refreshStatus(false), 800, true);
     this.debouncedSave = debounce(() => { void this.persist(); }, 500, true);
+
+    // Nach den debounced Fns: der Handler ruft debouncedRefresh (onload-Reihenfolge
+    // ist load-bearing, s. AGENTS.md § Gotchas).
+    this.taskNotesUnsubscribe = subscribeTaskNotes(this.app, () => {
+      this.xpEventPending = true;
+      this.debouncedRefresh();
+    });
 
     this.regenFreezeTokensIfNeeded();
     await this.seedFreshInstallDefaults();
@@ -135,6 +152,8 @@ export default class KuroPlugin extends Plugin {
   }
 
   onunload(): void {
+    this.taskNotesUnsubscribe?.();
+    this.taskNotesUnsubscribe = null;
     if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
     if (this.statusBarEl) this.statusBarEl.detach();
     this.statusBarEl = null;
@@ -182,12 +201,15 @@ export default class KuroPlugin extends Plugin {
         settings: this.data.settings,
       });
 
+      const taskNotes = await this.collectTaskNotesInput();
+
       const agg = XpEngine.aggregate({
         dailies,
         weeklies,
         manualXp: this.data.manualXpAdjustments,
         streakBonus: streakRes.bonus,
         settings: this.data.settings,
+        taskNotes,
       });
 
       const lvl = XpEngine.levelForXp(agg.totalXp, this.data.settings.levels);
@@ -200,7 +222,9 @@ export default class KuroPlugin extends Plugin {
         : null;
 
       const todayCalc = todayDaily
-        ? XpEngine.computeDaily(todayDaily, this.data.settings)
+        ? XpEngine.computeDaily(todayDaily, this.data.settings, {
+          suppressPomodoroBonus: pomodoroBonusSuppressed(taskNotes),
+        })
         : { date: todayStr, xp: 0, rows: [] };
 
       const lootPick = LootEngine.pickOptions(
@@ -238,6 +262,16 @@ export default class KuroPlugin extends Plugin {
         await this.persist();
       }
 
+      const previousXp = this.data.lastSnapshot?.totalXp ?? snap.totalXp;
+      const pending = this.xpEventPending;
+      this.xpEventPending = false;
+      const delta = snap.totalXp - previousXp;
+      if (shouldNotifyGain({
+        eventPending: pending, delta, enabled: this.data.settings.notifyXpGain,
+      })) {
+        new Notice(t('notice.xpGain', this.data.settings.language, { amount: delta }));
+      }
+
       this.data.lastSnapshot = snap;
       this.debouncedSave();
       this.syncSidebarSnapshot();
@@ -249,6 +283,20 @@ export default class KuroPlugin extends Plugin {
     } catch (err) {
       this.logger.error('refreshStatus failed', err);
     }
+  }
+
+  /**
+   * Liest die TaskNotes-Quellen frisch. Bewusst KEIN Cache: das Nachbarplugin kann
+   * mitten in der Sitzung deaktiviert werden, und der Zugriff ist billig. Rechnung
+   * (refreshStatus) und Anzeige (Herkunfts-Panel) rufen dieselbe Methode — zwei
+   * Lesungen koennten auseinanderlaufen.
+   */
+  async collectTaskNotesInput(): Promise<TaskNotesInput> {
+    const config = readTaskNotesConfig(this.app);
+    const rule = taskRuleFromSettings(this.data.settings);
+    const sessions = await readPomodoroSessions(this.app);
+    const tasks = readCompletedTasks(this.app, rule);
+    return { config, rule, sessions, tasks, settings: this.data.settings };
   }
 
   private syncSidebarSnapshot(): void {

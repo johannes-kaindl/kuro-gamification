@@ -89,3 +89,45 @@ function frontmatterState(inp: TaskNotesInput, sessionsReadable: boolean): Sourc
   }
   return { id, state: 'ok', reason: 'counting', facts: { key: inp.settings.pomodoroFrontmatterKey } };
 }
+
+/** Beschriftung der Aufschluesselungs-Zeilen. Deutsch wie die uebrigen Zeilen in
+ *  XpEngine ("Streak-Bonus", "Manuell …") — die Engine ist pur und kennt kein i18n. */
+const ROW_LABEL: Record<string, string> = {
+  tasks: 'TaskNotes — Aufgaben',
+  work: 'TaskNotes — Arbeitssessions',
+  break: 'TaskNotes — Pausen',
+};
+
+/**
+ * XP aus den TaskNotes-Quellen. Baut ausschliesslich auf `diagnoseSources` auf:
+ * gezaehlt wird genau, was dort `ok` ist. Damit kann die Anzeige nie etwas
+ * anderes behaupten als die Rechnung.
+ */
+export function computeTaskNotesXp(inp: TaskNotesInput): { xp: number; rows: KuroXpBreakdownRow[] } {
+  const rows: KuroXpBreakdownRow[] = [];
+  let xp = 0;
+
+  for (const d of diagnoseSources(inp)) {
+    if (d.id === 'frontmatterPomodoro' || d.state !== 'ok') continue;
+    const count = Number(d.facts.count ?? 0);
+    const perItem = Number(d.facts.rate ?? 0);
+    const amount = count * perItem;
+    if (amount === 0) continue;
+    xp += amount;
+    rows.push({
+      source: ROW_LABEL[d.id] ?? d.id,
+      amount,
+      reason: `${count} × ${perItem} XP`,
+    });
+  }
+
+  return { xp, rows };
+}
+
+/** Soll der alte Frontmatter-Pomodoro-Bonus schweigen? Genau dann, wenn ihn etwas abloest. */
+export function pomodoroBonusSuppressed(inp: TaskNotesInput | undefined): boolean {
+  if (!inp) return false;
+  return diagnoseSources(inp).some(
+    (d) => d.id === 'frontmatterPomodoro' && d.reason === 'superseded',
+  );
+}

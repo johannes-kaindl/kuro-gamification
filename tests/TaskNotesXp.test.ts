@@ -96,3 +96,57 @@ describe('diagnoseSources', () => {
     }
   });
 });
+
+import { computeTaskNotesXp, pomodoroBonusSuppressed } from '../src/engine/TaskNotesXp';
+
+describe('computeTaskNotesXp', () => {
+  it('rechnet je Quelle mit ihrem Satz und schluesselt lesbar auf', () => {
+    const r = computeTaskNotesXp(input({
+      tasks: [{ path: 'a.md', completedAt: null }, { path: 'b.md', completedAt: null }],
+      sessions: [
+        { kind: 'work', completedAt: null }, { kind: 'work', completedAt: null },
+        { kind: 'break', completedAt: null },
+      ],
+    }));
+    expect(r.xp).toBe(2 * 10 + 2 * 10 + 1 * 5);
+    expect(r.rows.map((x) => x.amount)).toEqual([20, 20, 5]);
+    expect(r.rows[0]?.reason).toContain('2');
+  });
+
+  it('zaehlt eine Quelle mit Satz 0 nicht mit und erzeugt fuer sie keine Zeile', () => {
+    const r = computeTaskNotesXp(input({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        xpPerCompletedTask: 0, xpPerWorkSession: 10, xpPerBreakSession: 0,
+      },
+      tasks: [{ path: 'a.md', completedAt: null }],
+      sessions: [{ kind: 'work', completedAt: null }, { kind: 'break', completedAt: null }],
+    }));
+    expect(r.xp).toBe(10);
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it('liefert 0 und keine Zeilen, wenn nichts lesbar ist', () => {
+    expect(computeTaskNotesXp(input({
+      config: null, sessions: null,
+      rule: { matchField: '', matchValue: '', statusField: 'status', doneValues: [] },
+    }))).toEqual({ xp: 0, rows: [] });
+  });
+});
+
+describe('pomodoroBonusSuppressed', () => {
+  it('unterdrueckt genau dann, wenn der Speicher den Frontmatter-Weg abloest', () => {
+    expect(pomodoroBonusSuppressed(input({
+      config: { ...CFG, pomodoroStorageLocation: 'daily-notes' },
+      sessions: [{ kind: 'work', completedAt: null }],
+    }))).toBe(true);
+  });
+
+  it('unterdrueckt NICHT, wenn es keinen lesbaren Speicher gibt', () => {
+    expect(pomodoroBonusSuppressed(input({ sessions: null }))).toBe(false);
+  });
+
+  it('unterdrueckt nicht ohne Eingabe — Rueckwaertskompatibilitaet', () => {
+    expect(pomodoroBonusSuppressed(undefined)).toBe(false);
+  });
+});

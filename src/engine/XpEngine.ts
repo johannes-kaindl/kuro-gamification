@@ -7,6 +7,8 @@ import type {
   KuroSettings, KuroXpAdjustment, KuroXpBreakdownRow, KuroLevel,
 } from '../types';
 import type { CheckboxStats } from '../utils/checkboxes';
+import { computeTaskNotesXp, pomodoroBonusSuppressed } from './TaskNotesXp';
+import type { TaskNotesInput } from './TaskNotesXp';
 
 export interface DailyInput {
   /** YYYY-MM-DD basename of the daily note. */
@@ -32,6 +34,8 @@ export interface AggregateInput {
   dailies: readonly DailyInput[];
   weeklies: readonly WeeklyInput[];
   manualXp: readonly KuroXpAdjustment[];
+  /** Optional: XP aus den TaskNotes-Quellen. Fehlt das Feld, bleibt alles wie bisher. */
+  taskNotes?: TaskNotesInput;
   streakBonus: number;
   settings: KuroSettings;
 }
@@ -43,7 +47,11 @@ export interface AggregateResult {
 
 export class XpEngine {
   /** Compute a single daily's XP — pure. Returns rows for verbose breakdown. */
-  static computeDaily(d: DailyInput, s: KuroSettings): DailyXpResult {
+  static computeDaily(
+    d: DailyInput,
+    s: KuroSettings,
+    opts?: { suppressPomodoroBonus?: boolean },
+  ): DailyXpResult {
     const rows: KuroXpBreakdownRow[] = [];
     let xp = 0;
 
@@ -86,7 +94,7 @@ export class XpEngine {
       }
       const rawPomos = d.frontmatter[s.pomodoroFrontmatterKey];
       const pomos = Array.isArray(rawPomos) ? countCompletedPomodoros(rawPomos) : numFromFm(rawPomos);
-      if (pomos !== null && pomos >= s.pomodoroThreshold) {
+      if (!opts?.suppressPomodoroBonus && pomos !== null && pomos >= s.pomodoroThreshold) {
         xp += s.pomodoroBonus;
         rows.push({
           source: `Daily ${d.date} — Pomodoros`,
@@ -127,9 +135,10 @@ export class XpEngine {
   static aggregate(inp: AggregateInput): AggregateResult {
     const rows: KuroXpBreakdownRow[] = [];
     let total = 0;
+    const suppressPomodoroBonus = pomodoroBonusSuppressed(inp.taskNotes);
 
     for (const d of inp.dailies) {
-      const r = XpEngine.computeDaily(d, inp.settings);
+      const r = XpEngine.computeDaily(d, inp.settings, { suppressPomodoroBonus });
       total += r.xp;
       rows.push(...r.rows);
     }
@@ -156,6 +165,12 @@ export class XpEngine {
         amount: adj.amount,
         reason: adj.reason,
       });
+    }
+
+    if (inp.taskNotes) {
+      const tn = computeTaskNotesXp(inp.taskNotes);
+      total += tn.xp;
+      rows.push(...tn.rows);
     }
 
     return { totalXp: total, rows };

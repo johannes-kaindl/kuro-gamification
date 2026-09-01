@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-09-01
+
 ### Added
 
 - **XP aus TaskNotes**: completed tasks, finished pomodoro work sessions and **breaks**.

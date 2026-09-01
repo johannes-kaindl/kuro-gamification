@@ -5,6 +5,26 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **XP aus TaskNotes**: completed tasks, finished pomodoro work sessions and **breaks**.
+  Rewarding breaks is deliberate — they are the counterweight to hyperfocus. All three rates
+  default to 0, so every source stays off until you turn it on.
+- **Source panel in the settings tab**: for each source it shows whether it counts — and if not,
+  why. Always visible, no toggle in front of it. Four states rather than two: a source can be
+  readable but sitting at rate 0, which now says so instead of looking broken.
+- **Task detection is yours**: which frontmatter field marks a task, which value, which status
+  field and which values mean "done" are Kuro's own settings. If TaskNotes is installed and
+  configured differently, the panel offers to adopt its configuration with one click.
+- A short notice the moment XP is gained (throttled, can be switched off).
+
+### Fixed
+
+- The pomodoro bonus could silently never fire when TaskNotes keeps its sessions in its own
+  plugin storage (`pomodoroStorageLocation: "plugin"`) instead of the daily note. The previous
+  hint explicitly did not cover that case. Kuro now reads those sessions directly — and says so
+  when it cannot.
+
 ## [1.3.0] — 2026-08-18
 
 ### Changed

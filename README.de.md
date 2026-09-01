@@ -103,6 +103,7 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 | 🎮 Allgemein | Sprache (DE/EN), Reduce-Animations, Statusleisten-Item, Aktions-Hinweise, Verbose-Aufschlüsselung, Sidebar an/aus |
 | 📁 Pfade | Daily-/Weekly-Ordnerpfade + Datumsformate |
 | ⚡ XP-Quellen | XP pro Checkbox, Abschluss-Boni, Pomodoro-Key/Schwelle/Bonus |
+| ✅ Aufgaben & Pomodoro | XP für erledigte Aufgaben, Arbeitssessions und Pausen; woran eine Aufgabe erkannt wird; Herkunfts-Panel |
 | 🎯 Habits | Eigene Habit-Liste hinzufügen/bearbeiten/entfernen (Frontmatter-Key + Label + XP) |
 | 📅 Weekly | Review-/Planning-Frontmatter-Keys + XP |
 | 🔥 Streaks | Tagesqualifikations-Schwelle, monatliche Freeze-Tokens |
@@ -111,6 +112,28 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 | 📚 Packs | Loot-/Lore-Packs installieren/wechseln/löschen; pro Einheit export/kopieren/auf Werkszustand zurücksetzen |
 | 🛠 Erweitert | Log-Level; kompletter State-Export/-Import/-Reset (inkl. XP) |
 | ℹ️ Über | Version, Link zur In-Vault-Doku |
+
+### Aufgaben und Pomodoro-Sessions (optional)
+
+Kuro kann Punkte für erledigte Aufgaben und abgeschlossene Pomodoro-Sessions vergeben —
+**auch für Pausen**, und das ist Absicht: Pausen sind das Gegengewicht zum Hyperfokus, also
+sind sie Punkte wert. Alle drei Sätze stehen anfangs auf 0; es zählt nichts, bis du es
+einschaltest.
+
+**Du sagst Kuro, was eine Aufgabe ist.** Vier Einstellungen entscheiden das: das
+Frontmatter-Feld, das eine Notiz als Aufgabe ausweist, der Wert darin, das Feld mit dem Status
+und die Werte, die „erledigt" bedeuten (kommagetrennt — „erledigt" hat in manchen Vaults mehr
+als einen Wert). Voreingestellt sind TaskNotes' eigene Standardwerte, aber sie gehören dir:
+Wer `type: 💪 Aufgabe` mit `status: 6_erledigt_✅` fährt, trägt das dort ein.
+
+Ist [TaskNotes](https://github.com/callumalpass/tasknotes) installiert und anders konfiguriert,
+bietet Kuro die Übernahme per Klick an. Pomodoro-Sessions liest Kuro direkt aus TaskNotes —
+unabhängig davon, wo es sie ablegt.
+
+**Ob das alles wirkt, sagt das Herkunfts-Panel.** Es steht im selben Abschnitt, immer sichtbar,
+mit einer Zeile je Quelle: zählt (mit Satz), lesbar aber auf Satz 0, noch nichts gefunden, oder
+kann gar nicht zählen — samt Grund. Es gibt das Panel, weil ein Bonus, der still nie feuert,
+schlimmer ist als einer, der aus ist.
 
 ### Status-Codeblock
 

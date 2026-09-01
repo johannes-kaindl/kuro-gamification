@@ -103,6 +103,7 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 | 🎮 General | Language (DE/EN), reduce-animations, status-bar item, action notices, verbose breakdown, sidebar enable/disable |
 | 📁 Paths | Daily/weekly folder paths + date formats |
 | ⚡ XP sources | XP per checkbox, completion bonuses, pomodoro key/threshold/bonus |
+| ✅ Tasks & pomodoro | XP for completed tasks, work sessions and breaks; how a task is recognised; source panel |
 | 🎯 Habits | Add/edit/remove your own habit list (frontmatter key + label + XP) |
 | 📅 Weekly | Review/planning frontmatter keys + XP |
 | 🔥 Streaks | Day-qualification threshold, monthly freeze tokens |
@@ -111,6 +112,27 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 | 📚 Packs | Install/switch/delete loot·lore packs; per-unit export/copy/reset to factory |
 | 🛠 Advanced | Log level; whole-state data export/import/reset (incl. XP) |
 | ℹ️ About | Version, link to in-vault docs |
+
+### Tasks and pomodoro sessions (optional)
+
+Kuro can award XP for tasks you complete and for pomodoro sessions you finish — **including
+breaks**, which is deliberate: they are the counterweight to hyperfocus, so they are worth
+points too. All three rates start at 0, so nothing counts until you decide it should.
+
+**You tell Kuro what a task is.** Four settings decide it: the frontmatter field that marks a
+note as a task, the value it holds, the field carrying the status, and which status values mean
+"done" (comma-separated, because "done" may have more than one value in your vault). The
+defaults match TaskNotes' own defaults, but they are yours to change — if your vault uses
+`type: 💪 Task` with `status: 6_done_✅`, put that in.
+
+If [TaskNotes](https://github.com/callumalpass/tasknotes) is installed and configured
+differently, Kuro offers to adopt its configuration with one click. Pomodoro sessions are read
+from TaskNotes directly, wherever it keeps them.
+
+**The source panel tells you whether any of it works.** It sits in the same section, always
+visible, and shows one line per source: counting (with the rate), readable but sitting at rate
+0, nothing found yet, or unable to count at all — with the reason. It is there because a bonus
+that silently never fires is worse than one that is switched off.
 
 ### Status code block
 

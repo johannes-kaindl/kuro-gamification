@@ -96,3 +96,129 @@ export function readTaskNotesConfig(app: App | null | undefined): TaskNotesConfi
     return null;
   }
 }
+
+export interface PomodoroSession {
+  kind: 'work' | 'break';
+  /** ISO-Zeitpunkt, wenn TaskNotes einen mitliefert — sonst null. */
+  completedAt: string | null;
+}
+
+export interface CompletedTask {
+  path: string;
+  completedAt: string | null;
+}
+
+/** Kuros EIGENE Aufgaben-Regel, aus den Einstellungen gebaut. */
+export interface TaskRule {
+  matchField: string;
+  matchValue: string;
+  statusField: string;
+  doneValues: string[];
+}
+
+/** Baut die Regel aus den Einstellungen. Leere Felder ⇒ Quelle aus (s. Diagnose). */
+export function taskRuleFromSettings(s: {
+  taskMatchField: string; taskMatchValue: string;
+  taskStatusField: string; taskDoneValues: string;
+}): TaskRule {
+  return {
+    matchField: s.taskMatchField.trim(),
+    matchValue: s.taskMatchValue.trim(),
+    statusField: s.taskStatusField.trim() || 'status',
+    doneValues: s.taskDoneValues.split(',').map((v) => v.trim()).filter((v) => v !== ''),
+  };
+}
+
+/**
+ * Liest TaskNotes' Pomodoro-Historie aus dessen Plugin-Speicher.
+ *
+ * Unterscheidet zwei Zustaende, die der Aufrufer NICHT verwechseln darf:
+ *   null → keine lesbare Historie (Plugin weg, Feld fehlt, Form unerwartet)
+ *   []   → Historie ist da und leer (noch keine Session abgeschlossen)
+ * Die Diagnose macht daraus `is-error` bzw. `is-warning`.
+ */
+export async function readPomodoroSessions(
+  app: App | null | undefined,
+): Promise<PomodoroSession[] | null> {
+  try {
+    const plugin = (app as unknown as {
+      plugins?: { plugins?: Record<string, { loadData?: () => Promise<unknown> }> };
+    } | null | undefined)?.plugins?.plugins?.tasknotes;
+    if (typeof plugin?.loadData !== 'function') return null;
+
+    const data = await plugin.loadData() as { pomodoroHistory?: unknown } | null;
+    const raw = data?.pomodoroHistory;
+    if (!Array.isArray(raw)) return null;
+
+    const out: PomodoroSession[] = [];
+    for (const entry of raw) {
+      if (typeof entry !== 'object' || entry === null) continue;
+      const e = entry as Record<string, unknown>;
+      if (e.completed !== true) continue;
+      const type = typeof e.type === 'string' ? e.type : '';
+      const kind: PomodoroSession['kind'] | null =
+        type === 'work' ? 'work'
+          : (type === 'short-break' || type === 'long-break') ? 'break'
+            : null;
+      if (!kind) continue;
+      out.push({ kind, completedAt: typeof e.endTime === 'string' ? e.endTime : null });
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sammelt abgeschlossene Aufgaben aus dem VAULT nach Kuros eigener Regel — nicht
+ * aus dem Fremdplugin. Der Vault ist die belastbarere Quelle: er ueberlebt eine
+ * Deaktivierung von TaskNotes, und Kuro liest ihn ohnehin.
+ */
+export function readCompletedTasks(app: App | null | undefined, rule: TaskRule): CompletedTask[] {
+  try {
+    if (!rule.matchField || !rule.matchValue || rule.doneValues.length === 0) return [];
+    const a = app as unknown as {
+      vault?: { getMarkdownFiles?: () => { path: string }[] };
+      metadataCache?: { getCache?: (p: string) => { frontmatter?: Record<string, unknown> } | null };
+    } | null | undefined;
+    const files = a?.vault?.getMarkdownFiles?.();
+    const cache = a?.metadataCache;
+    if (!Array.isArray(files) || typeof cache?.getCache !== 'function') return [];
+
+    const out: CompletedTask[] = [];
+    for (const file of files) {
+      const fm = cache.getCache(file.path)?.frontmatter;
+      if (!fm) continue;
+      if (!fieldHas(fm[rule.matchField], rule.matchValue)) continue;
+      const status = fm[rule.statusField];
+      if (typeof status !== 'string' || !rule.doneValues.includes(status.trim())) continue;
+      out.push({ path: file.path, completedAt: completedAtOf(fm) });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Trifft der Wert? Ein Listenfeld (`tags: [aufgabe, brand]`) trifft, wenn EIN
+ * Eintrag passt; ein Skalarfeld (`type: 💪 Aufgabe`) muss uebereinstimmen.
+ * Dieselbe Regel deckt damit TaskNotes' tags/task UND ein type/-Schema ab, ohne
+ * dass der Nutzer zwischen zwei Modi waehlen muss.
+ */
+function fieldHas(value: unknown, wanted: string): boolean {
+  if (Array.isArray(value)) return value.some((v) => typeof v === 'string' && v.trim() === wanted);
+  if (typeof value === 'string') {
+    return value.trim() === wanted || value.split(/[,\s]+/).some((v) => v.trim() === wanted);
+  }
+  return false;
+}
+
+/** Erledigt-Datum, wenn eines der ueblichen Felder eines traegt — sonst null. */
+function completedAtOf(fm: Record<string, unknown>): string | null {
+  for (const key of ['completedDate', 'erledigt_am', 'completed']) {
+    const v = fm[key];
+    if (typeof v === 'string' && v.trim() !== '') return v.trim();
+  }
+  return null;
+}

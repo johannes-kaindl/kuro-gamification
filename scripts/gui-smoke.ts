@@ -54,8 +54,11 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { join } from 'node:path';
+import { cwd } from 'node:process';
 
 import { Cdp, attachTo, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
 import { de } from '../src/i18n/de';
 import { en } from '../src/i18n/en';
 
@@ -654,6 +657,10 @@ async function main(): Promise<void> {
   // die Abschnitte stellen um, was sie brauchen, und die Wiederherstellung darf nicht
   // daran hängen, dass jeder von ihnen sauber zu Ende läuft.
   let vorwert: string | null = null;
+  // Die `ungeklaert`-Warnung gehört in die Abschlusszeile, nicht nur nach oben ins
+  // Protokoll: wer eine Runde fährt, liest die letzte Zeile — und ein Lauf, dessen
+  // Herkunft ungeprüft blieb, darf nicht aussehen wie einer, der belegt ist.
+  let herkunftsWarnung: string | null = null;
 
   try {
     if (process.platform === 'darwin') {
@@ -666,14 +673,42 @@ async function main(): Promise<void> {
     }
     await requireVisible(cdp);
 
-    const name = await cdp.evaluate<string>('return app.vault.getName();');
-    console.log(`Vault: ${name}\n`);
+    const vaultInfo = await cdp.evaluate<{ name: string; basePath: string; configDir: string }>(`
+      return {
+        name: app.vault.getName(),
+        basePath: app.vault.adapter.basePath,
+        configDir: app.vault.configDir,
+      };
+    `);
+    console.log(`Vault: ${vaultInfo.name}\n`);
+
+    // Läuft dieser Lauf gegen den eigenen Stand? Die Frage, gegen die `manifest.version`
+    // eine Zeile weiter unten strukturell blind ist: Store-Build und Repo-Build tragen
+    // dieselbe Nummer. Am 2026-08-30 standen dachweit 69 von 150 grünen Prüfpunkten auf
+    // einem Build, der nicht belegt der Repo-Stand war — dieser Treiber war einer davon
+    // (16/16 am 28.08. gegen die Store-Installation 1.3.0).
+    //
+    // Der Pfad kommt aus der LAUFENDEN Instanz, nicht aus `stagingVaultDir(PLUGIN_ID)`.
+    // Das ist der Unterschied zum Muster in `tools/obsidian-cdp/README.md` und er ist
+    // load-bearing: der Fehllauf lief gegen `10_Pallas`, und ein Check gegen den
+    // Staging-Pfad hätte eine ganz andere Datei geprüft — also genau den Fall nicht
+    // gesehen, für den er gebaut ist. Geprüft wird, was gemessen wird.
+    requireEigenerBuild(
+      join(vaultInfo.basePath, vaultInfo.configDir, 'plugins', PLUGIN_ID, 'main.js'),
+      // Der Vergleichsstand muss frisch sein — `npm run deploy` baut ihn direkt davor.
+      // Ohne ihn bleibt nur die billige Aussage (Store-Suffix ja/nein).
+      join(cwd(), 'main.js'),
+      (meldung) => {
+        herkunftsWarnung = meldung;
+        console.warn(meldung);
+      },
+    );
 
     // Das Plugin NEU LADEN, bevor irgendetwas gemessen wird: `npm run deploy` ersetzt nur
     // die Dateien, die laufende Instanz behält den alten Code im Speicher. Ohne diesen
     // Schritt misst der Smoke den zuletzt geladenen Stand und meldet ihn als Ergebnis für
     // den gerade gebauten — genau so läuft eine kaputte Version grün durch.
-    const plugin = await cdp.evaluate<{ ok: boolean; version?: string }>(`
+    const plugin = await cdp.evaluate<{ ok: boolean; version?: string; aufPlatte?: string }>(`
       const id = ${JSON.stringify(PLUGIN_ID)};
       if (app.plugins.plugins[id]) {
         await app.plugins.disablePlugin(id);
@@ -682,10 +717,35 @@ async function main(): Promise<void> {
       await app.plugins.enablePlugin(id);
       await new Promise((r) => setTimeout(r, 1200));
       const p = app.plugins.plugins[id];
-      return p ? { ok: true, version: p.manifest.version } : { ok: false };
+      if (!p) return { ok: false };
+      // Die Platte getrennt lesen — s. Kommentar unten, warum das nicht dasselbe ist.
+      let aufPlatte;
+      try {
+        const pfad = app.vault.configDir + "/plugins/" + id + "/manifest.json";
+        aufPlatte = JSON.parse(await app.vault.adapter.read(pfad)).version;
+      } catch { aufPlatte = undefined; }
+      return { ok: true, version: p.manifest.version, aufPlatte };
     `);
     if (!plugin.ok) throw new Error(`Plugin ${PLUGIN_ID} ist nicht aktiv. Erst \`npm run deploy\`.`);
-    console.log(`Plugin-Version im Vault: ${plugin.version}\n`);
+
+    // Zwei Versionen, und sie können auseinanderlaufen — gemessen am 2026-09-02 in genau
+    // diesem Vault: Speicher 1.3.0, Platte 1.4.0. `enablePlugin` lädt den CODE neu, das
+    // MANIFEST nicht; das liest Obsidian beim Vault-Start. `app.plugins.manifests[id]`
+    // sagt dasselbe Alte (beide gegengemessen).
+    //
+    // Warum das hier steht und nicht bloß kosmetisch ist: die Zeile sah aus wie eine
+    // Aussage über die gemessene Datei und war eine über den App-Start. Der Herkunfts-
+    // Guard oben prüft `main.js` per sha1 und ist davon unberührt — die Versionszeile ist
+    // die dritte Blindstelle derselben Familie und darf nicht als Beleg gelesen werden.
+    console.log(`Plugin-Version — Obsidians Speicher: ${plugin.version} · manifest.json auf Platte: ${plugin.aufPlatte ?? 'nicht lesbar'}`);
+    if (plugin.aufPlatte !== undefined && plugin.aufPlatte !== plugin.version) {
+      console.log(
+        '  (Divergenz: Obsidian hat das Manifest beim Vault-Start gelesen und lädt es bei ' +
+          'enablePlugin nicht neu. Der gemessene CODE ist trotzdem der deployte — das belegt ' +
+          'der sha1-Vergleich oben, nicht diese Nummer.)',
+      );
+    }
+    console.log('');
 
     vorwert = await cdp.evaluate<string>(`
       return JSON.stringify(app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].data.settings);
@@ -756,6 +816,9 @@ async function main(): Promise<void> {
     ? ` · ${uebersprungen.length} übersprungen (${uebersprungen.join(', ')}) — NICHT geprüft`
     : '';
   console.log(`\n${results.length - failed.length}/${results.length} grün${lueckeed}`);
+  if (herkunftsWarnung !== null) {
+    console.log('⚠️  Herkunft des gemessenen Builds ungeprüft — s. Warnung oben.');
+  }
   if (failed.length > 0) {
     console.log('Rot:');
     for (const check of failed) console.log(`  - ${check.name}: ${check.detail}`);

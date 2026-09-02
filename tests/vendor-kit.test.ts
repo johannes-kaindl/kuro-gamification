@@ -26,6 +26,27 @@ describe('vendored kit modules', () => {
     expect(parseSSE('data: [DONE]\n\n').done).toBe(true);
   });
 
+  /* Seit code-kit 0.5.0 liest parseSSE `choices[0].message`, wenn `delta` fehlt — manche
+     Server schicken trotz `stream: true` volle Message-Objekte. DAS ist der Teil der 0.5.0-
+     Erweiterung, der KuroChatClient erreicht: er liest `parsed.content`. Vorher kam bei
+     solchen Servern gar kein Text an, ohne Fehlermeldung. */
+  it('parseSSE falls back to choices[0].message when delta is absent', () => {
+    const out = parseSSE('data: {"choices":[{"message":{"content":"voll"}}]}\n\n');
+    expect(out.content.join('')).toBe('voll');
+  });
+
+  /* Die drei Reasoning-Feldvarianten derselben 0.5.0-Erweiterung, als Charakterisierung.
+     ⚠️ KuroChatClient liest `parsed.reasoning` NICHT — sein Denk-Text kommt aus dem
+     ThinkSplitter (<think>-Tags im content-Strom). Der Test haelt die Kit-Zusage fest, nicht
+     eine Faehigkeit dieses Plugins; wer den Client spaeter auf SSE-Reasoning umstellt, findet
+     hier, was er erwarten darf. */
+  it('parseSSE reads reasoning from all three delta field variants', () => {
+    const of = (b: string) => parseSSE(b).reasoning.join('');
+    expect(of('data: {"choices":[{"delta":{"reasoning_content":"ds"}}]}\n\n')).toBe('ds');
+    expect(of('data: {"choices":[{"delta":{"reasoning":"mlx"}}]}\n\n')).toBe('mlx');
+    expect(of('data: {"choices":[{"delta":{"thinking":"fork"}}]}\n\n')).toBe('fork');
+  });
+
   it('ThinkSplitter separates a think block from the answer', () => {
     const s = new ThinkSplitter();
     const a = s.push('<think>nachdenken</think>Antwort');

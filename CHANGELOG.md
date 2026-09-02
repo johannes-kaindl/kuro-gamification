@@ -5,6 +5,20 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- **Companion-Chat: Antworten von Servern, die trotz `stream: true` volle Message-Objekte
+  senden, kommen jetzt an.** Der SSE-Parser las nur `choices[0].delta`; fehlte das Feld, blieb
+  der Text aus — ohne Fehlermeldung. Er liest jetzt ersatzweise `choices[0].message`
+  (aus code-kit 0.5.0).
+
+### Changed
+
+- **Vendoring auf zwei Quellen umgestellt** (intern, keine Verhaltensaenderung): die
+  plattformneutrale Schicht kommt seit dem code-kit-Split direkt aus `code-kit@0.5.0`, die
+  Obsidian-Schicht weiter aus `obsidian-kit@0.29.0`. Vier Module (`num`, `reasoning`, `sse`,
+  `think-splitter`) gibt es im Kit gar nicht mehr.
+
 ## [1.4.0] — 2026-09-01
 
 ### Added

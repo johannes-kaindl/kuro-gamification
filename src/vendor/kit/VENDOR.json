@@ -1,7 +1,9 @@
 {
-  "source": "obsidian-kit",
-  "version": "0.27.0",
-  "sha": "548041b",
-  "vendored": "clipboard.ts, endpoint.ts, endpoint_config.ts, endpoint_diagnostics.ts, model-choice.ts, model-list-cache.ts, num.ts, reasoning.ts, sse.ts, think-splitter.ts",
-  "note": "Verbatim snapshot. Never hand-edit. Re-vendor via tools/sync-kit.sh. kit-obsidian/ siehe dortige VENDOR.json."
+  "source": "code-kit",
+  "tag": "0.5.0",
+  "version": "0.5.0",
+  "sha": "efcd456",
+  "date": "2026-09-02",
+  "vendored": "pure: endpoint, endpoint_config, endpoint_diagnostics, model-choice, model-list-cache, num, reasoning, sse, think-splitter; web: clipboard",
+  "note": "Verbatim snapshot von code-kit/src/ts (plus Herkunfts-Header in Zeile 1). Der Ordner heisst historisch 'kit'; die Quelle ist seit dem code-kit-Split (obsidian-kit@2ab1bb5) code-kit, nicht obsidian-kit. Never hand-edit. Re-vendor via tools/sync-kit.sh. kit-obsidian/ siehe dortige VENDOR.json."
 }

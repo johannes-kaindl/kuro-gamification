@@ -1,6 +1,21 @@
 #!/bin/sh
 # Re-vendor kit modules from ../obsidian-kit. Run after kit updates.
 # Vorlage: koda-agent/tools/sync-kit.sh (die Form, die fuenf Repos teilen).
+#
+# ⚠️ STAND 2026-09-02: DIESES SKRIPT LAEUFT GEGEN DAS AKTUELLE KIT INS LEERE.
+#    Das Kit hat seine Ordner umgebaut (code-kit-Split): die zehn hier vendorierten
+#    Module liegen nicht mehr unter $KIT/src/pure/, sondern unter
+#    $KIT/src/vendor/code-kit/pure/. Der Tag-Guard weiter unten schlaegt vorher zu und
+#    UEBERDECKT diesen zweiten Defekt — ein Waechter maskiert den Fehler eines anderen.
+#    Das Vendoring dieses Repos ist auf 0.27.0 eingefroren und vollstaendig; nichts ist
+#    kaputt, der Weg zurueck ins Kit ist nur verlegt.
+#
+#    Wer das nachzieht, baut in einem Zug auch das Lesen um: kanonisch ist
+#    `git show "$REF:<pfad>"` statt cp aus dem Arbeitsstand (REGISTRY § Utils,
+#    "Vendoring per Sync-Skript"). Dann entfaellt der Guard unten ersatzlos — gegen eine
+#    feste Ref ist ein abweichender Arbeitsstand egal, und das Skript ist wieder
+#    benutzbar, auch wenn HEAD ueber den Tag hinaus ist. Genau das ist heute der Grund,
+#    warum es abbricht.
 set -e
 
 KIT="${KIT_DIR:-../obsidian-kit}"

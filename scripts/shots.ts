@@ -61,7 +61,7 @@ import {
   setAppConfig,
 } from '../../tools/obsidian-cdp/cdp.js';
 import { type Rect, boxOf, capture, setWindowSize, withMetrics, writeShot } from '../../tools/obsidian-cdp/shot.js';
-import { buildVault, stagingVaultDir } from '../../tools/obsidian-cdp/vault.js';
+import { buildVault, requireEigenerBuild, stagingVaultDir } from '../../tools/obsidian-cdp/vault.js';
 import { DEFAULT_HABITS_EN } from '../src/data/default-habits';
 
 const REPO_NAME = 'kuro-gamification';
@@ -496,7 +496,21 @@ async function main(): Promise<void> {
       'Erst `npm run shots -- --setup`, dann Obsidian mit dem Aufnahme-Vault starten.',
     );
   }
-  console.log(`Verbunden auf Port ${port}.\n`);
+  console.log(`Verbunden auf Port ${port}.`);
+
+  // Zeigen die Bilder den eigenen Stand? Dieselbe Frage wie im GUI-Smoke, hier mit
+  // oeffentlicher Folge: eine README bebildert das Plugin fuer alle, die es nie
+  // installiert haben. `--setup` stellt den Vault aus dem Fixture her und baut das
+  // Plugin mit — ein Aufnahmelauf OHNE Setup laeuft dagegen gegen einen Vault, der
+  // seit dem letzten Setup beliebig gealtert sein kann, und sieht dabei genauso aus.
+  const vaultInfo = await cdp.evaluate<{ basePath: string; configDir: string }>(`
+    return { basePath: app.vault.adapter.basePath, configDir: app.vault.configDir };
+  `);
+  requireEigenerBuild(
+    join(vaultInfo.basePath, vaultInfo.configDir, 'plugins', PLUGIN_ID, 'main.js'),
+    join(repoRoot, 'main.js'),
+  );
+  console.log('');
   await cdp.mitschnitt((zeile) => console.log(`      » ${zeile}`));
 
   await cdp.send('Page.bringToFront');

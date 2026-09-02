@@ -58,7 +58,7 @@ import { join } from 'node:path';
 import { cwd } from 'node:process';
 
 import { Cdp, attachTo, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
-import { requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
+import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
 import { de } from '../src/i18n/de';
 import { en } from '../src/i18n/en';
 
@@ -693,8 +693,9 @@ async function main(): Promise<void> {
     // load-bearing: der Fehllauf lief gegen `10_Pallas`, und ein Check gegen den
     // Staging-Pfad hätte eine ganz andere Datei geprüft — also genau den Fall nicht
     // gesehen, für den er gebaut ist. Geprüft wird, was gemessen wird.
+    const pluginDir = join(vaultInfo.basePath, vaultInfo.configDir, 'plugins', PLUGIN_ID);
     requireEigenerBuild(
-      join(vaultInfo.basePath, vaultInfo.configDir, 'plugins', PLUGIN_ID, 'main.js'),
+      join(pluginDir, 'main.js'),
       // Der Vergleichsstand muss frisch sein — `npm run deploy` baut ihn direkt davor.
       // Ohne ihn bleibt nur die billige Aussage (Store-Suffix ja/nein).
       join(cwd(), 'main.js'),
@@ -703,6 +704,29 @@ async function main(): Promise<void> {
         console.warn(meldung);
       },
     );
+
+    // Dieselbe Frage für `styles.css`, denn der zentrale Guard kennt nur `main.js` —
+    // `npm run deploy` kopiert aber beides. Dieser Treiber misst an mehreren Stellen
+    // **gerendertes CSS**: das Chat-Log muss intern scrollen (`scrollHeight > clientHeight`,
+    // der Flexbox-Gotcha aus REGISTRY § LLM-Chat-Panel-UI) und Knopf-/Status-Klassen werden
+    // über `getComputedStyle` beurteilt. Ein altes Stylesheet neben frischer `main.js`
+    // erzeugt dort genau den unbelegten Stand, den der Guard eine Zeile höher gerade
+    // ausgeschlossen hat — und er erschiene als Plugin-Befund, nicht als Deploy-Fehler.
+    // Übernommen aus json_viewer/scripts/gui-smoke.ts (`4c32757`), dort aus
+    // local-image-generator (`e6fbb53`), via REGISTRY § Testing.
+    const cssHerkunft = buildHerkunft(join(pluginDir, 'styles.css'), join(cwd(), 'styles.css'));
+    if (cssHerkunft.art === 'fehlt') {
+      throw new Error(`Im Vault liegt kein styles.css: ${cssHerkunft.pfad}\nZuerst deployen.`);
+    }
+    if (cssHerkunft.art === 'fremd') {
+      const z = (n: number) => n.toLocaleString('de-DE');
+      throw new Error(
+        `Das styles.css im Vault ist nicht der gebaute Repo-Stand: ${cssHerkunft.pfad}\n` +
+        `  im Vault: ${z(cssHerkunft.bytes)} Bytes\n` +
+        `  gebaut:   ${z(cssHerkunft.erwarteteBytes)} Bytes\n` +
+        'Dieser Lauf misst gerendertes CSS. Zuerst deployen, dann erneut laufen.',
+      );
+    }
 
     // Das Plugin NEU LADEN, bevor irgendetwas gemessen wird: `npm run deploy` ersetzt nur
     // die Dateien, die laufende Instanz behält den alten Code im Speicher. Ohne diesen

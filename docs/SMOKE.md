@@ -102,3 +102,63 @@ Plugin neu geladen:
 
 Beides ist der Grund, warum ein grüner Smoke ohne Gegenprobe nichts beweist: **beide
 Mängel hätten dauerhaft grün gemeldet.**
+
+### 2026-09-02 · Bestätigungslauf nach dem Vendor-Nachzug · Plugin 1.4.0 (Stand `71e1a3a`)
+
+**20/20 grün**, 2 übersprungen (`ton/stimmt-der-ton`, `stream/zeichenweise` — beide bleiben
+Hand-Runde). Einstellungen nach dem Lauf byte-gleich zum Vorwert. Anlass war der Umbau des
+Vendorings auf zwei Quellen (`code-kit@0.5.0` + `obsidian-kit@0.29.0`); berührt war die
+Render-Oberfläche über `endpoint-list.ts`, dessen `globalModel`/`emptyModelLabel` von Pflicht
+auf optional gelockert wurden — für einen Konsumenten **mit** globalem Modell verhaltensgleich,
+und genau das bestätigt der Lauf.
+
+**`styles.css` wird jetzt mitgeprüft.** Der zentrale `requireEigenerBuild` kennt nur `main.js`,
+`npm run deploy` kopiert aber beides. Dieser Treiber misst an mehreren Stellen **gerendertes
+CSS** — `layout/log-scrollt-intern` (`scrollHeight > clientHeight`, der Flexbox-Gotcha aus
+REGISTRY § LLM-Chat-Panel-UI) und `destruktiv/farblich-abgesetzt` über `getComputedStyle`. Ein
+altes Stylesheet neben frischer `main.js` erzeugt dort denselben unbelegten Stand, den der
+Guard eine Zeile höher gerade ausgeschlossen hat — und er erschiene als **Plugin**-Befund, nicht
+als Deploy-Fehler. Übernommen aus `json_viewer` (`4c32757`), dort aus `local-image-generator`
+(`e6fbb53`).
+
+Gegenprobe, alle drei Ausgänge einzeln provoziert:
+
+| Zustand im Vault | `buildHerkunft` | Verhalten |
+|---|---|---|
+| unverändert | `deployt` | Lauf geht durch |
+| Kommentar angehängt (16.166 statt 16.144 Bytes) | `fremd` | Abbruch mit beiden Größen |
+| Datei entfernt | `fehlt` | Abbruch mit Pfad |
+
+### 2026-09-02 · Die eigentliche Abnahme des Herkunfts-Guards: ein Lauf gegen ein FREMDES Fenster
+
+Die Gegenproben vom Vormittag (manipuliertes `main.js` → Abbruch) belegen, dass
+`requireEigenerBuild` **funktioniert**. Sie belegen **nicht**, dass der Prüfgegenstand aus der
+laufenden Instanz kommt — genau die Korrektur, wegen der dieser Treiber vom Muster im
+Brücken-README abweicht. Dafür braucht es einen Lauf, der an ein fremdes Fenster andockt:
+
+```
+npm run smoke:gui -- --vault koda-agent
+→ Abbruch: Im Vault liegt keine main.js:
+  $STAGING_VAULTS_DIR/koda-agent/.obsidian/plugins/kuro-gamification/main.js
+```
+
+Der Pfad trägt **`koda-agent`** (hier gekürzt — der Lauf zeigt ihn absolut), nicht `kuro-gamification`. Ein Check gegen
+`stagingVaultDir(PLUGIN_ID)` hätte hier die gültige `main.js` im *eigenen* Staging-Vault
+geprüft und wäre **grün durchgelaufen**, obwohl der Lauf gegen ein fremdes Fenster ging — also
+genau der Fall, für den der Guard gebaut wurde. *Verfahren angeregt von der `llm-lab`-Session,
+die es am selben Tag unabhängig fuhr; hier nachgemessen, nicht übernommen.*
+
+### 2026-09-02 · Was die Warteschlange am CDP-Lock gekostet hat
+
+Der Lauf stand rund zweieinhalb Stunden aus, weil der Lock durchgehend von anderen Sessions
+gehalten wurde (`paperless-storage` → `koda-agent` → `obsidian-transmute` → `json_viewer` →
+`llm-lab` → `obsidian-transmute` → `koda-agent`). Zwei praktische Lehren:
+
+- **`acquire` pollen, nicht `status`.** Wer den freien Zustand *sieht* und dann greift, verliert
+  gegen den, der ununterbrochen greift — hier zweimal passiert, einmal binnen 30 Sekunden.
+- **Der Guard hätte den Lauf durchgelassen** (`PROTECTED_KINDS["focus"] = {quit, focus}`, das
+  Kommando matcht nur `ACCESS_PATTERN`) — trotzdem wäre er falsch gewesen: `clickReal` reißt ein
+  Fenster nach vorn und zerstört genau die fremde Messung, die ein `focus`-Lock schützt. Der
+  Guard sieht das nicht, weil der Aufruf im gebündelten Treiber steckt und nicht im
+  Kommandotext. **Text-Matching kann Absicht nicht prüfen; die Zurückhaltung muss von der
+  Session kommen.**

@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.4.1] — 2026-09-03
+
 ### Fixed
 
 - **Companion-Chat: Antworten von Servern, die trotz `stream: true` volle Message-Objekte

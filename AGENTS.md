@@ -17,7 +17,7 @@ Leitprinzip: **off-by-default** für alles, was eskalieren könnte. Plugin-Code 
 > (`40_src/`, bewusst getrackte `node_modules`, Workflow-Ordner `10_discovery…90_workflow-log`).
 > Bei der Öffentlich-Machung (CORE-GIT-01, 2026-07-24) auf flache Sibling-Form migriert, frische
 > Historie ab v1.0.0. Die volle Vor-1.0.0-Historie liegt lokal im Archiv
-> `../kuro-gamification-container` (nie gepusht).
+> `~/Archive/repos/kuro-gamification-container` (seit 2026-09-14; vorher `../kuro-gamification-container`, nur als privates Forgejo-Archiv gesichert).
 
 ## Architecture principles
 Pure-Function-Engines (`src/engine/`) bleiben frei von Obsidian-Imports und in Node testbar

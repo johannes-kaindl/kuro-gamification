@@ -23,3 +23,7 @@ coverage/
 # GUI-Smoke-Bundle (esbuild, maintainer-lokal)
 .gui-smoke.mjs
 .shots.mjs
+
+# Ad-hoc git worktrees (Vorher/Nachher-Baselines, Muster outpost-worldbuilding) — Scratch,
+# nie committen.
+.worktrees/

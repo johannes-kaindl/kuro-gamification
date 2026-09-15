@@ -67,6 +67,10 @@ export class KuroChatPanel {
       cls: 'kuro-chat-stream',
     });
     this.area = area;
+    // `kuro-chat-log` bleibt als Alias auf dem Kit-Body stehen: der GUI-Smoke-Treiber
+    // (scripts/gui-smoke.ts, Schritt 4) und ältere Referenzen suchen strukturell danach,
+    // nicht nach dem Kit-eigenen `.okit-stream-body`.
+    area.bodyEl.addClass('kuro-chat-log');
 
     for (const e of this.session.entries) this.renderEntry(area.bodyEl, e);
 

@@ -15,6 +15,7 @@ import type { Lang } from '../types';
 import { t } from '../i18n';
 import type { ChatEntry, ChatSession } from '../llm/ChatSession';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
+import { buildStreamArea, type StreamArea } from '../vendor/kit-obsidian/stream-area';
 
 export interface ChatPanelCallbacks {
   onAsk(question: string): void;
@@ -25,8 +26,10 @@ export interface ChatPanelCallbacks {
 }
 
 export class KuroChatPanel {
-  private logEl: HTMLElement | null = null;
-  private streamTextEl: HTMLElement | null = null;
+  /** Streaming-Antwortbereich aus dem Kit (UI-STANDARD §8, `buildStreamArea`, Bauart 2:
+   *  append-only Rohtext). Kuro hat keinen Gedankenstrom — der Reasoning-Slot des Bausteins
+   *  bleibt deshalb ungenutzt (nie `appendReasoning`/`setReasoning` aufgerufen). */
+  private area: StreamArea | null = null;
   private inputEl: HTMLInputElement | null = null;
 
   constructor(
@@ -39,8 +42,7 @@ export class KuroChatPanel {
   /** Hinweis statt Chat, solange kein Endpunkt eingerichtet ist. */
   showSetupHint(): void {
     this.host.empty();
-    this.logEl = null;
-    this.streamTextEl = null;
+    this.area = null;
     this.inputEl = null;
     const box = this.host.createDiv({ cls: 'kuro-empty' });
     box.createEl('h3', { text: t('chat.setup.title', this.lang) });
@@ -58,27 +60,39 @@ export class KuroChatPanel {
 
     this.renderContextLine();
 
-    this.logEl = this.host.createDiv({ cls: 'kuro-chat-log' });
-    for (const e of this.session.entries) this.renderEntry(e);
+    // Wurzel bekommt eine eigene Klasse fürs Layout (flex:1 1 auto im kuro-chat-body,
+    // s. styles.css) — das Kit stylt nur seine eigenen okit-stream-*-Klassen.
+    const area = buildStreamArea(this.host, {
+      strings: { reasoning: '' },
+      cls: 'kuro-chat-stream',
+    });
+    this.area = area;
+
+    for (const e of this.session.entries) this.renderEntry(area.bodyEl, e);
 
     if (this.session.streaming !== null) {
-      const line = this.logEl.createDiv({ cls: 'kuro-chat-line kuro-chat-assistant' });
+      const line = area.bodyEl.createDiv({ cls: 'kuro-chat-line kuro-chat-assistant kuro-chat-streaming' });
       line.createSpan({ cls: 'kuro-chat-who', text: t('chat.kuro', this.lang) });
-      this.streamTextEl = line.createSpan({ cls: 'kuro-chat-text', text: this.session.streaming });
+      area.tailEl.addClass('kuro-chat-text');
+      // `tailEl` liegt nach buildStreamArea() als erstes (einziges) Kind des Bodys — hinter
+      // die fertigen Einträge verschieben, statt es dort neu einzufügen (Muster aus
+      // lingotuner/src/obsidian/view-render.ts, dort für denselben Zweck).
+      line.appendChild(area.tailEl);
+      area.setTail(this.session.streaming);
       line.createSpan({ cls: 'kuro-chat-cursor', text: '▮' });
     } else {
-      this.streamTextEl = null;
+      area.bodyEl.appendChild(area.tailEl);
     }
 
     this.renderInputRow(draft);
-    this.scrollToEnd();
+    area.followTail();
   }
 
   /** Laufenden Text fortschreiben, statt pro Token neu zu zeichnen. */
   appendToken(token: string): void {
-    if (this.streamTextEl === null) { this.render(); return; }
-    this.streamTextEl.setText((this.session.streaming ?? '') + token);
-    this.scrollToEnd();
+    if (this.area === null) { this.render(); return; }
+    this.area.setTail((this.session.streaming ?? '') + token);
+    this.area.followTail();
   }
 
   private renderContextLine(): void {
@@ -101,9 +115,8 @@ export class KuroChatPanel {
     });
   }
 
-  private renderEntry(e: ChatEntry): void {
-    if (this.logEl === null) return;
-    const line = this.logEl.createDiv({ cls: `kuro-chat-line kuro-chat-${e.role}` });
+  private renderEntry(container: HTMLElement, e: ChatEntry): void {
+    const line = container.createDiv({ cls: `kuro-chat-line kuro-chat-${e.role}` });
 
     if (e.role !== 'error') {
       line.createSpan({
@@ -156,9 +169,5 @@ export class KuroChatPanel {
     if (q === '' || this.session.busy) return;
     if (this.inputEl) this.inputEl.value = '';
     this.cb.onAsk(q);
-  }
-
-  private scrollToEnd(): void {
-    if (this.logEl) this.logEl.scrollTop = this.logEl.scrollHeight;
   }
 }

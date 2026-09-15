@@ -2,11 +2,13 @@ import { KuroChatPanel, type ChatPanelCallbacks } from '../src/views/KuroChatPan
 import { ChatSession } from '../src/llm/ChatSession';
 import type { DailyExtract } from '../src/llm/kuroContext';
 
-/** Minimaler Fake-Host nach dem Muster des Obsidian-Mocks. */
+/** Minimaler Fake-Host nach dem Muster des Obsidian-Mocks (tests/__mocks__/obsidian.ts),
+ *  um `buildStreamArea` (obsidian-kit) aufnehmen zu können: addClass + appendChild dazu. */
 function makeHost(): any {
   const el: any = { children: [] as any[], classes: new Set<string>(), text: '' };
   el.empty = () => { el.children = []; };
   el.setText = (s: string) => { el.text = s; };
+  el.addClass = (c: string) => { el.classes.add(c); };
   el.createEl = (_tag: string, opts?: any) => {
     const child = makeHost();
     if (opts?.text) child.setText(opts.text);
@@ -16,14 +18,26 @@ function makeHost(): any {
   };
   el.createDiv = (opts?: any) => el.createEl('div', opts);
   el.createSpan = (opts?: any) => el.createEl('span', opts);
+  // ⚠️ Haengt an statt zu verschieben (echtes DOM verschiebt bei appendChild eines
+  // bestehenden Kindes) — dieselbe dokumentierte Mock-Luecke wie
+  // lingotuner/tests/view-soft.test.ts:187. Betrifft hier `line.appendChild(area.tailEl)`:
+  // der Tail steht danach zweimal im Mock-Baum, im echten DOM einmal. Tests messen deshalb
+  // nur Aussagen, die unter BEIDEN Zaehlweisen gelten (z. B. "der letzte Treffer").
+  el.appendChild = (c: any) => { el.children.push(c); };
   el.addEventListener = () => {};
   return el;
 }
 
-/** Alle Elemente des Baums, die eine Klasse tragen. */
+/** Alle Elemente des Baums, die eine Klasse tragen — je Knoten-Identität höchstens einmal.
+ *  Noetig wegen der dokumentierten Mock-Luecke bei `appendChild` (s. `makeHost`): ein
+ *  verschobener Knoten haengt dort zusaetzlich an statt zu verschieben und wuerde sonst
+ *  doppelt gezaehlt, waehrend das echte DOM ihn nur einmal fuehrt. */
 function findAll(root: any, cls: string): any[] {
   const out: any[] = [];
+  const seen = new Set<any>();
   const walk = (n: any): void => {
+    if (seen.has(n)) return;
+    seen.add(n);
     if (n.classes?.has(cls)) out.push(n);
     for (const c of n.children ?? []) walk(c);
   };
@@ -115,5 +129,48 @@ describe('KuroChatPanel', () => {
     });
     panel.render();
     expect(findAll(host, 'kuro-chat-context-body')[0].text).toBe('(nichts)');
+  });
+
+  it('streamt den laufenden Absatz über den Kit-Antwortbereich (buildStreamArea)', () => {
+    const s = new ChatSession();
+    s.append({ role: 'user', text: 'frage' });
+    s.streaming = '';
+    const { panel, host } = makePanel(s);
+    panel.render();
+    expect(findAll(host, 'okit-stream-tail')).toHaveLength(1);
+
+    panel.appendToken('Hal');
+    s.streaming = 'Hal';
+    panel.appendToken('lo');
+    s.streaming = 'Hallo';
+
+    // Nur der Tail wird fortgeschrieben — kein voller Re-Render, die feste Frage bleibt
+    // die einzige weitere Zeile im Log.
+    expect(findAll(host, 'kuro-chat-line')).toHaveLength(2);
+    expect(findAll(host, 'okit-stream-tail')[0].text).toBe('Hallo');
+  });
+
+  it('haengt den Tail in die laufende Zeile, hinter den fertigen Einträgen im Log', () => {
+    const s = new ChatSession();
+    s.append({ role: 'user', text: 'frage' });
+    s.append({ role: 'assistant', text: 'antwort' });
+    s.streaming = 'läuft';
+    const { panel, host } = makePanel(s);
+    panel.render();
+
+    const lines = findAll(host, 'kuro-chat-line');
+    expect(lines).toHaveLength(3); // 2 fertige Einträge + die laufende Zeile
+    const streamLine = findAll(host, 'kuro-chat-streaming')[0];
+    // Die laufende Zeile ist die LETZTE der drei — sie steht hinter den fertigen Einträgen.
+    expect(lines[lines.length - 1]).toBe(streamLine);
+    // Und sie traegt den Kit-Tail direkt als Kind (nicht nur irgendwo im Baum).
+    expect((streamLine.children as any[]).some((c) => c.classes?.has('okit-stream-tail'))).toBe(true);
+  });
+
+  it('idle nach dem Streaming: kein Cursor, Tail bleibt leer im Bereich', () => {
+    const { panel, host } = makePanel(new ChatSession());
+    panel.render();
+    expect(findAll(host, 'kuro-chat-cursor')).toHaveLength(0);
+    expect(findAll(host, 'okit-stream-tail')).toHaveLength(1);
   });
 });

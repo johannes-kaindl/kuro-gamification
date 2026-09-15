@@ -172,8 +172,9 @@
 /* ── Companion-Chat: Panel ────────────────────────────── */
 /* Inherits flex:1+min-height:0 from .kuro-view-body (shared with the status
    body) — overflow-y goes back to hidden here because THIS body has its own
-   nested scroll region (.kuro-chat-log below), not the whole body at once;
-   context + input row stay fixed at their natural size via flex:0 0 auto. */
+   nested scroll region (.kuro-chat-stream/.okit-stream-body below), not the
+   whole body at once; context + input row stay fixed at their natural size
+   via flex:0 0 auto. */
 .kuro-chat-body { overflow-y: hidden; }
 .kuro-chat-context {
   flex: 0 0 auto;
@@ -191,10 +192,12 @@
   border-radius: var(--radius-s);
   padding: var(--size-2-2);
 }
-/* min-height:0 is the actual fix (Schritt 6, 2026-08-12): flex:1 alone did
-   not stop this from growing to fit the whole conversation — the input row
-   and abort button then scrolled along with it, past the visible viewport. */
-.kuro-chat-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-bottom: var(--size-4-2); }
+/* Wurzel des Kit-Streaming-Antwortbereichs (buildStreamArea, UI-STANDARD §8): füllt den
+   verbleibenden Platz im kuro-chat-body — die interne Scroll-Grenze setzt bereits
+   .okit-stream-body (s. u.). min-height:0 ist der eigentliche Fix (Schritt 6, 2026-08-12):
+   flex:1 allein stoppte das Wachstum nicht — Eingabezeile und Abbrechen-Knopf rollten sonst
+   mit dem ganzen Verlauf aus dem Sichtfeld. */
+.kuro-chat-stream { flex: 1 1 auto; min-height: 0; margin-bottom: var(--size-4-2); }
 .kuro-chat-line { margin-bottom: var(--size-4-2); }
 .kuro-chat-who {
   color: var(--text-accent);
@@ -209,8 +212,37 @@
   margin-top: var(--size-2-1);
 }
 .kuro-chat-cursor { color: var(--text-accent); }
+/* Die laufende Zeile hängt „Wer" + Kit-Tail (ein <div>, kein <span>) nebeneinander —
+   ohne diese Regel bräche der Tail als Block-Element in eine eigene Zeile um. */
+.kuro-chat-streaming { display: flex; align-items: baseline; gap: var(--size-2-2); flex-wrap: wrap; }
 .kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto; }
 .kuro-chat-input { flex: 1; min-width: 0; }
+
+/* ── Streaming-Antwortbereich (obsidian-kit@0.35.0, buildStreamArea) ────
+   Laut Kit-Vertrag kopiert, nicht importiert — s. AGENTS.md § Gotchas. */
+.okit-stream { display: flex; flex-direction: column; min-height: 0; gap: var(--size-4-2); }
+.okit-stream-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  font-size: var(--font-ui-small); line-height: var(--line-height-normal);
+}
+.okit-stream--host-scroll .okit-stream-body { flex: 0 0 auto; min-height: auto; overflow-y: visible; }
+.okit-stream-block > :first-child { margin-top: 0; }
+.okit-stream-block > :last-child { margin-bottom: 0; }
+.okit-stream-tail { white-space: pre-wrap; color: var(--text-muted); }
+.okit-stream-status {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--size-4-1);
+  font-size: var(--font-ui-smaller); color: var(--text-muted);
+}
+.okit-stream-reasoning {
+  flex: 0 0 auto;
+  font-size: var(--font-ui-smaller); color: var(--text-muted);
+}
+.okit-stream-reasoning > summary { cursor: var(--cursor); color: var(--text-faint); }
+.okit-stream-reasoning > pre {
+  max-height: 12em; overflow-y: auto; white-space: pre-wrap;
+  background: var(--background-secondary); padding: var(--size-4-2);
+}
 
 /* ── Companion-Chat: Kontext-Vorschau in den Einstellungen ── */
 .kuro-settings-label {

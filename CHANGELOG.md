@@ -5,6 +5,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **Companion-Chat: Streaming-Antwortbereich kommt jetzt aus dem Kit** (`buildStreamArea`,
+  `obsidian-kit@0.35.0`, UI-STANDARD §8) statt aus einem Eigenbau. Sichtbare Folge: der
+  laufende Absatz scrollt nur noch mit, solange man selbst am unteren Rand steht (`atBottom`,
+  40 px Toleranz) — wer während des Streams hochscrollt, bleibt jetzt oben stehen, statt bei
+  jedem Token nach unten gerissen zu werden. Kein Gedankenblock betroffen: Kuro streamt kein
+  Reasoning.
+- **Kit-Pin: `obsidian-kit` 0.29.0 → 0.35.0, `code-kit` 0.5.0 → 0.6.0** (`tools/sync-kit.sh`,
+  feste Refs, nicht der Kit-Arbeitsstand — dort läuft parallel Plan 2 auf 0.36.0).
+
 ## [1.4.1] — 2026-09-03
 
 ### Fixed

@@ -23,14 +23,14 @@
 set -e
 
 KIT="${KIT_DIR:-../obsidian-kit}"
-KIT_REF="${KIT_REF:-0.29.0}"
+KIT_REF="${KIT_REF:-0.35.0}"
 CODEKIT="${CODEKIT_DIR:-../../code-kit}"
-CODEKIT_REF="${CODEKIT_REF:-0.5.0}"
+CODEKIT_REF="${CODEKIT_REF:-0.6.0}"
 
 # Nur die Module, die DIESES Repo wirklich konsumiert.
 CK_PURE="endpoint endpoint_config endpoint_diagnostics model-choice model-list-cache num reasoning sse think-splitter"
 CK_WEB="clipboard"
-KIT_OBSIDIAN="clipboard clock confirm endpoint-list model-picker"
+KIT_OBSIDIAN="clipboard clock confirm endpoint-list model-picker stream-area"
 
 # --- Vorbedingungen. Alle Pruefungen VOR dem ersten Schreibvorgang: ein Fehlschlag darf
 #     keine halb aktualisierte Vendor-Schicht hinterlassen.

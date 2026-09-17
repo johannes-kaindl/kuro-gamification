@@ -64,6 +64,9 @@ import { en } from '../src/i18n/en';
 
 const PLUGIN_ID = 'kuro-gamification';
 const VIEW_TYPE = 'kuro-status-view';
+/** Fester Test-Endpunkt — kein echter Nutzer konfiguriert exakt diese lokale Test-URL als
+ *  einzigen Chat-Endpunkt. Dient als Marker fuer einen liegen gebliebenen Smoke-Rest. */
+const SMOKE_ENDPOINT_URL = 'http://127.0.0.1:1234';
 
 /* ---------------------------------------------------------------- Protokoll */
 
@@ -275,7 +278,7 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
   // aus dem Bild. Gemessen wird der Effekt (liegt die Eingabezeile im sichtbaren
   // Bereich?), nicht die Ursache (`min-height:0` gesetzt?) — die Klasse war auch im
   // Defektfall vorhanden.
-  await setSetting(cdp, 'chatEndpoints', [{ url: 'http://127.0.0.1:1234' }]);
+  await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
   await rebuildSidebar(cdp);
   await oeffneChatTab(cdp);
 
@@ -662,6 +665,49 @@ async function main(): Promise<void> {
   // Herkunft ungeprüft blieb, darf nicht aussehen wie einer, der belegt ist.
   let herkunftsWarnung: string | null = null;
 
+  // Dieselbe Aufraeumarbeit wie im `finally` unten — als eigene Funktion, damit der
+  // SIGINT/SIGTERM-Handler sie aufrufen kann, ohne Code zu duplizieren. Ein Ctrl-C mitten
+  // im Lauf ueberspringt das `finally` NICHT (try/catch-Semantik), sondern beendet den
+  // Node-Prozess sofort — ohne eigenen Handler bleiben die umgestellten Settings
+  // (`enableChat`, `chatEndpoints`, `language`) im Smoke-Zustand stehen.
+  const cleanupState = async (): Promise<void> => {
+    if (vorwert !== null) {
+      const zurueck = await cdp
+        .evaluate<boolean>(`
+          const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+          p.data.settings = JSON.parse(${JSON.stringify(vorwert)});
+          p.chatSession.reset();
+          await p.persist();
+          for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.detach();
+          await new Promise((r) => setTimeout(r, 300));
+          await p.activateSidebar();
+          const pfad = app.vault.configDir + "/plugins/${PLUGIN_ID}/data.json";
+          const roh = await app.vault.adapter.read(pfad);
+          return JSON.stringify(JSON.parse(roh).settings) === ${JSON.stringify(vorwert)};
+        `)
+        .catch(() => false);
+      console.log(
+        zurueck
+          ? 'Einstellungen zurückgeschrieben — byte-gleich zum Vorwert.'
+          : '⚠️  ABWEICHUNG beim Zurückschreiben der Einstellungen — data.json prüfen!',
+      );
+    }
+  };
+
+  let signalCleanupRunning = false;
+  const onAbortSignal = (signal: NodeJS.Signals) => {
+    if (signalCleanupRunning) return;
+    signalCleanupRunning = true;
+    void (async () => {
+      console.log(`\n\nAbbruch durch ${signal} — raeume Smoke-Zustand auf...`);
+      await cleanupState();
+      cdp.close();
+      process.exit(130);
+    })();
+  };
+  process.on('SIGINT', onAbortSignal);
+  process.on('SIGTERM', onAbortSignal);
+
   try {
     if (process.platform === 'darwin') {
       try {
@@ -771,6 +817,31 @@ async function main(): Promise<void> {
     }
     console.log('');
 
+    // `chatEndpoints === [{ url: SMOKE_ENDPOINT_URL }]` ist eine feste Test-Konfiguration —
+    // kein echter Nutzer konfiguriert exakt diese lokale Adresse als einzigen Endpunkt. Ein
+    // Rest aus einem per SIGINT/SIGTERM abgebrochenen frueheren Lauf ist daran erkennbar,
+    // BEVOR dieser Lauf `vorwert` erfasst — sonst wuerde der Rest als "vorheriger Stand"
+    // mitgesnapshotted und am Laufende wiederhergestellt statt entfernt.
+    const leftoverEndpoint = await cdp.evaluate<boolean>(`
+      const eps = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].data.settings.chatEndpoints ?? [];
+      return eps.length === 1 && eps[0]?.url === ${JSON.stringify(SMOKE_ENDPOINT_URL)};
+    `);
+    record(
+      'vor/kein-liegen-gebliebener-endpunkt',
+      !leftoverEndpoint,
+      leftoverEndpoint
+        ? `Test-Endpunkt ${SMOKE_ENDPOINT_URL} gefunden und entfernt — vermutlich Ctrl-C/Crash im vorigen Lauf vor dessen Aufraeumen; dieser Lauf faehrt normal weiter`
+        : 'kein Rest in den Settings',
+    );
+    if (leftoverEndpoint) {
+      await cdp.evaluate(`
+        const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+        p.data.settings.chatEndpoints = [];
+        await p.persist();
+        return true;
+      `);
+    }
+
     vorwert = await cdp.evaluate<string>(`
       return JSON.stringify(app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].data.settings);
     `);
@@ -807,29 +878,11 @@ async function main(): Promise<void> {
   } finally {
     // Aufräumen darf nie am Ergebnis hängen: auch ein abgebrochener Lauf gibt den Vault
     // so zurück, wie er ihn vorgefunden hat. Der Chat-Verlauf wird bewusst nicht
-    // persistiert, muss also nur im Speicher geleert werden.
-    if (vorwert !== null) {
-      const zurueck = await cdp
-        .evaluate<boolean>(`
-          const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-          p.data.settings = JSON.parse(${JSON.stringify(vorwert)});
-          p.chatSession.reset();
-          await p.persist();
-          for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.detach();
-          await new Promise((r) => setTimeout(r, 300));
-          await p.activateSidebar();
-          const pfad = app.vault.configDir + "/plugins/${PLUGIN_ID}/data.json";
-          const roh = await app.vault.adapter.read(pfad);
-          return JSON.stringify(JSON.parse(roh).settings) === ${JSON.stringify(vorwert)};
-        `)
-        .catch(() => false);
-      // Das Ergebnis des Zurückschreibens gehört ins Protokoll, nicht ins Vertrauen.
-      console.log(
-        zurueck
-          ? 'Einstellungen zurückgeschrieben — byte-gleich zum Vorwert.'
-          : '⚠️  ABWEICHUNG beim Zurückschreiben der Einstellungen — data.json prüfen!',
-      );
-    }
+    // persistiert, muss also nur im Speicher geleert werden. Dieselbe Funktion wie der
+    // SIGINT/SIGTERM-Handler oben — kein Doppelcode.
+    process.off('SIGINT', onAbortSignal);
+    process.off('SIGTERM', onAbortSignal);
+    await cleanupState();
     cdp.close();
   }
 

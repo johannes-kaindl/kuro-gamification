@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-09-25
+
 ### Added
 
 - **Companion-Chat: Endpunkte vom LLM Endpoint Manager.** Ist das Plugin `llm-endpoint-manager` installiert, kommen die Chat-Endpunkte samt Modell von dort (Kit `endpoint-source`, Fähigkeit `chat`); in den Einstellungen erscheint statt der Endpunkt-Liste der Manager-Abschnitt mit Endpunkt- und Modellwahl. Sichtbare Folge: mit Manager wird die lokale Liste nicht mehr befragt (sie bleibt gespeichert), ohne Manager läuft alles wie bisher. Das globale Modell ("Global model") gilt nur noch ohne Manager.

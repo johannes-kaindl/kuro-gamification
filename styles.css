@@ -225,6 +225,8 @@
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
   font-size: var(--font-ui-small); line-height: var(--line-height-normal);
 }
+/* Ein leerer Slot bleibt Flex-Item und kostet einen gap (Kit 0.41.1). */
+.okit-stream-status:empty, .okit-stream-reasoning-slot:empty { display: none; }
 .okit-stream--host-scroll .okit-stream-body { flex: 0 0 auto; min-height: auto; overflow-y: visible; }
 .okit-stream-block > :first-child { margin-top: 0; }
 .okit-stream-block > :last-child { margin-bottom: 0; }
@@ -273,6 +275,8 @@
 .okit-ep-status svg { width: 14px; height: 14px; }
 .okit-ep-status.is-ok { color: var(--text-success); }
 .okit-ep-status.is-error { color: var(--text-error); }
+.okit-ep-extra { flex: 0 0 100%; order: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.okit-ep-secret { color: var(--text-muted); font-size: var(--font-ui-small); margin-right: 8px; }
 .okit-ep-warn { display: inline-flex; align-items: center; margin-right: 8px; vertical-align: middle; color: var(--text-warning); }
 .okit-ep-warn svg { width: 14px; height: 14px; }
 /* Drittanbieter-Hinweis (Schlüssel gesetzt): sachlicher Hinweis, keine Fehler-Warnung — bewusst

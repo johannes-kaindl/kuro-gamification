@@ -23,14 +23,16 @@
 set -e
 
 KIT="${KIT_DIR:-../obsidian-kit}"
-KIT_REF="${KIT_REF:-0.35.0}"
-CODEKIT="${CODEKIT_DIR:-../../code-kit}"
-CODEKIT_REF="${CODEKIT_REF:-0.6.0}"
+KIT_REF="${KIT_REF:-0.41.1}"
+CODEKIT="${CODEKIT_DIR:-../../libs/code-kit}"
+CODEKIT_REF="${CODEKIT_REF:-0.7.0}"
 
 # Nur die Module, die DIESES Repo wirklich konsumiert.
-CK_PURE="endpoint endpoint_config endpoint_diagnostics model-choice model-list-cache num reasoning sse think-splitter"
+CK_PURE="endpoint endpoint_config endpoint_diagnostics model-choice model-list-cache num reasoning sampling-profiles sse stream-blocks think-splitter"
+# Aus obsidian-kit/src/pure/ (nicht code-kit), aber mit Querimport auf code-kit → relayer_pure.
+KIT_PURE="endpoint-source"
 CK_WEB="clipboard"
-KIT_OBSIDIAN="clipboard clock confirm endpoint-list model-picker stream-area"
+KIT_OBSIDIAN="clipboard clock confirm endpoint-list endpoint-source model-picker stable-writer stream-area"
 
 # --- Vorbedingungen. Alle Pruefungen VOR dem ersten Schreibvorgang: ein Fehlschlag darf
 #     keine halb aktualisierte Vendor-Schicht hinterlassen.
@@ -109,6 +111,32 @@ relayer() { # relayer <vendored-file>
   mv "$f.tmp" "$f"
 }
 
+# Zweite Fallgruppe: ein Modul aus obsidian-kit/src/pure/ mit Querimport auf code-kit. Beide Seiten
+# liegen hier flach in src/vendor/kit/, der Zielpfad ist also ./ (Geschwisterdatei) statt ../kit/.
+# Praezedenz: lingotuner/tools/sync-kit.sh (relayer_pure).
+relayer_pure() { # relayer_pure <vendored-file>
+  f=$1
+  case "$f" in
+    src/vendor/kit/*) ;;
+    *) echo "sync-kit: $f liegt nicht in src/vendor/kit/ — relayer_pure gilt nur fuer die pure-Schicht" >&2; exit 1 ;;
+  esac
+  sed -e 's|\(["'"'"']\)\.\./vendor/code-kit/pure/|\1./|g' \
+      -e 's|\(["'"'"']\)\.\./vendor/code-kit/web/|\1./|g' "$f" > "$f.tmp"
+  if cmp -s "$f" "$f.tmp"; then rm -f "$f.tmp"; return 0; fi
+  mv "$f.tmp" "$f"
+  if grep -qE '\.\./vendor/code-kit/' "$f"; then
+    echo "sync-kit: unaufgeloester Kit-Querimport in $f — Muster pruefen" >&2; exit 1
+  fi
+  for dep in $(sed -n 's|.*from ["'"'"']\./\([A-Za-z0-9_/-]*\)["'"'"'].*|\1|p' "$f" | sort -u); do
+    [ -f "src/vendor/kit/$dep.ts" ] || {
+      echo "sync-kit: $f importiert ./$dep, aber src/vendor/kit/$dep.ts fehlt — mitvendorieren" >&2; exit 1
+    }
+  done
+  note="// ONE mechanical deviation from verbatim: kit-internal import (../vendor/code-kit/{pure,web}/) → ./ (flat vendor layout, sibling module in src/vendor/kit/); reproduce on every re-vendor, nothing else may differ."
+  printf '%s\n' "$note" | cat - "$f" > "$f.tmp"
+  mv "$f.tmp" "$f"
+}
+
 # Die pure-Schicht zuerst — Guard (3) des relayers prueft gegen sie.
 for m in $CK_PURE; do
   copy "$CODEKIT" "$CODEKIT_REF" code-kit "src/ts/pure/$m.ts" "src/vendor/kit/$m.ts"
@@ -117,6 +145,12 @@ done
 for m in $CK_WEB; do
   copy "$CODEKIT" "$CODEKIT_REF" code-kit "src/ts/web/$m.ts" "src/vendor/kit/$m.ts"
   echo "vendored code-kit@$CODEKIT_REF/web/$m.ts"
+done
+
+for m in $KIT_PURE; do
+  copy "$KIT" "$KIT_REF" obsidian-kit "src/pure/$m.ts" "src/vendor/kit/$m.ts"
+  relayer_pure "src/vendor/kit/$m.ts"
+  echo "vendored obsidian-kit@$KIT_REF/pure/$m.ts"
 done
 
 for m in $KIT_OBSIDIAN; do

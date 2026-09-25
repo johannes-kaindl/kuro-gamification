@@ -9,7 +9,7 @@
    (vault.modify → refreshStatus) bei jedem Tastendruck in einer
    beliebigen Notiz weg — samt Verlauf und Eingabe-Entwurf.
    ========================================================== */
-import { ItemView, type WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, MarkdownRenderer, type WorkspaceLeaf, setIcon } from 'obsidian';
 import type KuroPlugin from '../main';
 import { KuroStatusRenderer } from './KuroStatusRenderer';
 import { KuroChatPanel } from './KuroChatPanel';
@@ -81,6 +81,9 @@ export class KuroSidebarView extends ItemView {
         onClear: () => this.plugin.clearChat(),
         contextInfo: () => buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
         openSettings: () => this.plugin.openOwnSettings(),
+        // Die View ist die Component, an der die gerenderten Blöcke hängen: schließt sie, räumt
+        // Obsidian deren Listener und eingebettete Kinder mit ab.
+        renderMarkdown: (el, md) => MarkdownRenderer.render(this.app, md, el, '', this),
       });
     }
 
@@ -107,6 +110,11 @@ export class KuroSidebarView extends ItemView {
       return;
     }
     this.chatPanel.render();
+  }
+
+  /** Kontextzeile nachziehen, nachdem `plugin.lastDailyText` neu gelesen wurde. */
+  refreshChatContext(): void {
+    this.chatPanel?.refreshContext();
   }
 
   /** Laufende Antwort fortschreiben, ohne den ganzen Tab neu zu zeichnen. */

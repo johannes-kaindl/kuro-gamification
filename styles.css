@@ -205,6 +205,9 @@
   font-weight: var(--font-semibold);
 }
 .kuro-chat-text { white-space: pre-wrap; }
+/* Gerendertes Markdown bricht selbst um — pre-wrap würde jeden Quelltext-Umbruch zusätzlich zeigen. */
+.kuro-chat-md, .kuro-chat-stream-content .markdown-rendered { white-space: normal; }
+.kuro-chat-stream-content { flex: 1 1 0; min-width: 0; }
 .kuro-chat-error .kuro-chat-text { color: var(--text-error); }
 .kuro-chat-detail {
   color: var(--text-faint);
@@ -215,7 +218,11 @@
 /* Die laufende Zeile hängt „Wer" + Kit-Tail (ein <div>, kein <span>) nebeneinander —
    ohne diese Regel bräche der Tail als Block-Element in eine eigene Zeile um. */
 .kuro-chat-streaming { display: flex; align-items: baseline; gap: var(--size-2-2); flex-wrap: wrap; }
-.kuro-chat-inputrow { display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto; }
+.kuro-chat-inputrow {
+  display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto;
+  /* Mobil: Home-Indikator bzw. Gesten-Leiste des Systems darf das Eingabefeld nicht überdecken. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 .kuro-chat-input { flex: 1; min-width: 0; }
 
 /* ── Streaming-Antwortbereich (obsidian-kit@0.35.0, buildStreamArea) ────

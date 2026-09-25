@@ -16,6 +16,7 @@ import { t } from '../i18n';
 import type { ChatEntry, ChatSession } from '../llm/ChatSession';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
 import { buildStreamArea, type StreamArea } from '../vendor/kit-obsidian/stream-area';
+import { createStableWriter, type StableMarkdownWriter } from '../vendor/kit-obsidian/stable-writer';
 
 export interface ChatPanelCallbacks {
   onAsk(question: string): void;
@@ -23,6 +24,10 @@ export interface ChatPanelCallbacks {
   onClear(): void;
   contextInfo(): DailyExtract;
   openSettings(): void;
+  /** Rendert Markdown in ein Element (Obsidians `MarkdownRenderer` — braucht `App` und eine
+   *  Component, beides gehört der View, nicht diesem Panel). Fehlt der Callback, bleibt es
+   *  beim Rohtext. */
+  renderMarkdown?: (el: HTMLElement, markdown: string) => Promise<void>;
 }
 
 export class KuroChatPanel {
@@ -31,6 +36,11 @@ export class KuroChatPanel {
    *  bleibt deshalb ungenutzt (nie `appendReasoning`/`setReasoning` aufgerufen). */
   private area: StreamArea | null = null;
   private inputEl: HTMLInputElement | null = null;
+  /** Inkrementeller Markdown-Schreiber auf dem laufenden Absatz (Kit `stable-writer`):
+   *  abgeschlossene Absätze werden genau einmal gerendert, der laufende bleibt Rohtext. */
+  private writer: StableMarkdownWriter | null = null;
+  private ctxSummaryEl: HTMLElement | null = null;
+  private ctxBodyEl: HTMLElement | null = null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -43,6 +53,9 @@ export class KuroChatPanel {
   showSetupHint(): void {
     this.host.empty();
     this.area = null;
+    this.writer = null;
+    this.ctxSummaryEl = null;
+    this.ctxBodyEl = null;
     this.inputEl = null;
     const box = this.host.createDiv({ cls: 'kuro-empty' });
     box.createEl('h3', { text: t('chat.setup.title', this.lang) });
@@ -74,15 +87,25 @@ export class KuroChatPanel {
 
     for (const e of this.session.entries) this.renderEntry(area.bodyEl, e);
 
+    this.writer = null;
     if (this.session.streaming !== null) {
       const line = area.bodyEl.createDiv({ cls: 'kuro-chat-line kuro-chat-assistant kuro-chat-streaming' });
       line.createSpan({ cls: 'kuro-chat-who', text: t('chat.kuro', this.lang) });
+      const content = line.createDiv({ cls: 'kuro-chat-stream-content' });
       area.tailEl.addClass('kuro-chat-text');
       // `tailEl` liegt nach buildStreamArea() als erstes (einziges) Kind des Bodys — hinter
       // die fertigen Einträge verschieben, statt es dort neu einzufügen (Muster aus
       // lingotuner/src/obsidian/view-render.ts, dort für denselben Zweck).
-      line.appendChild(area.tailEl);
-      area.setTail(this.session.streaming);
+      content.appendChild(area.tailEl);
+      // Der Schreiber legt fertige Blöcke in `area.bodyEl` ab — hier soll das die Inhalts-
+      // spalte der laufenden Zeile sein, nicht der ganze Log. Die Handles des Bereichs
+      // (Tail, Scrollen) bleiben dieselben; nur der Ablageort der Blöcke wird umgelenkt.
+      this.writer = createStableWriter({
+        area: { ...area, bodyEl: content },
+        render: (el, md) => this.renderMd(el, md),
+        blockCls: 'okit-stream-block markdown-rendered',
+      });
+      this.writer.push(this.session.streaming);
       line.createSpan({ cls: 'kuro-chat-cursor', text: '▮' });
     } else {
       area.bodyEl.appendChild(area.tailEl);
@@ -94,14 +117,12 @@ export class KuroChatPanel {
 
   /** Laufenden Text fortschreiben, statt pro Token neu zu zeichnen. */
   appendToken(token: string): void {
-    if (this.area === null) { this.render(); return; }
-    this.area.setTail((this.session.streaming ?? '') + token);
-    this.area.followTail();
+    if (this.area === null || this.writer === null) { this.render(); return; }
+    this.writer.push(token);
   }
 
-  private renderContextLine(): void {
-    const info = this.cb.contextInfo();
-    const label = info.mode === 'none'
+  private contextLabel(info: DailyExtract): string {
+    return info.mode === 'none'
       ? t('chat.contextNone', this.lang)
       : info.mode === 'full'
         ? t('chat.contextFull', this.lang)
@@ -109,14 +130,41 @@ export class KuroChatPanel {
             tasks: info.tasks.length,
             habits: info.habits.length,
           });
+  }
 
-    const details = this.host.createEl('details', { cls: 'kuro-chat-context' });
-    details.createEl('summary', { text: label });
+  private contextBody(info: DailyExtract): string {
     const body = renderDailyExtract(info);
-    details.createEl('pre', {
-      cls: 'kuro-chat-context-body',
-      text: body === '' ? t('set.chatDailyContext.previewEmpty', this.lang) : body,
+    return body === '' ? t('set.chatDailyContext.previewEmpty', this.lang) : body;
+  }
+
+  private renderContextLine(): void {
+    const info = this.cb.contextInfo();
+    const details = this.host.createEl('details', { cls: 'kuro-chat-context' });
+    this.ctxSummaryEl = details.createEl('summary', {
+      cls: 'kuro-chat-context-summary',
+      text: this.contextLabel(info),
     });
+    this.ctxBodyEl = details.createEl('pre', {
+      cls: 'kuro-chat-context-body',
+      text: this.contextBody(info),
+    });
+  }
+
+  /** Kontextzeile und Vorschau aus dem aktuellen Stand neu schreiben — ohne den Chat neu
+   *  zu zeichnen (Verlauf, Scrollposition und ein laufender Stream bleiben stehen, und der
+   *  Ausklapper behält seinen Zustand). No-op, solange kein Chat gezeichnet ist. */
+  refreshContext(): void {
+    if (this.ctxSummaryEl === null || this.ctxBodyEl === null) return;
+    const info = this.cb.contextInfo();
+    this.ctxSummaryEl.setText(this.contextLabel(info));
+    this.ctxBodyEl.setText(this.contextBody(info));
+  }
+
+  /** Markdown in ein Element; ohne Renderer der Rohtext. */
+  private renderMd(el: HTMLElement, markdown: string): Promise<void> {
+    const r = this.cb.renderMarkdown;
+    if (r === undefined) { el.setText(markdown); return Promise.resolve(); }
+    return r(el, markdown);
   }
 
   private renderEntry(container: HTMLElement, e: ChatEntry): void {
@@ -128,7 +176,13 @@ export class KuroChatPanel {
         text: e.role === 'user' ? t('chat.you', this.lang) : t('chat.kuro', this.lang),
       });
     }
-    line.createSpan({ cls: 'kuro-chat-text', text: e.text });
+    if (e.role === 'assistant' && this.cb.renderMarkdown !== undefined) {
+      // Nur Kuros Antworten sind Markdown; die eigene Frage und Fehlertexte bleiben Rohtext.
+      const box = line.createDiv({ cls: 'kuro-chat-text kuro-chat-md markdown-rendered' });
+      this.renderMd(box, e.text).catch(() => { box.setText(e.text); });
+    } else {
+      line.createSpan({ cls: 'kuro-chat-text', text: e.text });
+    }
 
     if (e.detail !== undefined) {
       line.createDiv({ cls: 'kuro-chat-detail', text: e.detail });

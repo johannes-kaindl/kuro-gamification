@@ -163,8 +163,10 @@ describe('KuroChatPanel', () => {
     const streamLine = findAll(host, 'kuro-chat-streaming')[0];
     // Die laufende Zeile ist die LETZTE der drei — sie steht hinter den fertigen Einträgen.
     expect(lines[lines.length - 1]).toBe(streamLine);
-    // Und sie traegt den Kit-Tail direkt als Kind (nicht nur irgendwo im Baum).
-    expect((streamLine.children as any[]).some((c) => c.classes?.has('okit-stream-tail'))).toBe(true);
+    // Und sie traegt den Kit-Tail im Inhaltsbereich der Zeile (dort landen auch die
+    // fertig gerenderten Markdown-Blöcke, nicht nur der laufende Absatz).
+    const content = findAll(streamLine, 'kuro-chat-stream-content')[0];
+    expect((content.children as any[]).some((c) => c.classes?.has('okit-stream-tail'))).toBe(true);
   });
 
   it('idle nach dem Streaming: kein Cursor, Tail bleibt leer im Bereich', () => {
@@ -172,5 +174,101 @@ describe('KuroChatPanel', () => {
     panel.render();
     expect(findAll(host, 'kuro-chat-cursor')).toHaveLength(0);
     expect(findAll(host, 'okit-stream-tail')).toHaveLength(1);
+  });
+
+  describe('Markdown', () => {
+    const md = () => {
+      const calls: string[] = [];
+      const renderMarkdown = (el: any, text: string): Promise<void> => {
+        calls.push(text);
+        el.setText(`<md>${text}`);
+        return Promise.resolve();
+      };
+      return { calls, renderMarkdown };
+    };
+
+    it('rendert fertige Antworten als Markdown, die eigene Frage bleibt Rohtext', () => {
+      const s = new ChatSession();
+      s.append({ role: 'user', text: 'eine *Frage*' });
+      s.append({ role: 'assistant', text: '**fett**\n\n- a\n- b' });
+      const m = md();
+      const { panel, host } = makePanel(s, { renderMarkdown: m.renderMarkdown });
+      panel.render();
+      expect(m.calls).toEqual(['**fett**\n\n- a\n- b']);
+      const texts = findAll(host, 'kuro-chat-text');
+      expect(texts[0].text).toBe('eine *Frage*');
+      expect(texts[1].text).toBe('<md>**fett**\n\n- a\n- b');
+      expect(texts[1].classes.has('markdown-rendered')).toBe(true);
+    });
+
+    it('zeigt den Rohtext, wenn das Rendern scheitert', async () => {
+      const s = new ChatSession();
+      s.append({ role: 'assistant', text: '**fett**' });
+      const { panel, host } = makePanel(s, {
+        renderMarkdown: () => Promise.reject(new Error('kaputt')),
+      });
+      panel.render();
+      await Promise.resolve(); await Promise.resolve();
+      expect(findAll(host, 'kuro-chat-text')[0].text).toBe('**fett**');
+    });
+
+    it('ohne Renderer bleibt es beim Rohtext (Tests, Einstellungs-Vorschau)', () => {
+      const s = new ChatSession();
+      s.append({ role: 'assistant', text: '**fett**' });
+      const { panel, host } = makePanel(s);
+      panel.render();
+      expect(findAll(host, 'kuro-chat-text')[0].text).toBe('**fett**');
+    });
+
+    it('rendert im Stream nur abgeschlossene Absätze, der laufende bleibt Rohtext', () => {
+      const s = new ChatSession();
+      s.streaming = '';
+      const m = md();
+      const { panel, host } = makePanel(s, { renderMarkdown: m.renderMarkdown });
+      panel.render();
+      panel.appendToken('Erster **Absatz**');
+      expect(m.calls).toEqual([]);
+      panel.appendToken('\n\nZwei');
+      expect(m.calls).toEqual(['Erster **Absatz**\n\n']);
+      panel.appendToken('ter');
+      // Bereits Gerendertes wird nicht noch einmal gerendert.
+      expect(m.calls).toHaveLength(1);
+      expect(findAll(host, 'okit-stream-tail')[0].text).toBe('Zweiter');
+    });
+
+    it('nach einem Neuzeichnen mitten im Stream steht der Stand des Streams wieder da', () => {
+      const s = new ChatSession();
+      s.streaming = 'Eins\n\nZw';
+      const m = md();
+      const { panel, host } = makePanel(s, { renderMarkdown: m.renderMarkdown });
+      panel.render();
+      expect(m.calls).toEqual(['Eins\n\n']);
+      expect(findAll(host, 'okit-stream-tail').pop().text).toBe('Zw');
+    });
+  });
+
+  describe('Kontextzeile', () => {
+    it('refreshContext schreibt Zeile und Vorschau um, ohne den Chat neu zu zeichnen', () => {
+      let info = extract({ mode: 'none' });
+      const s = new ChatSession();
+      s.append({ role: 'user', text: 'frage' });
+      const { panel, host } = makePanel(s, { contextInfo: () => info });
+      panel.render();
+      const lineBefore = findAll(host, 'kuro-chat-line')[0];
+      expect(findAll(host, 'kuro-chat-context-body')[0].text).toBe('(nichts)');
+
+      info = extract({ tasks: ['[ ] neu'], habits: [] });
+      panel.refreshContext();
+
+      expect(findAll(host, 'kuro-chat-context-body')[0].text).toContain('neu');
+      expect(findAll(host, 'kuro-chat-context-summary')[0].text).toContain('1');
+      expect(findAll(host, 'kuro-chat-line')[0]).toBe(lineBefore);
+    });
+
+    it('refreshContext ohne gezeichneten Chat (Einrichtungs-Hinweis) tut nichts', () => {
+      const { panel } = makePanel(new ChatSession());
+      panel.showSetupHint();
+      expect(() => panel.refreshContext()).not.toThrow();
+    });
   });
 });

@@ -275,6 +275,7 @@ export default class KuroPlugin extends Plugin {
       this.data.lastSnapshot = snap;
       this.debouncedSave();
       this.syncSidebarSnapshot();
+      this.syncChatContext();
       this.refreshStatusBar();
 
       if (force) this.logger.info('status recomputed', {
@@ -323,6 +324,13 @@ export default class KuroPlugin extends Plugin {
       if (leaf.view instanceof KuroSidebarView) out.push(leaf.view);
     }
     return out;
+  }
+
+  /** Kontextzeile jedes offenen Chat-Tabs an den frisch gelesenen Tagesnotiz-Stand anpassen.
+   *  Bewusst nicht `syncChat()`: das zeichnet den ganzen Tab neu, und `refreshStatus` läuft
+   *  bei jeder Änderung in irgendeiner Notiz. */
+  syncChatContext(): void {
+    for (const view of this.chatViews()) view.refreshChatContext();
   }
 
   /** Chat-Tab neu zeichnen. No-op bei geschlossener Seitenleiste. */

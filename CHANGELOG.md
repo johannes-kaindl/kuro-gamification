@@ -5,16 +5,26 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **Companion-Chat: Endpunkte vom LLM Endpoint Manager.** Ist das Plugin `llm-endpoint-manager` installiert, kommen die Chat-Endpunkte samt Modell von dort (Kit `endpoint-source`, Fähigkeit `chat`); in den Einstellungen erscheint statt der Endpunkt-Liste der Manager-Abschnitt mit Endpunkt- und Modellwahl. Sichtbare Folge: mit Manager wird die lokale Liste nicht mehr befragt (sie bleibt gespeichert), ohne Manager läuft alles wie bisher. Das globale Modell ("Global model") gilt nur noch ohne Manager.
+
+### Fixed
+
+- **Companion-Chat: Markdown in Antworten wird dargestellt.** Fettung, Listen, Code und Zitate erscheinen als solche statt als Sternchen und Striche. Fertige Antworten werden gerendert; während des Streams werden abgeschlossene Absätze gerendert und nur der laufende bleibt Rohtext. Die eigene Frage und Fehlertexte bleiben Rohtext.
+- **Companion-Chat: die Zeile „Kuro sieht gerade …“ war veraltet.** Sie und die Vorschau darunter folgen jetzt der Tagesnotiz, auch wenn der Chat-Tab offen bleibt; vorher zeigten sie den Stand der letzten eigenen Chat-Aktion.
+- **Companion-Chat (Mobil): die Eingabezeile wird nicht mehr von der System-Leiste unten überdeckt** (`env(safe-area-inset-bottom)`).
+
 ### Changed
 
+- Einstellungen: die Beschreibungen von „Eigene Stimme“, „Merkzettel“ und „Aus der Tagesnotiz“ sind ohne Vorwissen verständlich (mit Beispiel; bei der Tagesnotiz steht, dass nur Checkbox-Zeilen und Habit-Felder zählen, keine bloße Zahl im Notiz-Kopf).
 - **Companion-Chat: Streaming-Antwortbereich kommt jetzt aus dem Kit** (`buildStreamArea`,
   `obsidian-kit@0.35.0`, UI-STANDARD §8) statt aus einem Eigenbau. Sichtbare Folge: der
   laufende Absatz scrollt nur noch mit, solange man selbst am unteren Rand steht (`atBottom`,
   40 px Toleranz) — wer während des Streams hochscrollt, bleibt jetzt oben stehen, statt bei
   jedem Token nach unten gerissen zu werden. Kein Gedankenblock betroffen: Kuro streamt kein
   Reasoning.
-- **Kit-Pin: `obsidian-kit` 0.29.0 → 0.35.0, `code-kit` 0.5.0 → 0.6.0** (`tools/sync-kit.sh`,
-  feste Refs, nicht der Kit-Arbeitsstand — dort läuft parallel Plan 2 auf 0.36.0).
+- **Kit-Pin: `obsidian-kit` 0.29.0 → 0.41.1, `code-kit` 0.5.0 → 0.7.0** (`tools/sync-kit.sh`, feste Refs, nicht der Kit-Arbeitsstand). Neu vendoriert: `stable-writer`, `endpoint-source`, `stream-blocks`, `sampling-profiles`. `tools/sync-kit.sh` zeigt auf `../../libs/code-kit`; der alte Pfad `../../code-kit` gab es nicht.
 
 ## [1.4.1] — 2026-09-03
 

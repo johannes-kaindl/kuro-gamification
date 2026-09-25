@@ -163,6 +163,8 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
     mit Obsidian-Mock testbar.
   - **`activePersona` folgt der Lore**, nicht dem Loot — wer die Gothic-Lore aktiviert, will
     auch die Gothic-Stimme.
+  - **Endpunkt-Quelle (seit Kit 0.41.1): der LLM Endpoint Manager, wenn installiert, sonst die lokale Liste.** `main.ts` `resolveChatEndpoint()` ist der einzige Weg zum Endpunkt; der Manager wird bei jedem Aufruf frisch gelesen (`findEndpointManager`), nie gecacht, und die lokale Liste wird mit Manager bewusst nicht befragt. Gesendet wird `result.model` (Wahl → `defaultModel`), nie `config.model` — der echte Manager setzt beides, und `config.model` überschreibt sonst die Nutzerwahl (lingotuner-Befund C1). Die Wahl steht in `chatChoice`, das globale `chatModel` gilt nur ohne Manager (Ablösung: Cockpit-Task „Globales chatModel abloesen“).
+  - **Markdown im Chat:** `KuroChatPanel` bekommt `renderMarkdown` als Callback (die View liefert `MarkdownRenderer.render(app, …, this)`), damit das Panel weder `App` noch eine Component kennt. Fertige Kuro-Antworten werden gerendert, im Stream schneidet der Kit-`stable-writer` an der Absatzgrenze; eigene Fragen und Fehler bleiben Rohtext. Der Schreiber legt seine Blöcke in `.kuro-chat-stream-content` der laufenden Zeile ab, nicht in den ganzen Log.
 - **TaskNotes-Quellen (seit 1.4.0):** `src/utils/taskNotesBridge.ts` ist die **einzige** Stelle,
   die `app.plugins.plugins.tasknotes` kennt. TaskNotes gibt keinen Vertrag (kein `apiVersion`),
   deshalb gilt dort die defensive Konsumenten-Regel: bei jedem Zugriff frisch lesen, Form prüfen

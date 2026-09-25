@@ -197,6 +197,8 @@ keinen voreingestellten Anbieter und keinen Cloud-Default; gedacht ist er für e
 Server wie [LM Studio](https://lmstudio.ai) (`http://localhost:1234`) oder
 [Ollama](https://ollama.com) (`http://localhost:11434`).
 
+Ist das Plugin **LLM Endpoint Manager** installiert, holt sich der Chat Endpunkte und Modell von dort, und die Einstellungen zeigen statt der Liste dessen Endpunktwahl.
+
 **Was wann gesendet wird.** Vor deiner ersten Frage gar nichts. Mit jeder Frage gehen mit:
 
 | Immer | Je nach `Aus der heutigen Notiz` |

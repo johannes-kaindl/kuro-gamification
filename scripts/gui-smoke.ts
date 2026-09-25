@@ -54,6 +54,8 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
@@ -413,6 +415,297 @@ async function sektionKontext(cdp: Cdp): Promise<void> {
   );
 }
 
+
+/* -------------------------------------------- 9 · Markdown, Kontext-Sync, Manager */
+
+const MANAGER_PLUGIN_ID = 'llm-endpoint-manager';
+const MANAGER_DEFAULT_MODEL = 'smoke-manager-modell';
+
+/** Fake-Chat-Endpunkt: streamt eine Antwort mit Markdown und merkt sich Anfragen und Modell.
+ *  CORS ist Pflicht — der Renderer läuft unter app://obsidian.md, ohne die Header sieht der
+ *  Server die Anfrage nie (gemessen 2026-09-15 in lingotuner, dort dieselbe Bauart). */
+interface FakeChat { url: string; close: () => Promise<void>; calls: () => number; lastModel: () => string | null }
+async function startFakeChat(): Promise<FakeChat> {
+  let calls = 0;
+  let lastModel: string | null = null;
+  const server: Server = createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+    if (req.url?.includes('/v1/models') === true) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data: [{ id: MANAGER_DEFAULT_MODEL, object: 'model' }] }));
+      return;
+    }
+    if (req.method === 'POST' && req.url?.includes('/v1/chat/completions') === true) {
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk.toString('utf8'); });
+      req.on('end', () => {
+        calls += 1;
+        try { lastModel = ((JSON.parse(body) as { model?: unknown }).model as string | undefined) ?? null; } catch { lastModel = null; }
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+        for (const stueck of ['Antwort mit **Fettung**', '\n\n', '- eins\n- zwei']) {
+          res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: stueck }, finish_reason: null }] })}\n\n`);
+        }
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      });
+      return;
+    }
+    res.writeHead(404); res.end();
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = (server.address() as AddressInfo).port;
+  return {
+    url: `http://127.0.0.1:${port}`,
+    close: () => new Promise<void>((resolve) => { server.close(() => { resolve(); }); }),
+    calls: () => calls,
+    lastModel: () => lastModel,
+  };
+}
+
+/** Fake `llm-endpoint-manager`-API. `findEndpointManager` prüft nur die FORM (version 1 +
+ *  alle Methoden), keine Herkunft. `config.model` trägt bewusst NICHT das Standardmodell:
+ *  der echte Manager setzt es zusätzlich zu `defaultModel`, und wer `config.model` statt
+ *  `result.model` sendet, überschreibt eine getroffene Modellwahl (lingotuner-Befund C1). Ein
+ *  abweichender Wert macht diesen Fehler sichtbar. */
+async function installFakeManager(cdp: Cdp, url: string): Promise<void> {
+  await cdp.evaluate(`
+    if (!("__smokeVorherManager" in window)) {
+      window.__smokeVorherManager = app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}] ?? null;
+    }
+    const ep = { id: "fake-ep", label: "Fake Endpoint", url: ${JSON.stringify(url)}, provider: "openai", capabilities: ["chat"], defaultModel: ${JSON.stringify(MANAGER_DEFAULT_MODEL)}, enabled: true, hasSecret: false };
+    const res = { id: ep.id, label: ep.label, config: { url: ${JSON.stringify(url)}, model: "config-model-darf-nicht-gesendet-werden" }, defaultModel: ${JSON.stringify(MANAGER_DEFAULT_MODEL)} };
+    app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}] = { api: {
+      version: 1,
+      list: () => [ep],
+      get: (id) => (id === ep.id ? ep : null),
+      resolve: async () => res,
+      materialize: async (id) => (id === ep.id ? res : { error: "not-found" }),
+      models: async () => [${JSON.stringify(MANAGER_DEFAULT_MODEL)}],
+      importEndpoints: async () => ({ added: [], merged: [], skipped: [] }),
+      on: () => (() => {}),
+    } };
+    return true;
+  `);
+}
+
+/** Stellt den vorgefundenen Registry-Eintrag wieder her, statt ihn zu löschen (im Renderer
+ *  geparkt, weil ein Plugin-Objekt keine CDP-Rundreise überlebt). Idempotent. */
+async function removeFakeManager(cdp: Cdp): Promise<void> {
+  await cdp.evaluate(`
+    if ("__smokeVorherManager" in window) {
+      const vorher = window.__smokeVorherManager;
+      if (vorher === null) delete app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}];
+      else app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}] = vorher;
+      delete window.__smokeVorherManager;
+    } else {
+      delete app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}];
+    }
+    return true;
+  `);
+}
+
+async function sektionMarkdown(cdp: Cdp): Promise<void> {
+  await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
+  await rebuildSidebar(cdp);
+  await oeffneChatTab(cdp);
+
+  // (a) Fertige Antwort: Fettung und Liste müssen als Elemente da sein, nicht als Sternchen.
+  await cdp.evaluate(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    p.chatSession.reset();
+    p.chatSession.append({ role: "user", text: "eine *Frage*" });
+    p.chatSession.append({ role: "assistant", text: "Das ist **fett**.\\n\\n- eins\\n- zwei" });
+    p.syncChat();
+    return true;
+  `);
+  const fertig = await pollUntil<{ strong: number; li: number; frageRoh: boolean; ws: string } | null>(
+    cdp,
+    `const v = ${VIEW_EL};
+     const md = v?.querySelector(".kuro-chat-assistant .kuro-chat-md");
+     if (!md || md.querySelectorAll("li").length < 2) return null;
+     const frage = v.querySelector(".kuro-chat-user .kuro-chat-text");
+     return { strong: md.querySelectorAll("strong").length, li: md.querySelectorAll("li").length,
+              frageRoh: frage?.textContent === "eine *Frage*" && !frage.querySelector("em"),
+              ws: getComputedStyle(md).whiteSpace };`,
+    6000,
+  );
+  record(
+    'markdown/fertige-antwort-gerendert',
+    fertig !== null && fertig.strong === 1 && fertig.li === 2,
+    fertig === null ? 'kein gerendertes Markdown im Chat' : `${fertig.strong}× <strong>, ${fertig.li}× <li>, white-space ${fertig.ws}`,
+  );
+  record(
+    'markdown/eigene-frage-bleibt-rohtext',
+    fertig?.frageRoh === true,
+    fertig?.frageRoh === true ? 'Sternchen der Frage unverändert' : 'Frage wurde gerendert oder fehlt',
+  );
+
+  // (b) Stream: ein abgeschlossener Absatz wird gerendert, der laufende bleibt Rohtext.
+  const stream = await cdp.evaluate<{ block: number; strong: number; tail: string } | null>(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    p.chatSession.reset();
+    p.chatSession.streaming = "";
+    p.syncChat();
+    await new Promise((r) => setTimeout(r, 300));
+    const leaf = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
+    leaf.view.appendChatToken("Erster **Absatz**\\n\\nZwei");
+    await new Promise((r) => setTimeout(r, 600));
+    const v = ${VIEW_EL};
+    const c = v?.querySelector(".kuro-chat-stream-content");
+    const out = c ? { block: c.querySelectorAll(".okit-stream-block").length,
+      strong: c.querySelectorAll(".okit-stream-block strong").length,
+      tail: c.querySelector(".okit-stream-tail")?.textContent ?? "" } : null;
+    p.chatSession.streaming = null;
+    p.chatSession.reset();
+    p.syncChat();
+    return out;
+  `);
+  record(
+    'markdown/stream-abgeschlossener-absatz-gerendert',
+    stream !== null && stream.block === 1 && stream.strong === 1 && stream.tail === 'Zwei',
+    stream === null ? 'keine laufende Zeile im Chat' : `${stream.block} Block, ${stream.strong}× <strong>, Tail „${stream.tail}“`,
+  );
+}
+
+async function sektionKontextSync(cdp: Cdp): Promise<void> {
+  // Der Regress: refreshStatus las die Tagesnotiz neu, der offene Chat-Tab zeigte weiter den
+  // alten Stand. Gemessen wird die sichtbare Zeile nach einer echten Änderung der Notiz.
+  await setSetting(cdp, 'chatDailyContext', 'tasks');
+  await rebuildSidebar(cdp);
+  await oeffneChatTab(cdp);
+  const lauf = await cdp.evaluate<{ vorher: string; nachher: string } | { fehler: string }>(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const path = p.data.settings.dailyFolder + "/" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + ".md";
+    const adapter = app.vault.adapter;
+    const existierte = await adapter.exists(path);
+    const original = existierte ? await adapter.read(path) : null;
+    const zeile = () => ${VIEW_EL}?.querySelector(".kuro-chat-context-summary")?.textContent ?? "";
+    try {
+      await adapter.write(path, "- [ ] smoke-eins\\n");
+      await p.refreshStatus(true);
+      await new Promise((r) => setTimeout(r, 300));
+      const vorher = zeile();
+      await adapter.write(path, "- [ ] smoke-eins\\n- [ ] smoke-zwei\\n- [ ] smoke-drei\\n");
+      await p.refreshStatus(true);
+      await new Promise((r) => setTimeout(r, 300));
+      return { vorher, nachher: zeile() };
+    } catch (e) {
+      return { fehler: String(e) };
+    } finally {
+      if (existierte) await adapter.write(path, original);
+      else await adapter.remove(path);
+      await p.refreshStatus(true);
+    }
+  `);
+  if ('fehler' in lauf) {
+    record('kontext/zeile-folgt-der-notiz', false, lauf.fehler);
+    return;
+  }
+  const zahl = (text: string): number | null => {
+    const m = /\d+/.exec(text);
+    return m ? Number(m[0]) : null;
+  };
+  record(
+    'kontext/zeile-folgt-der-notiz',
+    zahl(lauf.vorher) === 1 && zahl(lauf.nachher) === 3,
+    `„${lauf.vorher}“ → „${lauf.nachher}“ (ohne den Chat-Tab neu zu öffnen)`,
+  );
+}
+
+async function sektionManager(cdp: Cdp): Promise<void> {
+  const fake = await startFakeChat();
+  try {
+    await installFakeManager(cdp, fake.url);
+    // Die lokale Liste zeigt bewusst auf einen toten Port: würde sie befragt, käme kein Aufruf
+    // am Fake-Server an.
+    await setSetting(cdp, 'chatEndpoints', [{ url: 'http://127.0.0.1:9' }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+
+    // Einstellungen: mit Manager statt des lokalen Listen-Editors der Manager-Abschnitt.
+    // Modal (< 1.13) oder eigenes Fenster (≥ 1.13) — wie in sektionKontext.
+    await cdp.evaluate(`
+      await app.setting.open();
+      await app.setting.openTabById(${JSON.stringify(PLUGIN_ID)});
+      await new Promise((r) => setTimeout(r, 900));
+      return true;
+    `);
+    const settingsText = async (): Promise<string | null> => {
+      const imModal = await cdp.evaluate<string | null>(`
+        const m = document.querySelector(".modal.mod-settings");
+        return m ? m.textContent : null;
+      `);
+      if (imModal !== null && imModal.includes('Kuro')) return imModal;
+      const fenster = await attachTo('settings', PORT);
+      if (!fenster) return null;
+      const text = await fenster.evaluate<string | null>(`return document.body ? document.body.textContent : null;`);
+      fenster.close();
+      return text;
+    };
+    const text = await settingsText();
+    await cdp.evaluate(`app.setting.close?.(); return true;`);
+    const zeigtManager = text !== null && (text.includes(de['src.managed']) || text.includes(en['src.managed']));
+    record(
+      'manager/einstellungen-zeigen-den-manager-abschnitt',
+      zeigtManager,
+      text === null ? 'Einstellungen nicht lesbar' : zeigtManager ? '„Endpunkte kommen vom LLM Endpoint Manager“ sichtbar' : 'Abschnitt fehlt',
+    );
+
+    await cdp.evaluate(`
+      const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+      p.chatSession.reset();
+      await p.askKuro("Hallo");
+      return true;
+    `);
+    const gerendert = await pollUntil<boolean>(
+      cdp,
+      `return Boolean(${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md strong"));`,
+      8000,
+    ).catch(() => false);
+    record(
+      'manager/lauf-nutzt-den-manager-endpunkt',
+      fake.calls() === 1,
+      `${fake.calls()} Anfrage(n) am Fake-Server, obwohl die lokale Liste auf einen toten Port zeigt`,
+    );
+    record(
+      'manager/modell-kommt-aus-defaultModel-nicht-aus-config',
+      fake.lastModel() === MANAGER_DEFAULT_MODEL,
+      `gesendet: ${fake.lastModel() ?? 'nichts'}`,
+    );
+    record(
+      'manager/antwort-ist-gerendertes-markdown',
+      gerendert === true,
+      gerendert === true ? '<strong> im fertigen Eintrag' : 'kein <strong> im Chat nach dem Lauf',
+    );
+
+    // Manager weg → lokale Liste wie zuvor.
+    await removeFakeManager(cdp);
+    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url }]);
+    await cdp.evaluate(`
+      const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+      p.endpointResolver.invalidate();
+      p.chatSession.reset();
+      await p.askKuro("Nochmal");
+      return true;
+    `);
+    record(
+      'manager/ohne-manager-laeuft-die-lokale-liste',
+      fake.calls() === 2,
+      `${fake.calls()} Anfragen insgesamt am Fake-Server`,
+    );
+  } finally {
+    await removeFakeManager(cdp);
+    await fake.close();
+  }
+}
+
 /* ---------------------------------------------- 6 · Sprache (Schritt 12) */
 
 async function sektionSprache(cdp: Cdp): Promise<void> {
@@ -671,6 +964,7 @@ async function main(): Promise<void> {
   // Node-Prozess sofort — ohne eigenen Handler bleiben die umgestellten Settings
   // (`enableChat`, `chatEndpoints`, `language`) im Smoke-Zustand stehen.
   const cleanupState = async (): Promise<void> => {
+    await removeFakeManager(cdp).catch(() => undefined);
     if (vorwert !== null) {
       const zurueck = await cdp
         .evaluate<boolean>(`
@@ -869,6 +1163,16 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 8 · Herkunfts-Panel');
     await sektionHerkunft(cdp);
+    console.log('');
+
+    console.log('── 9 · Markdown im Chat');
+    await sektionMarkdown(cdp);
+    console.log('');
+    console.log('── 10 · Kontextzeile folgt der Tagesnotiz');
+    await sektionKontextSync(cdp);
+    console.log('');
+    console.log('── 11 · Endpunkte vom Manager');
+    await sektionManager(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

@@ -195,6 +195,8 @@ preset provider and no cloud default; it is meant for a local server such as
 [LM Studio](https://lmstudio.ai) (`http://localhost:1234`) or
 [Ollama](https://ollama.com) (`http://localhost:11434`).
 
+If you have the **LLM Endpoint Manager** plugin installed, the chat takes its endpoints and model from there instead, and the settings show the manager's endpoint choice in place of the list.
+
 **What is sent, and when.** Nothing is sent until you ask a question. With each question go:
 
 | Always | Depending on `From today's note` |

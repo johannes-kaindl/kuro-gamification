@@ -39,6 +39,7 @@ import {
   diagnoseSources, sourceStateClass, sourceStateIcon, taskRuleSuggestion,
 } from '../engine/TaskNotesXp';
 import { buildEndpointList, type EndpointListStrings } from '../vendor/kit-obsidian/endpoint-list';
+import { buildEndpointSourceSection, findEndpointManager } from '../vendor/kit-obsidian/endpoint-source';
 import { renderModelPicker } from '../vendor/kit-obsidian/model-picker';
 import { resolveModelChoice, type ModelHintKey } from '../vendor/kit/model-choice';
 import { createModelListCache, type ModelListCache } from '../vendor/kit/model-list-cache';
@@ -667,9 +668,34 @@ export class KuroSettingsTab extends PluginSettingTab {
    *  eine Netzwerk-Frage ist; deshalb einmal pro Render aufgelöst und hier abgelegt. */
   private _activeChatEndpointUrl: string | null = null;
 
+  /** Manager da → „Endpunkte kommen vom LLM Endpoint Manager" (Wahl + Modell + Import);
+   *  sonst der lokale Listen-Editor. Gespeichert wird nur die Wahl (`chatChoice`). */
   private _renderChatEndpoints(setting: Setting, lang: Lang): void {
+    const host = this._hostFor(setting);
+    buildEndpointSourceSection({
+      app: this.app, containerEl: host, capability: 'chat', caller: 'kuro-gamification',
+      choice: () => this.plugin.data.settings.chatChoice,
+      setChoice: async (c) => { this.plugin.data.settings.chatChoice = c; await this._persistOnly(); },
+      local: () => this.plugin.data.settings.chatEndpoints,
+      strings: {
+        managed: t('src.managed', lang), managedDesc: t('src.managedDesc', lang),
+        openManager: t('src.openManager', lang), pickEndpoint: t('src.pickEndpoint', lang),
+        automatic: t('src.automatic', lang), model: t('set.chatModel.name', lang),
+        importLocal: t('src.importLocal', lang),
+        imported: (r) => t('src.imported', lang, { 0: r.added.length, 1: r.merged.length }),
+        importFailed: t('src.importFailed', lang),
+        modelHint: (key: ModelHintKey) => (key ? t(`set.model.hint.${key}`, lang) : ''),
+        savedSuffix: t('set.model.saved', lang), refreshModels: t('set.chatModel.refresh', lang),
+        saveFailed: t('set.chatEndpoints.saveFailed', lang),
+      },
+      renderLocalList: () => { this._renderLocalChatEndpoints(host, lang); },
+      rerender: () => this._refreshUi(),
+    });
+  }
+
+  private _renderLocalChatEndpoints(host: HTMLElement, lang: Lang): void {
     buildEndpointList({
-      containerEl: this._hostFor(setting),
+      containerEl: host,
       label: t('set.chatEndpoints.name', lang),
       desc: t('set.chatEndpoints.desc', lang),
       placeholder: ENDPOINT_PRESETS[0]?.url ?? '',
@@ -751,6 +777,9 @@ export class KuroSettingsTab extends PluginSettingTab {
     const setting = new Setting(containerEl)
       .setName(t('set.chatModel.name', lang))
       .setDesc(t('set.chatModel.desc', lang));
+    // Mit Manager wählt der Endpunkt-Abschnitt darüber das Modell; ein zweites Feld wäre eine
+    // zweite Wahrheit, die nichts mehr bewirkt.
+    if (findEndpointManager(this.app) !== null) { setting.setDesc(t('src.modelManaged', lang)); return; }
 
     void this._activeModelChoiceInputs().then(({ models, reachable }) => {
       const choice = resolveModelChoice({ reachable, models, current: s.chatModel });

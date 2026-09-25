@@ -24,6 +24,7 @@ const makePlugin = (enableChat: boolean, over: Record<string, unknown> = {}) => 
   openOwnSettings: () => {},
   chatSession: { entries: [], streaming: null, busy: false, reset: () => {} },
   lastDailyText: null,
+  hasChatEndpointSource: () => !!(over.chatEndpoints as unknown[] | undefined)?.length,
   askKuro: async () => {},
   abortChat: () => {},
   rememberNote: () => {},

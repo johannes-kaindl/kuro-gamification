@@ -42,6 +42,8 @@ import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
 import { KuroLlmClient, type KuroLlmHttpJson } from './llm/KuroLlmClient';
 import { ChatEndpointResolver } from './llm/ChatEndpointResolver';
 import { effectiveModel, type EndpointConfig } from './vendor/kit/endpoint_config';
+import { resolveEndpointSource } from './vendor/kit/endpoint-source';
+import { findEndpointManager, onEndpointManagerChanged } from './vendor/kit-obsidian/endpoint-source';
 import { activePersona } from './utils/packLibrary';
 
 export default class KuroPlugin extends Plugin {
@@ -65,6 +67,7 @@ export default class KuroPlugin extends Plugin {
   private statusBarEl: HTMLElement | null = null;
   private debouncedRefresh!: () => void;
   private taskNotesUnsubscribe: (() => void) | null = null;
+  private managerUnsubscribe: (() => void) | null = null;
   /** Ein TaskNotes-Ereignis lag an — von refreshStatus konsumiert und zurueckgesetzt. */
   private xpEventPending = false;
   private debouncedSave!: () => void;
@@ -124,6 +127,12 @@ export default class KuroPlugin extends Plugin {
       if (this.data.settings.openSidebarOnStartup) void this.activateSidebar();
       void this.refreshStatus(true);
       this.scheduleMidnightTick();
+      // Erst nach dem Layout abonnieren: lädt der Manager nach uns, bliebe ein früheres Abo
+      // für die ganze Sitzung wirkungslos (Kit-Hinweis an onEndpointManagerChanged).
+      this.managerUnsubscribe = onEndpointManagerChanged(this.app, () => {
+        this.endpointResolver.invalidate();
+        this.syncChat();
+      });
       if (!this.data.onboardingShown) new WelcomeModal(this.app, this).open();
     });
 
@@ -154,6 +163,8 @@ export default class KuroPlugin extends Plugin {
   onunload(): void {
     this.taskNotesUnsubscribe?.();
     this.taskNotesUnsubscribe = null;
+    this.managerUnsubscribe?.();
+    this.managerUnsubscribe = null;
     if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
     if (this.statusBarEl) this.statusBarEl.detach();
     this.statusBarEl = null;
@@ -369,7 +380,7 @@ export default class KuroPlugin extends Plugin {
       question,
     });
 
-    const active = await this.endpointResolver.resolve();
+    const active = await this.resolveChatEndpoint();
     if (active === null) {
       this.chatSession.busy = false;
       this.chatSession.streaming = null;
@@ -381,9 +392,9 @@ export default class KuroPlugin extends Plugin {
     this.chatAbort = new AbortController();
     const outcome = await this.chatClient.stream(
       {
-        endpoint: active.url,
-        apiKey: active.apiKey ?? '',
-        model: effectiveModel(active, s.chatModel),
+        endpoint: active.config.url,
+        apiKey: active.config.apiKey ?? '',
+        model: active.model,
         suppressThinking: s.chatSuppressThinking,
       },
       messages,
@@ -413,6 +424,38 @@ export default class KuroPlugin extends Plugin {
       this.logger.error('chat stream failed', outcome.kind, outcome.detail);
     }
     this.syncChat();
+  }
+
+  /** Gibt es überhaupt eine Quelle für Chat-Endpunkte — den Manager oder mindestens eine
+   *  lokale Zeile? Ohne beides zeigt der Chat-Tab den Einrichtungs-Hinweis. */
+  hasChatEndpointSource(): boolean {
+    return findEndpointManager(this.app) !== null || this.data.settings.chatEndpoints.length > 0;
+  }
+
+  /** EINZIGER Weg zum Chat-Endpunkt. Ist der LLM Endpoint Manager installiert, entscheidet er
+   *  (bei JEDEM Aufruf frisch gelesen, nie gecacht — das Plugin kann jederzeit deaktiviert
+   *  werden) und die lokale Liste wird bewusst NICHT befragt: eine Wahrheit, eine Meldung.
+   *  Ohne Manager läuft die lokale Fallback-Liste wie bisher, gecacht im Resolver. */
+  async resolveChatEndpoint(): Promise<{ config: EndpointConfig; model: string } | null> {
+    const s = this.data.settings;
+    const manager = findEndpointManager(this.app);
+    if (manager === null) {
+      const local = await this.endpointResolver.resolve();
+      return local === null ? null : { config: local, model: effectiveModel(local, s.chatModel) };
+    }
+    const r = await resolveEndpointSource({
+      manager,
+      local: s.chatEndpoints,
+      localModel: s.chatModel,
+      capability: 'chat',
+      choice: s.chatChoice,
+      caller: 'kuro-gamification',
+    }, (cfg) => this.clientFor(cfg).ping());
+    if (r.config === null) {
+      this.logger.error('chat endpoint: manager gave none', r.reason ?? 'unknown');
+      return null;
+    }
+    return { config: r.config, model: r.model };
   }
 
   abortChat(): void { this.chatAbort?.abort(); }

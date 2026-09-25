@@ -104,8 +104,7 @@ export class KuroSidebarView extends ItemView {
   /** Chat-Tab neu zeichnen; ohne eingerichteten Endpunkt der Setup-Hinweis. */
   renderChat(): void {
     if (this.chatPanel === null) return;
-    const s = this.plugin.data.settings;
-    if (s.chatEndpoints.length === 0) {
+    if (!this.plugin.hasChatEndpointSource()) {
       this.chatPanel.showSetupHint();
       return;
     }

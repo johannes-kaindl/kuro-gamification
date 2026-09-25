@@ -301,6 +301,15 @@ export const de: Record<string, string> = {
   'set.enableChat.name': 'Chat aktiv',
   'set.enableChat.desc': 'Zeigt einen Chat-Tab in der Seitenleiste. Aus = keine Netzwerkverbindung.',
   /* Endpunkt-Fallback-Liste (obsidian-kit buildEndpointList) — ein Chat-Block */
+  'src.managed': 'Endpunkte kommen vom LLM Endpoint Manager',
+  'src.managedDesc': 'Der Chat nutzt die Endpunkte aus dem Plugin LLM Endpoint Manager. Deine lokale Liste bleibt gespeichert, wird aber nicht mehr befragt, solange der Manager installiert ist.',
+  'src.openManager': 'Manager-Einstellungen öffnen',
+  'src.pickEndpoint': 'Endpunkt',
+  'src.automatic': 'automatisch (erster erreichbarer)',
+  'src.importLocal': 'Lokale Endpunkte in den Manager übernehmen',
+  'src.imported': 'Übernommen: {0} neu, {1} zusammengeführt.',
+  'src.importFailed': 'Übernahme fehlgeschlagen.',
+  'src.modelManaged': 'Das Modell wird oben im Endpunkt-Abschnitt gewählt, solange der LLM Endpoint Manager aktiv ist.',
   'set.chatEndpoints.name': 'Endpunkte',
   'set.chatEndpoints.desc': 'Geordnete Fallback-Liste — der erste erreichbare gewinnt. Lokale Server '
     + '(LM Studio, Ollama) und gehostete Anbieter mischen; jede Zeile trägt ihren eigenen optionalen API-Schlüssel und Modell-Override.',

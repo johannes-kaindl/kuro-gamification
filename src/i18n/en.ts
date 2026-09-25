@@ -289,6 +289,15 @@ export const en: Record<string, string> = {
   'set.enableChat.name': 'Enable chat',
   'set.enableChat.desc': 'Shows a chat tab in the sidebar. Off means no network connection at all.',
   /* Endpoint fallback list (obsidian-kit buildEndpointList) — a Chat block */
+  'src.managed': 'Endpoints come from the LLM Endpoint Manager',
+  'src.managedDesc': 'The chat uses the endpoints from the LLM Endpoint Manager plugin. Your local list stays saved but is not consulted while the manager is installed.',
+  'src.openManager': 'Open manager settings',
+  'src.pickEndpoint': 'Endpoint',
+  'src.automatic': 'automatic (first reachable)',
+  'src.importLocal': 'Copy local endpoints into the manager',
+  'src.imported': 'Copied: {0} new, {1} merged.',
+  'src.importFailed': 'Copying failed.',
+  'src.modelManaged': 'The model is chosen in the endpoint section above while the LLM Endpoint Manager is active.',
   'set.chatEndpoints.name': 'Endpoints',
   'set.chatEndpoints.desc': 'Ordered fallback list — the first reachable one wins. Mix local servers '
     + '(LM Studio, Ollama) and hosted providers; each row carries its own optional API key and model override.',

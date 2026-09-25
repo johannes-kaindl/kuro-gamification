@@ -2,6 +2,7 @@
    Kuro Gamification — Type Definitions + Defaults
    ========================================================== */
 import type { EndpointConfig } from './vendor/kit/endpoint_config';
+import type { EndpointChoice } from './vendor/kit/endpoint-source';
 
 export type KuroLootTier = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type Lang = 'de' | 'en';
@@ -179,6 +180,9 @@ export interface KuroSettings {
   chatEndpoints: EndpointConfig[];
   /** Globales Modell, das gilt, wenn der aktive Endpunkt keinen Override trägt. */
   chatModel: string;
+  /** Gemerkte Wahl gegenüber dem LLM Endpoint Manager (Endpunkt-ID + Modell). Leer = automatisch.
+   *  Gilt nur, solange der Manager installiert ist; die lokale Liste kennt keine Wahl. */
+  chatChoice: EndpointChoice;
   chatSuppressThinking: boolean;
   chatDailyContext: ChatDailyContext;
   chatPersonaOverride: string;
@@ -306,6 +310,7 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   enableChat: false,
   chatEndpoints: [],
   chatModel: '',
+  chatChoice: {},
   chatSuppressThinking: true,
   chatDailyContext: 'tasks',
   chatPersonaOverride: '',

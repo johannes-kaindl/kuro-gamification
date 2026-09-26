@@ -1078,6 +1078,10 @@ async function main(): Promise<void> {
         await app.plugins.disablePlugin(id);
         await new Promise((r) => setTimeout(r, 500));
       }
+      // uebernommen aus obsidian-letterhead/scripts/gui-smoke.ts, 2026-09-26
+      // Ein frisches Profil startet im Restricted Mode: Community-Plugins sind aus, und
+      // enablePlugin liefert dann still nichts. Nur im eigenen Staging-Vault aufheben.
+      if (app.vault.getName() === id && app.plugins.setEnable) await app.plugins.setEnable(true);
       await app.plugins.enablePlugin(id);
       await new Promise((r) => setTimeout(r, 1200));
       const p = app.plugins.plugins[id];
@@ -1090,7 +1094,13 @@ async function main(): Promise<void> {
       } catch { aufPlatte = undefined; }
       return { ok: true, version: p.manifest.version, aufPlatte };
     `);
-    if (!plugin.ok) throw new Error(`Plugin ${PLUGIN_ID} ist nicht aktiv. Erst \`npm run deploy\`.`);
+    if (!plugin.ok) {
+      throw new Error(
+        `Plugin ${PLUGIN_ID} ist nicht aktiv. Erst \`npm run deploy\`. Bleibt es danach aus, `
+        + 'laeuft die Instanz im Restricted Mode (frisches Profil) oder der Vault ist ein fremder: '
+        + `der Treiber hebt den Modus nur im Vault ${PLUGIN_ID} auf (\`app.plugins.setEnable(true)\`).`,
+      );
+    }
 
     // Zwei Versionen, und sie können auseinanderlaufen — gemessen am 2026-09-02 in genau
     // diesem Vault: Speicher 1.3.0, Platte 1.4.0. `enablePlugin` lädt den CODE neu, das

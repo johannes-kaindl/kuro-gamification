@@ -706,6 +706,66 @@ async function sektionManager(cdp: Cdp): Promise<void> {
   }
 }
 
+/* ------------------------------------- 12 · Echter Endpunkt (Kit-Chat-Client) */
+
+/** Ein bereits GELADENES Chat-Modell auf dem lokalen LM-Studio-Endpunkt, sonst `null`.
+ *  Bewusst nur ein geladenes: eine Anfrage an ein nicht geladenes Modell löst in LM Studio ein
+ *  JIT-Laden aus und verdrängt das Modell, an dem eine andere Sitzung gerade arbeitet. */
+async function geladenesModell(): Promise<string | null> {
+  try {
+    const res = await fetch(`${SMOKE_ENDPOINT_URL}/api/v0/models`, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data?: Array<{ id: string; state?: string; type?: string }> };
+    const treffer = (body.data ?? []).find((m) => m.state === 'loaded' && (m.type === 'llm' || m.type === 'vlm'));
+    return treffer?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
+  const modell = await geladenesModell();
+  if (modell === null) {
+    skipped('stream/echter-endpunkt', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht — nichts gemessen (ein Lauf löste sonst ein JIT-Laden aus)`);
+    return;
+  }
+  await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
+  await setSetting(cdp, 'chatModel', modell);
+  await setSetting(cdp, 'chatSuppressThinking', true);
+  await cdp.evaluate(`app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].endpointResolver.invalidate(); return true;`);
+  await rebuildSidebar(cdp);
+  await oeffneChatTab(cdp);
+  // Mutation und Wartephase getrennt: `cdp.evaluate` bricht nach 30 s ab, ein echtes Modell braucht länger.
+  await cdp.evaluate(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    p.chatSession.reset();
+    window.__smokeEcht = { tokens: 0, erster: null, t0: Date.now(), fertig: false };
+    const leaf = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
+    const orig = leaf.view.appendChatToken.bind(leaf.view);
+    window.__smokeEcht.orig = orig;
+    leaf.view.appendChatToken = (t) => { window.__smokeEcht.tokens += 1; window.__smokeEcht.erster ??= Date.now() - window.__smokeEcht.t0; orig(t); };
+    p.askKuro("Antworte mit genau einem Satz: Wer bist du?").finally(() => { window.__smokeEcht.fertig = true; });
+    return true;
+  `);
+  await pollUntil<boolean>(cdp, `return window.__smokeEcht?.fertig === true;`, 180_000).catch(() => false);
+  const lauf = await cdp.evaluate<{ tokens: number; antwort: string; fehler: string; erster: number | null; fertig: boolean }>(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    const leaf = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
+    const e = window.__smokeEcht;
+    leaf.view.appendChatToken = e.orig;
+    const antwort = p.chatSession.entries.filter((x) => x.role === "assistant").map((x) => x.text).join("");
+    const fehler = p.chatSession.entries.filter((x) => x.role === "error").map((x) => x.text + " " + (x.detail ?? "")).join(" | ");
+    const out = { tokens: e.tokens, antwort, fehler, erster: e.erster, fertig: e.fertig };
+    delete window.__smokeEcht;
+    return out;
+  `);
+  record(
+    'stream/echter-endpunkt-liefert-tokens-einzeln',
+    lauf.fertig && lauf.fehler === '' && lauf.tokens >= 2 && lauf.antwort.trim() !== '',
+    !lauf.fertig ? 'Antwort kam nicht innerhalb von 180 s' : lauf.fehler !== '' ? `Fehlerzeile im Chat: ${lauf.fehler}` : `${lauf.tokens} Token-Häppchen von ${modell}, erstes nach ${lauf.erster ?? '?'} ms, Antwort ${lauf.antwort.length} Zeichen`,
+  );
+}
+
 /* ---------------------------------------------- 6 · Sprache (Schritt 12) */
 
 async function sektionSprache(cdp: Cdp): Promise<void> {
@@ -1207,10 +1267,12 @@ async function main(): Promise<void> {
     console.log('── 11 · Endpunkte vom Manager');
     await sektionManager(cdp);
     console.log('');
+    console.log('── 12 · Echter Endpunkt');
+    await sektionEchterEndpunkt(cdp);
+    console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');
     skipped('ton/stimmt-der-ton', 'Schritt 11 der Checkliste — ob sich Antworten richtig anfühlen, ist keine Messung');
-    skipped('stream/zeichenweise', 'braucht einen echten Endpunkt-Lauf; Abbruch und Fehlertext ebenso');
     console.log('');
   } finally {
     // Aufräumen darf nie am Ergebnis hängen: auch ein abgebrochener Lauf gibt den Vault

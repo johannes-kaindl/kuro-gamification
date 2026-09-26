@@ -23,7 +23,7 @@
 set -e
 
 KIT="${KIT_DIR:-../obsidian-kit}"
-KIT_REF="${KIT_REF:-0.41.1}"
+KIT_REF="${KIT_REF:-0.43.0}"
 CODEKIT="${CODEKIT_DIR:-../../libs/code-kit}"
 CODEKIT_REF="${CODEKIT_REF:-0.7.0}"
 # Eigener Pin, Absicht: help-setting.ts (Hilfe-Zeile, UI-STANDARD 8) kam mit Kit 0.43.0 und haengt an
@@ -31,11 +31,11 @@ CODEKIT_REF="${CODEKIT_REF:-0.7.0}"
 KIT_HELP_REF="${KIT_HELP_REF:-0.43.0}"
 
 # Nur die Module, die DIESES Repo wirklich konsumiert.
-CK_PURE="endpoint endpoint_config endpoint_diagnostics model-choice model-list-cache num reasoning sampling-profiles sse stream-blocks think-splitter"
+CK_PURE="endpoint endpoint_config endpoint_diagnostics error_body model-choice model-list-cache num reasoning sampling-profiles sse stream-blocks think-splitter"
 # Aus obsidian-kit/src/pure/ (nicht code-kit), aber mit Querimport auf code-kit → relayer_pure.
 KIT_PURE="endpoint-source"
 CK_WEB="clipboard"
-KIT_OBSIDIAN="clipboard clock confirm endpoint-list endpoint-source model-picker stable-writer stream-area"
+KIT_OBSIDIAN="chat-client chat-transport clipboard clock confirm endpoint-list endpoint-source model-picker stable-writer stream-area"
 
 # --- Vorbedingungen. Alle Pruefungen VOR dem ersten Schreibvorgang: ein Fehlschlag darf
 #     keine halb aktualisierte Vendor-Schicht hinterlassen.

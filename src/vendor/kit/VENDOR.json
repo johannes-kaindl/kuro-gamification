@@ -3,7 +3,7 @@
   "tag": "0.7.0",
   "version": "0.7.0",
   "sha": "f999dd4",
-  "date": "2026-09-25",
-  "vendored": "pure: endpoint, endpoint_config, endpoint_diagnostics, model-choice, model-list-cache, num, reasoning, sampling-profiles, sse, stream-blocks, think-splitter; web: clipboard",
+  "date": "2026-09-26",
+  "vendored": "pure: endpoint, endpoint_config, endpoint_diagnostics, error_body, model-choice, model-list-cache, num, reasoning, sampling-profiles, sse, stream-blocks, think-splitter; web: clipboard",
   "note": "Verbatim snapshot von code-kit/src/ts (plus Herkunfts-Header in Zeile 1). Der Ordner heisst historisch 'kit'; die Quelle ist seit dem code-kit-Split (obsidian-kit@2ab1bb5) code-kit, nicht obsidian-kit. Never hand-edit. Re-vendor via tools/sync-kit.sh. kit-obsidian/ siehe dortige VENDOR.json."
 }

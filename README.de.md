@@ -17,7 +17,7 @@ Deine Daily-Notes halten längst fest, was du getan hast — dieses Plugin liest
 
 - **XP aus deinen Daily-Notes** — 2 XP pro abgehakter Checkbox + Tagesabschluss-Boni (50/75/90 %)
 - **User-definierte Habits** — Frontmatter-Toggles `qigong: true` etc., XP pro Habit konfigurierbar
-- **Weekly Review/Planning** — 50/30 XP für `review_done` / `planung_done` im Weekly-Frontmatter
+- **Weekly Review/Planning** — 50/30 XP für `review_done` / `planning_done` im Weekly-Frontmatter
 - **Streaks mit Freeze-Tokens** — 2 freie Skip-Tage pro Monat (konfigurierbar). Streak-Bonus ab Tag 3/7/14/30
 - **10 Level** — `SIGNAL LOST` → `K U R O`, alle Titel + Schwellen in Settings editierbar
 - **Deterministische Loot-Drops** — 1 Drop pro Level über 1, 5 Tiers (Common → Mythic), 50+ Default-Belohnungen. Custom-Pool unterstützt
@@ -86,7 +86,7 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 
 - Abgehakte Checkboxen in deiner Daily-Note geben automatisch XP beim Speichern — kein manuelles Loggen nötig.
 - Eigene Habits (Frontmatter-Toggles wie `qigong: true`) unter Einstellungen → Habits hinzufügen, jeweils mit eigenem XP-Wert.
-- `review_done: true` / `planung_done: true` im Frontmatter einer Weekly-Note für den Weekly-Review/Planning-Bonus setzen.
+- `review_done: true` / `planning_done: true` im Frontmatter einer Weekly-Note für den Weekly-Review/Planning-Bonus setzen.
 - Einen `kuro-status`-Codeblock (siehe [Status-Codeblock](#status-codeblock) unten) in jede Note einbetten für eine Live-Statusansicht ohne Sidebar.
 - Einen Tag verpasst? Ein Freeze-Token fängt das automatisch ab — keine Aktion nötig, kein Streak-Verlust.
 - Den Befehl **„XP manuell anpassen…"** für Offline-Aktivitäten, Korrekturen oder Geschenke nutzen.

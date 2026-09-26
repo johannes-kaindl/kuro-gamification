@@ -17,7 +17,7 @@ Your daily notes already record what you did — this plugin reads them and turn
 
 - **XP from your daily notes** — 2 XP per ticked checkbox + completion bonuses (50/75/90 %)
 - **User-defined habits** — frontmatter toggles `qigong: true` etc., XP per habit configurable
-- **Weekly review/planning bonus** — 50/30 XP on `review_done` / `planung_done` frontmatter
+- **Weekly review/planning bonus** — 50/30 XP on `review_done` / `planning_done` frontmatter
 - **Streaks with freeze tokens** — 2 free skip-days per month (configurable). Streak-bonus tiers at 3/7/14/30 days
 - **10-level progression** — `SIGNAL LOST` → `K U R O`, all titles + thresholds editable in Settings
 - **Deterministic loot drops** — 1 drop per level above 1, 5 tiers (Common → Mythic), 50+ default rewards. Custom pool supported
@@ -86,7 +86,7 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 
 - Ticked checkboxes in your daily note earn XP automatically as you save — no manual logging.
 - Add your own habits (frontmatter toggles like `qigong: true`) in Settings → Habits, each with its own XP value.
-- Set `review_done: true` / `planung_done: true` in a weekly note's frontmatter for the weekly review/planning bonus.
+- Set `review_done: true` / `planning_done: true` in a weekly note's frontmatter for the weekly review/planning bonus.
 - Embed a `kuro-status` code block (see [Status code block](#status-code-block) below) in any note for a live status view without opening the sidebar.
 - Missed a day? A freeze token absorbs it automatically — no action needed, no streak lost.
 - Use the **"Adjust XP manually…"** command for offline activities, corrections, or gifts.

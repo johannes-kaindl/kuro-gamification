@@ -33,7 +33,7 @@ Das ist **kein Produktivitäts-Trick**, der dich zu mehr Output zwingen soll. Es
 | Habit-Toggle im Frontmatter (z. B. `qigong: true`) | konfigurierbar pro Habit | Settings → 🎯 Habits |
 | Pomodoros ≥ Schwelle (z. B. `pomodoros: 4`) | +10 (Default) | Settings → ⚡ XP-Quellen |
 | Weekly-Review (`review_done: true`) | +50 | Settings → 📅 Weekly |
-| Weekly-Planung (`planung_done: true`) | +30 | Settings → 📅 Weekly |
+| Weekly-Planung (`planning_done: true`) | +30 | Settings → 📅 Weekly |
 | Streak-Bonus (3+ Tage qualifiziert) | 5/10/15/20 XP/Tag (Staffel) | Settings → 🔥 Streaks |
 | Manuell vergebene XP | beliebig | Command „XP manuell anpassen…" |
 

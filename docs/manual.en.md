@@ -35,7 +35,7 @@ This is **not a productivity trick** designed to force you to produce more outpu
 | Habit toggle in frontmatter (e.g. `qigong: true`) | configurable per habit | Settings → 🎯 Habits |
 | Pomodoros ≥ threshold (e.g. `pomodoros: 4`) | +10 (default) | Settings → ⚡ XP Sources |
 | Weekly review (`review_done: true`) | +50 | Settings → 📅 Weekly |
-| Weekly planning (`planung_done: true`) | +30 | Settings → 📅 Weekly |
+| Weekly planning (`planning_done: true`) | +30 | Settings → 📅 Weekly |
 | Streak bonus (3+ qualifying days) | 5/10/15/20 XP/day (tiered) | Settings → 🔥 Streaks |
 | Manually added XP | any amount | Command "Adjust XP manually…" |
 

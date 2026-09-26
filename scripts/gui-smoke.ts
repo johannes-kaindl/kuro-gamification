@@ -764,6 +764,29 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
     return true;
   `);
 
+  // Hilfe-Zeile (UI-STANDARD §8): die ERSTE Zeile des Tabs, mit Doku-Knopf. Das Settings-Fenster
+  // (Obsidian >= 1.13) ist ein eigenes Ziel ohne Workspace.
+  const ersteZeile = await (async (): Promise<string | null> => {
+    const fenster = await attachTo('settings', PORT);
+    if (!fenster) return null;
+    const text = await fenster.evaluate<string | null>(`
+      const zeile = document.querySelector(".vertical-tab-content .setting-item");
+      return zeile ? zeile.textContent : null;
+    `);
+    fenster.close();
+    return text;
+  })();
+  if (ersteZeile === null) skipped('einstellungen/hilfe-zeile-steht-zuerst', 'Settings-Fenster nicht lesbar');
+  else {
+    const passt = (l: Record<string, string>): boolean =>
+      ersteZeile.includes(l['help.name'] ?? '\0') && ersteZeile.includes(l['help.openDocs'] ?? '\0');
+    record(
+      'einstellungen/hilfe-zeile-steht-zuerst',
+      passt(de) || passt(en),
+      `erste Zeile: ${ersteZeile.slice(0, 80)}`,
+    );
+  }
+
   // Zwei Wurzeln, ein Grund: bis Obsidian 1.12 stehen die Einstellungen als Modal IM
   // Workspace-Fenster, ab 1.13 sind sie ein eigenes Fenster ohne Workspace. Ein Fallback
   // auf `document.body` im Hauptfenster wäre bequem und falsch — er findet dort die

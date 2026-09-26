@@ -6,12 +6,12 @@
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](LICENSE-DOCS)
-[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fgit.jkaindl.de&label=release)](https://git.jkaindl.de/jkaindl/kuro-gamification/releases)
+[![Release](https://img.shields.io/github/v/release/johannes-kaindl/kuro-gamification?label=release)](https://github.com/johannes-kaindl/kuro-gamification/releases)
 ![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.8.7-7c3aed)
 
 Deine Daily-Notes halten längst fest, was du getan hast — dieses Plugin liest sie und macht daraus XP, Level und einen Streak, der einen verpassten Tag übersteht. Alles läuft in deinem Vault: kein Account, kein Server, kein Netzwerkzugriff, und nichts nervt dich, solange du es nicht selbst einschaltest.
 
-![Kuro Gamification](docs/images/hero.svg)
+![Kuro Gamification](https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/hero.svg)
 
 ## Features
 
@@ -27,11 +27,11 @@ Deine Daily-Notes halten längst fest, was du getan hast — dieses Plugin liest
 - **Export / Import / Reset** — volle Daten-Portabilität via JSON, plus Loot/Lore-**Pack**-Import/-Export
 - **Zweisprachig** — Deutsch und Englisch; folgt beim ersten Start deiner Obsidian-UI-Sprache
 
-<img src="docs/images/hero.png" width="600" alt="Kuro sidebar panel next to a note">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/hero.png" width="600" alt="Kuro sidebar panel next to a note">
 
 <sub>Das Seitenleisten-Panel neben einer gewöhnlichen Notiz — Level, Gesamt-XP, Fortschritt, Streak mit Freeze-Tokens und der heutige Stand, alles aus den Tagesnotizen gerechnet.</sub>
 
-<img src="docs/images/loot-redeem.png" width="560" alt="Redeem loot dialog with three options">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/loot-redeem.png" width="560" alt="Redeem loot dialog with three options">
 
 <sub>Ein Loot-Drop wird eingelöst: drei deterministische Optionen, eine Wahl.</sub>
 
@@ -60,7 +60,7 @@ Die meisten Gamification-Plugins für Note-Apps sind für neurotypische Gehirne 
 
 ### Manuell
 
-1. `main.js`, `manifest.json`, `styles.css` aus dem [letzten Release](https://git.jkaindl.de/jkaindl/kuro-gamification/releases) laden und nach `<vault>/.obsidian/plugins/kuro-gamification/` kopieren
+1. `main.js`, `manifest.json`, `styles.css` aus dem [letzten Release](https://github.com/johannes-kaindl/kuro-gamification/releases) laden und nach `<vault>/.obsidian/plugins/kuro-gamification/` kopieren
 2. Einstellungen → Community-Plugins → Plugins neu laden
 3. Einstellungen → Community-Plugins → Kuro Gamification → aktivieren
 
@@ -93,7 +93,7 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 
 ## Konfiguration
 
-<a href="docs/images/settings.png"><img src="docs/images/thumbs/settings.png" width="380" alt="Kuro-Einstellungen, alle elf Abschnitte"></a>
+<a href="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/settings.png"><img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/thumbs/settings.png" width="380" alt="Kuro-Einstellungen, alle elf Abschnitte"></a>
 
 <sub>Für den vollständigen Einstellungs-Tab (elf Abschnitte) auf die Vorschau klicken.</sub>
 
@@ -148,7 +148,7 @@ breakdown: hide     # show | hide
 ```
 ````
 
-<img src="docs/images/status-block.png" width="600" alt="kuro-status code block rendered in a note">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/status-block.png" width="600" alt="kuro-status code block rendered in a note">
 
 <sub>Der `kuro-status`-Codeblock, gerendert in einer Notiz.</sub>
 
@@ -177,13 +177,13 @@ abgeschlossene Work-Sessions, Pausen und abgebrochene Sessions ignoriert es.
 
 ### Ästhetik-CSS
 
-Das Plugin funktioniert ohne externes Styling — es bringt sinnvolles Struktur-CSS mit. Für die volle **Gothic-Cyberpunk-CRT-Terminal-Optik** (Phosphor-Grün, Scanlines, Flicker) liefert [Ästhetik-CSS](docs/aesthetic-css.de.md) · ([EN](docs/aesthetic-css.en.md)) das CSS samt Einbau-Anleitung (bewusst als Doku gehalten, nicht als getrackte `.css`-Datei — so wird es nicht gebündelt und taucht im CSS-Lint des Plugin-Quellcodes nie auf).
+Das Plugin funktioniert ohne externes Styling — es bringt sinnvolles Struktur-CSS mit. Für die volle **Gothic-Cyberpunk-CRT-Terminal-Optik** (Phosphor-Grün, Scanlines, Flicker) liefert [Ästhetik-CSS](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.de.md) · ([EN](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.en.md)) das CSS samt Einbau-Anleitung (bewusst als Doku gehalten, nicht als getrackte `.css`-Datei — so wird es nicht gebündelt und taucht im CSS-Lint des Plugin-Quellcodes nie auf).
 
 Das Snippet stylt `pre.kuro-status`, `pre.kuro-loot` und die Callouts `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]`. Es hat keine harte Abhängigkeit zum Kuro-Theme (läuft unter jedem Theme, das CSS-Custom-Properties respektiert).
 
 ### Companion-Chat (optional, standardmäßig aus)
 
-<img src="docs/images/chat.png" width="600" alt="Companion chat in der Kuro-Seitenleiste">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/chat.png" width="600" alt="Companion chat in der Kuro-Seitenleiste">
 
 <sub>Der Companion-Chat in der Seitenleiste; der Ausklapper zeigt, was tatsächlich gesendet wird.</sub>
 
@@ -237,14 +237,17 @@ Die Engines tragen keine Obsidian-Imports und laufen deshalb in reinem Node unte
 
 ## Dokumentation
 
-- [Erste Schritte](docs/getting-started.de.md) · ([EN](docs/getting-started.en.md))
-- [Handbuch](docs/manual.de.md) · ([EN](docs/manual.en.md))
-- [Anpassung — Loot/Lore-Packs & LLM-Prompts](docs/customization.de.md) · ([EN](docs/customization.en.md))
-- [Design-Philosophie](docs/philosophy.de.md) · ([EN](docs/philosophy.en.md))
+- [Dokumentations-Index](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/README.md) — die Anleitungen, nach Diátaxis gegliedert (englisch).
+- [Erste Schritte](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/getting-started.de.md) · ([EN](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/getting-started.en.md))
+- [Troubleshooting](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/troubleshooting.md) — die genaue Meldung, ihre Ursache und was zu tun ist (englisch).
+- [Handbuch](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/manual.de.md) · ([EN](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/manual.en.md))
+- [Anpassen — Loot-/Lore-Packs & LLM-Prompts](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/customization.de.md) · ([EN](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/customization.en.md))
+- [Aesthetic CSS](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.de.md) · ([EN](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.en.md))
+- [Design-Philosophie](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/philosophy.de.md) · ([EN](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/philosophy.en.md))
 
 ## Mitwirken
 
-Issues und Pull-Requests laufen über [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification) (das GitHub-Repo ist ein Mirror). Entwickelt wird testgetrieben — `npm test` muss grün bleiben, und neue Regeln gehören in die Engines. Siehe [`CONTRIBUTING.md`](CONTRIBUTING.md) und [`AGENTS.md`](AGENTS.md); Beiträge werden unter dem [CLA](CLA.md) angenommen.
+Issues und Pull-Requests sind auf [GitHub](https://github.com/johannes-kaindl/kuro-gamification/issues) und im kanonischen Repository auf [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification) willkommen. Entwickelt wird testgetrieben — `npm test` muss grün bleiben, und neue Regeln gehören in die Engines. Siehe [`CONTRIBUTING.md`](CONTRIBUTING.md) und [`AGENTS.md`](AGENTS.md); Beiträge werden unter dem [CLA](CLA.md) angenommen.
 
 ## Credits
 

@@ -8,9 +8,9 @@ Kuro Gamification fügt deinen Obsidian-Daily-Notes leise XP, Level und kleine B
 
 ## 1. Installation
 
-### Via Obsidian Community Plugins (geplant)
+### Via Obsidian Community Plugins (empfohlen)
 
-Das Plugin ist noch nicht im Community-Katalog gelistet. Nutze vorerst die manuelle Installation.
+**Einstellungen → Community-Plugins → Durchsuchen** öffnen, nach **Kuro Gamification** suchen, dann **Installieren** und **Aktivieren**. Die manuelle Installation unten ist dann nicht nötig.
 
 ### Manuelle Installation
 

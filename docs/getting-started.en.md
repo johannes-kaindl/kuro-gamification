@@ -8,9 +8,9 @@ Kuro Gamification adds quiet XP, levels, and small rewards to your Obsidian dail
 
 ## 1. Install
 
-### Via Obsidian Community Plugins (planned)
+### Via Obsidian Community Plugins (recommended)
 
-The plugin is not yet listed in the community catalogue. For now, use the manual install below.
+Open **Settings → Community plugins → Browse**, search for **Kuro Gamification**, then **Install** and **Enable**. Skip the manual install below.
 
 ### Manual install
 
@@ -84,7 +84,7 @@ See [Customization — loot/lore packs & LLM prompts](customization.en.md) for t
 Everything that could feel like an obligation is **off by default** or can be turned off individually:
 
 - Streak tracking? **Settings → 🔥 Streaks → off**
-- Loot drops? **Settings → 📊 Level & Loot → off**
+- Loot drops? **Settings → 📊 Levels & loot → off**
 - Lore fragments? **Settings → 📜 Lore → off**
 - Status bar indicator? Already off by default
 - Toast notifications? Off individually

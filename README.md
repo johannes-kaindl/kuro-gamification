@@ -1,17 +1,17 @@
 # Kuro Gamification
 
-> 🇬🇧 English · [🇩🇪 Deutsch](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/README.de.md)
+> 🇬🇧 English · [🇩🇪 Deutsch](https://github.com/johannes-kaindl/kuro-gamification/blob/main/README.de.md)
 
 **Neurodivergence-friendly gamification for Obsidian — XP, levels, streaks with freeze tokens, deterministic loot drops, and optional lore, with everything that could escalate off by default.**
 
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE)
-[![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS)
-[![Release](https://img.shields.io/gitea/v/release/jkaindl/kuro-gamification?gitea_url=https%3A%2F%2Fgit.jkaindl.de&label=release)](https://git.jkaindl.de/jkaindl/kuro-gamification/releases)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/johannes-kaindl/kuro-gamification/blob/main/LICENSE)
+[![Docs: CC BY-SA 4.0](https://img.shields.io/badge/docs-CC%20BY--SA%204.0-lightgrey.svg)](https://github.com/johannes-kaindl/kuro-gamification/blob/main/LICENSE-DOCS)
+[![Release](https://img.shields.io/github/v/release/johannes-kaindl/kuro-gamification?label=release)](https://github.com/johannes-kaindl/kuro-gamification/releases)
 ![Platform](https://img.shields.io/badge/platform-Obsidian%20%E2%89%A5%201.8.7-7c3aed)
 
 Your daily notes already record what you did — this plugin reads them and turns that into XP, levels and a streak that survives a missed day. It runs entirely inside your vault: no account, no server, no network access, and nothing that nags you unless you switch it on yourself.
 
-![Kuro Gamification](https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.svg)
+![Kuro Gamification](https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/hero.svg)
 
 ## Features
 
@@ -27,11 +27,11 @@ Your daily notes already record what you did — this plugin reads them and turn
 - **Export / import / reset** — full data portability via JSON, plus loot/lore **pack** import/export
 - **Bilingual** — English and German; follows your Obsidian UI language on first launch
 
-<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/hero.png" width="600" alt="Kuro sidebar panel next to a note">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/hero.png" width="600" alt="Kuro sidebar panel next to a note">
 
 <sub>The sidebar panel next to an ordinary note — level, total XP, progress, streak with freeze tokens, and today's score, all computed from your daily notes.</sub>
 
-<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/loot-redeem.png" width="560" alt="Redeem loot dialog with three options">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/loot-redeem.png" width="560" alt="Redeem loot dialog with three options">
 
 <sub>Redeeming a loot drop: three deterministic options, one pick.</sub>
 
@@ -60,7 +60,7 @@ Search for **Kuro Gamification** in **Settings → Community plugins → Browse*
 
 ### Manual
 
-1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://git.jkaindl.de/jkaindl/kuro-gamification/releases) and copy them into `<vault>/.obsidian/plugins/kuro-gamification/`
+1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://github.com/johannes-kaindl/kuro-gamification/releases) and copy them into `<vault>/.obsidian/plugins/kuro-gamification/`
 2. Settings → Community plugins → Reload plugins
 3. Settings → Community plugins → Kuro Gamification → enable
 
@@ -93,7 +93,7 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 
 ## Configuration
 
-<a href="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/settings.png"><img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/thumbs/settings.png" width="380" alt="Kuro settings tab, all eleven sections"></a>
+<a href="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/settings.png"><img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/thumbs/settings.png" width="380" alt="Kuro settings tab, all eleven sections"></a>
 
 <sub>Click the preview for the full settings tab (eleven sections).</sub>
 
@@ -147,7 +147,7 @@ breakdown: hide     # show | hide
 ```
 ````
 
-<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/status-block.png" width="600" alt="kuro-status code block rendered in a note">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/status-block.png" width="600" alt="kuro-status code block rendered in a note">
 
 <sub>The `kuro-status` code block rendered inside a note.</sub>
 
@@ -176,13 +176,13 @@ completed work sessions from that array, ignoring breaks and interrupted session
 
 ### Aesthetic CSS
 
-This plugin works without external styling — it ships with sane structural CSS. For the full **gothic-cyberpunk CRT terminal aesthetic** (phosphor green, scanlines, flicker), see [Aesthetic CSS](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/aesthetic-css.de.md)) for the CSS and install instructions (it's kept as a doc, not a tracked `.css` file, so it isn't bundled and never shows up in CSS linting of the plugin's own source).
+This plugin works without external styling — it ships with sane structural CSS. For the full **gothic-cyberpunk CRT terminal aesthetic** (phosphor green, scanlines, flicker), see [Aesthetic CSS](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.en.md) · ([DE](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.de.md)) for the CSS and install instructions (it's kept as a doc, not a tracked `.css` file, so it isn't bundled and never shows up in CSS linting of the plugin's own source).
 
 The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!levelup]`, `[!spoiler]`, `[!streak]` callouts. It has no hard dependency on the Kuro theme (works under any theme that respects CSS custom properties).
 
 ### Companion chat (optional, off by default)
 
-<img src="https://git.jkaindl.de/jkaindl/kuro-gamification/raw/branch/main/docs/images/chat.png" width="600" alt="Companion chat in the Kuro sidebar">
+<img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/chat.png" width="600" alt="Companion chat in the Kuro sidebar">
 
 <sub>The companion chat in the sidebar, with the context disclosure showing exactly what gets sent.</sub>
 
@@ -230,18 +230,21 @@ The plugin watches `vault.modify` events (800 ms debounced) on your daily/weekly
 - **`LootEngine`** picks a deterministic reward per level-up above 1 (seeded by level + save count, so a drop doesn't change on reload) from a 5-tier pool that's user-replaceable via **packs**.
 - **`LoreEngine`** reveals the narrative fragment tied to the new level, from whichever lore pack is active.
 
-The engines carry no Obsidian imports, so they run in plain Node under jest — the UI layer (sidebar, status code-block, modals, settings tab) is a thin layer over these pure computations and the Obsidian API. Data is persisted to `data.json` via Obsidian's plugin data API; export/import/reset in Settings → Advanced operate on that same JSON. Module layout and the architectural rules behind it are documented in [`AGENTS.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/AGENTS.md).
+The engines carry no Obsidian imports, so they run in plain Node under jest — the UI layer (sidebar, status code-block, modals, settings tab) is a thin layer over these pure computations and the Obsidian API. Data is persisted to `data.json` via Obsidian's plugin data API; export/import/reset in Settings → Advanced operate on that same JSON. Module layout and the architectural rules behind it are documented in [`AGENTS.md`](https://github.com/johannes-kaindl/kuro-gamification/blob/main/AGENTS.md).
 
 ## Documentation
 
-- [Getting Started](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/getting-started.de.md))
-- [Manual](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/manual.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/manual.de.md))
-- [Customization — loot/lore packs & LLM prompts](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/customization.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/customization.de.md))
-- [Design Philosophy](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.en.md) · ([DE](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/docs/philosophy.de.md))
+- [Documentation index](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/README.md) — the guides, organised after Diátaxis.
+- [Getting started](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/getting-started.en.md) · ([DE](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/getting-started.de.md))
+- [Troubleshooting](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/troubleshooting.md) — the exact message you see, what it means, what to do.
+- [Manual](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/manual.en.md) · ([DE](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/manual.de.md))
+- [Customization — loot/lore packs & LLM prompts](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/customization.en.md) · ([DE](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/customization.de.md))
+- [Aesthetic CSS](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.en.md) · ([DE](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/aesthetic-css.de.md))
+- [Design Philosophy](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/philosophy.en.md) · ([DE](https://github.com/johannes-kaindl/kuro-gamification/blob/main/docs/philosophy.de.md))
 
 ## Contributing
 
-Issues and pull requests go to [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification) (the GitHub repo is a mirror). Development is test-driven — `npm test` must stay green, and the engines are the place where new rules belong. See [`CONTRIBUTING.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/CONTRIBUTING.md) and [`AGENTS.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/AGENTS.md); contributions are accepted under the [CLA](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/CLA.md).
+Issues and pull requests are welcome on [GitHub](https://github.com/johannes-kaindl/kuro-gamification/issues) and on the canonical repository on [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gamification). Development is test-driven — `npm test` must stay green, and the engines are the place where new rules belong. See [`CONTRIBUTING.md`](https://github.com/johannes-kaindl/kuro-gamification/blob/main/CONTRIBUTING.md) and [`AGENTS.md`](https://github.com/johannes-kaindl/kuro-gamification/blob/main/AGENTS.md); contributions are accepted under the [CLA](https://github.com/johannes-kaindl/kuro-gamification/blob/main/CLA.md).
 
 ## Credits
 
@@ -250,9 +253,9 @@ Issues and pull requests go to [Forgejo](https://git.jkaindl.de/jkaindl/kuro-gam
 
 ## License
 
-Code: **AGPL-3.0-or-later** — see [`LICENSE`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE).
-Documentation: **CC BY-SA 4.0** — see [`LICENSE-DOCS`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSE-DOCS).
+Code: **AGPL-3.0-or-later** — see [`LICENSE`](https://github.com/johannes-kaindl/kuro-gamification/blob/main/LICENSE).
+Documentation: **CC BY-SA 4.0** — see [`LICENSE-DOCS`](https://github.com/johannes-kaindl/kuro-gamification/blob/main/LICENSE-DOCS).
 
-A commercial license is available for uses incompatible with the AGPL — see [`LICENSING.md`](https://git.jkaindl.de/jkaindl/kuro-gamification/src/branch/main/LICENSING.md).
+A commercial license is available for uses incompatible with the AGPL — see [`LICENSING.md`](https://github.com/johannes-kaindl/kuro-gamification/blob/main/LICENSING.md).
 
 Copyright © 2026 Johannes Kaindl.

@@ -1,6 +1,10 @@
 /* German strings — default for v1.0 (DE-first audience). */
 
 export const de: Record<string, string> = {
+  'help.name': 'Hilfe',
+  'help.desc': 'Erste Schritte, Anleitungen und Fehlersuche',
+  'help.openDocs': 'Dokumentation öffnen',
+  'help.reportIssue': 'Problem melden',
   /* Plugin meta */
   'plugin.name': 'Kuro Gamification',
 

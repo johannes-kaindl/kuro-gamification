@@ -20,6 +20,7 @@ import type KuroPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../types';
 import { clampInt } from '../vendor/kit/num';
 import { copyToClipboard } from '../vendor/kit-obsidian/clipboard';
+import { githubHelpUrls, helpSettingDefinition } from '../vendor/kit-obsidian/help-setting';
 import type { Lang, LogLevel } from '../types';
 import { t } from '../i18n';
 import { ExportDataModal, ImportDataModal } from '../modals/DataIoModal';
@@ -60,7 +61,20 @@ export class KuroSettingsTab extends PluginSettingTab {
   /* ── Declarative settings API (Obsidian ≥ 1.13) ────────── */
 
   getSettingDefinitions(): SettingDefinitionItem[] {
-    return this._groups(this.plugin.data.settings.language);
+    const lang = this.plugin.data.settings.language;
+    return [
+      // UI-STANDARD §8 „Hilfe-Zeile“: erstes Element, vor jeder Gruppe.
+      helpSettingDefinition({
+        ...githubHelpUrls('kuro-gamification'),
+        texts: {
+          name: t('help.name', lang),
+          desc: t('help.desc', lang),
+          openDocs: t('help.openDocs', lang),
+          reportIssue: t('help.reportIssue', lang),
+        },
+      }),
+      ...this._groups(lang),
+    ];
   }
 
   getControlValue(key: string): unknown {

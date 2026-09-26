@@ -1,6 +1,10 @@
 /* English strings — fallback + community-publication ready. */
 
 export const en: Record<string, string> = {
+  'help.name': 'Help',
+  'help.desc': 'Getting started, how-tos and troubleshooting',
+  'help.openDocs': 'Open documentation',
+  'help.reportIssue': 'Report an issue',
   'plugin.name': 'Kuro Gamification',
 
   'sidebar.title': 'Kuro Status',

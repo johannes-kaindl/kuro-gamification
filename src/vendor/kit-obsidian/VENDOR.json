@@ -3,7 +3,15 @@
   "tag": "0.41.1",
   "version": "0.41.1",
   "sha": "f9439c8",
-  "date": "2026-09-25",
+  "date": "2026-09-26",
   "vendored": "clipboard.ts, clock.ts, confirm.ts, endpoint-list.ts, endpoint-source.ts, model-picker.ts, stable-writer.ts, stream-area.ts",
-  "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). clipboard.ts, endpoint-list.ts und model-picker.ts tragen EINE mechanische Abweichung: die Kit-internen Importe der code-kit-Schicht zeigen auf ../kit/ (Vendor-Layout). Bei jedem Re-Vendoring reproduzieren; sonst darf nichts abweichen. Never hand-edit. Re-vendor via tools/sync-kit.sh."
+  "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). clipboard.ts, endpoint-list.ts und model-picker.ts tragen EINE mechanische Abweichung: die Kit-internen Importe der code-kit-Schicht zeigen auf ../kit/ (Vendor-Layout). Bei jedem Re-Vendoring reproduzieren; sonst darf nichts abweichen. Never hand-edit. Re-vendor via tools/sync-kit.sh.",
+  "vendored_mixed_version": [
+    {
+      "file": "help-setting.ts",
+      "version": "0.43.0",
+      "sha": "bcd1805",
+      "note": "Eigener Pin KIT_HELP_REF in tools/sync-kit.sh (git show 0.43.0:src/obsidian/help-setting.ts), NICHT KIT_REF. Re-vendor mit KIT_HELP_REF=<neuer-tag> sh tools/sync-kit.sh; Kopf-Stempel und dieser Eintrag ziehen automatisch nach."
+    }
+  ]
 }

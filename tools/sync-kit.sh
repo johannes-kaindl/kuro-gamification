@@ -26,6 +26,9 @@ KIT="${KIT_DIR:-../obsidian-kit}"
 KIT_REF="${KIT_REF:-0.41.1}"
 CODEKIT="${CODEKIT_DIR:-../../libs/code-kit}"
 CODEKIT_REF="${CODEKIT_REF:-0.7.0}"
+# Eigener Pin, Absicht: help-setting.ts (Hilfe-Zeile, UI-STANDARD 8) kam mit Kit 0.43.0 und haengt an
+# keinem anderen Modul — die uebrigen Module bleiben auf KIT_REF (Vorlage epub-exporter 877eb2c).
+KIT_HELP_REF="${KIT_HELP_REF:-0.43.0}"
 
 # Nur die Module, die DIESES Repo wirklich konsumiert.
 CK_PURE="endpoint endpoint_config endpoint_diagnostics model-choice model-list-cache num reasoning sampling-profiles sse stream-blocks think-splitter"
@@ -45,12 +48,16 @@ for pair in "$KIT|$KIT_REF|KIT_DIR" "$CODEKIT|$CODEKIT_REF|CODEKIT_DIR"; do
     || { echo "sync-kit: Ref '$ref' gibt es in $dir nicht. Nichts geschrieben." >&2; exit 1; }
 done
 
+git -C "$KIT" cat-file -e "$KIT_HELP_REF:src/obsidian/help-setting.ts" 2>/dev/null \
+  || { echo "sync-kit: src/obsidian/help-setting.ts fehlt in Ref $KIT_HELP_REF (KIT_HELP_REF setzen). Nichts geschrieben." >&2; exit 1; }
+
 # `^{commit}` ist NICHT optional: bei einem ANNOTIERTEN Tag (code-kit taggt annotiert) liefert
 # `rev-parse` sonst die SHA des Tag-OBJEKTS — eine Zahl, die in `git log` der Quelle gar nicht
 # vorkommt. obsidian-kits Tags sind leichtgewichtig, dort faellt es nicht auf; das ist Zufall,
 # kein Schutz (REGISTRY § Utils, Fall obsidian-kit 0f936c9 → 7c04a48).
 KIT_SHA=$(git -C "$KIT" rev-parse --short "$KIT_REF^{commit}")
 CK_SHA=$(git -C "$CODEKIT" rev-parse --short "$CODEKIT_REF^{commit}")
+HELP_SHA=$(git -C "$KIT" rev-parse --short "$KIT_HELP_REF^{commit}")
 DATE=$(date +%F)
 
 mkdir -p src/vendor/kit src/vendor/kit-obsidian
@@ -159,6 +166,10 @@ for m in $KIT_OBSIDIAN; do
   echo "vendored obsidian-kit@$KIT_REF/obsidian/$m.ts"
 done
 
+# help-setting.ts aus dem eigenen Pin, nicht aus KIT_REF.
+copy "$KIT" "$KIT_HELP_REF" obsidian-kit "src/obsidian/help-setting.ts" "src/vendor/kit-obsidian/help-setting.ts"
+echo "vendored obsidian-kit@$KIT_HELP_REF/obsidian/help-setting.ts"
+
 # Dateiliste der obsidian-Schicht fuer VENDOR.json — als Schleife statt als sed-Kaskade,
 # damit die Form nicht an einem Zeichenklassen-Detail haengt.
 KIT_OBSIDIAN_LIST=""
@@ -185,7 +196,15 @@ cat > src/vendor/kit-obsidian/VENDOR.json <<JSON
   "sha": "$KIT_SHA",
   "date": "$DATE",
   "vendored": "$KIT_OBSIDIAN_LIST",
-  "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). clipboard.ts, endpoint-list.ts und model-picker.ts tragen EINE mechanische Abweichung: die Kit-internen Importe der code-kit-Schicht zeigen auf ../kit/ (Vendor-Layout). Bei jedem Re-Vendoring reproduzieren; sonst darf nichts abweichen. Never hand-edit. Re-vendor via tools/sync-kit.sh."
+  "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). clipboard.ts, endpoint-list.ts und model-picker.ts tragen EINE mechanische Abweichung: die Kit-internen Importe der code-kit-Schicht zeigen auf ../kit/ (Vendor-Layout). Bei jedem Re-Vendoring reproduzieren; sonst darf nichts abweichen. Never hand-edit. Re-vendor via tools/sync-kit.sh.",
+  "vendored_mixed_version": [
+    {
+      "file": "help-setting.ts",
+      "version": "$KIT_HELP_REF",
+      "sha": "$HELP_SHA",
+      "note": "Eigener Pin KIT_HELP_REF in tools/sync-kit.sh (git show $KIT_HELP_REF:src/obsidian/help-setting.ts), NICHT KIT_REF. Re-vendor mit KIT_HELP_REF=<neuer-tag> sh tools/sync-kit.sh; Kopf-Stempel und dieser Eintrag ziehen automatisch nach."
+    }
+  ]
 }
 JSON
 echo "VENDOR.json → code-kit@$CODEKIT_REF ($CK_SHA) · obsidian-kit@$KIT_REF ($KIT_SHA)"

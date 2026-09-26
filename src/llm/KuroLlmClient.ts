@@ -1,7 +1,7 @@
 /* ==========================================================
    Erreichbarkeits-Probe + Modell-Liste eines Chat-Endpunkts — pure,
    kein Obsidian-Import. Der HTTP-Transport wird injiziert (Obsidians
-   requestUrl läuft in Jest nicht), analog zu KuroChatClient/SseTransport.
+   requestUrl läuft in Jest nicht), analog zum Chat-Transport (vendor/kit-obsidian/chat-transport).
 
    Trägt den API-Key des Eintrags mit (authHeaders) — anders als der
    frühere main.ts-Pfad, der ihn nie sendete und dadurch jeden Endpunkt

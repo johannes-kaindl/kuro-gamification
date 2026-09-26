@@ -296,7 +296,10 @@ export const de: Record<string, string> = {
   'chat.setup.openSettings': 'Einstellungen öffnen',
   'chat.err.network': 'Keine Verbindung zum Endpunkt.',
   'chat.err.http': 'Der Endpunkt hat mit einem Fehler geantwortet.',
-  'chat.err.timeout': 'Keine Antwort innerhalb von {seconds} Sekunden.',
+  'chat.err.timeout': 'Seit {seconds} Sekunden kommt nichts mehr vom Endpunkt.',
+  'chat.err.overflow': 'Das Gespräch ist zu lang für das Modell.',
+  'chat.err.truncated': 'Die Antwort wurde vor dem ersten Wort abgeschnitten — das Denken hat das Token-Limit verbraucht.',
+  'chat.warn.truncated': 'Die Antwort wurde am Token-Limit abgeschnitten.',
   'chat.err.aborted': 'Abgebrochen.',
   'chat.err.noEndpoint': 'Kein Endpunkt aus der Liste ist erreichbar — Einstellungen prüfen.',
 

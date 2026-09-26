@@ -26,7 +26,7 @@ UI/Views/Modals kapseln die Obsidian-API. **Die Schichtengrenze Engine ↔ Obsid
 aufweichen.**
 
 `src/llm/` (Companion-Chat) ist die **zweite pure Zone**: alles darin ist obsidian-frei und in
-Node testbar — **einzige Ausnahme `XhrSseTransport.ts`**. `src/engine/` bleibt dem
+Node testbar. Der browsernahe XHR-/`requestUrl`-Transport kommt seit dem Kit-Tausch aus `vendor/kit-obsidian/chat-transport.ts` (Kit 0.43.0), nicht mehr aus dieser Zone. `src/engine/` bleibt dem
 deterministischen Gamification-Regelwerk vorbehalten; ein LLM-Client dort würde genau die
 Bedeutung verwässern, die diese Grenze trägt. Die Chat-Module lesen **nie** selbst aus dem
 Vault — Snapshot und Notiztext kommen als Argumente aus `main.ts`.

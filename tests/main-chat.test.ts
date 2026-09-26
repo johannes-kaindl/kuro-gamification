@@ -3,7 +3,8 @@
    Der onload-Pfad selbst ist in main-onload.test.ts abgedeckt.
    ========================================================== */
 import { ChatSession } from '../src/llm/ChatSession';
-import { KuroChatClient, type SseTransport } from '../src/llm/KuroChatClient';
+import { createChatClient, type SseTransport } from '../src/vendor/kit-obsidian/chat-client';
+import { streamKuro, type KuroChatConfig } from '../src/llm/kuroChat';
 import { addNote, extractNoteFromMessage, MAX_NOTES } from '../src/llm/kuroNotes';
 import { buildMessages, resolvePersona } from '../src/llm/kuroPrompt';
 import { buildContext } from '../src/llm/kuroContext';
@@ -16,7 +17,7 @@ const nodeClock: ClockPort = {
   clearTimeout: (id) => clearTimeout(id as unknown as NodeJS.Timeout),
 };
 
-const CFG = { endpoint: 'http://x', apiKey: '', model: 'm', suppressThinking: false };
+const CFG: KuroChatConfig = { endpoint: { url: 'http://x', apiKey: '' }, model: 'm', suppressThinking: false };
 
 const sse = (t: string): string =>
   `data: ${JSON.stringify({ choices: [{ delta: { content: t } }] })}\n\n`;
@@ -29,8 +30,8 @@ describe('chat round trip', () => {
     };
     session.append({ role: 'user', text: 'Frage' });
     session.busy = true;
-    const out = await new KuroChatClient(transport, 120_000, nodeClock)
-      .stream(CFG, session.historyForPrompt(), () => {}, new AbortController().signal);
+    const out = await streamKuro(createChatClient({ transport, clock: nodeClock }),
+      CFG, session.historyForPrompt(), () => {}, new AbortController().signal);
     session.busy = false;
     if (out.ok) session.append({ role: 'assistant', text: out.content });
     expect(session.entries.map((e) => e.text)).toEqual(['Frage', 'Antwort']);
@@ -40,8 +41,8 @@ describe('chat round trip', () => {
     const session = new ChatSession();
     const transport: SseTransport = { async postStream() { throw new Error('refused'); } };
     session.append({ role: 'user', text: 'Frage' });
-    const out = await new KuroChatClient(transport, 120_000, nodeClock)
-      .stream(CFG, session.historyForPrompt(), () => {}, new AbortController().signal);
+    const out = await streamKuro(createChatClient({ transport, clock: nodeClock }),
+      CFG, session.historyForPrompt(), () => {}, new AbortController().signal);
     if (!out.ok) session.append({ role: 'error', text: 'Fehler', detail: out.detail });
     expect(session.entries).toHaveLength(2);
     expect(session.historyForPrompt()).toHaveLength(1);

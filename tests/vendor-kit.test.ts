@@ -7,7 +7,7 @@ import { writeClipboard } from '../src/vendor/kit/clipboard';
 import { copyToClipboard } from '../src/vendor/kit-obsidian/clipboard';
 
 /* Smoke-Test für die vendored Kit-Module: sichert ab, dass die Kopien
-   importierbar sind und sich so verhalten, wie KuroChatClient es annimmt.
+   importierbar sind und sich so verhalten, wie Kuros Chat es annimmt.
    Schlägt hier etwas fehl, gilt die Kit-Datei — nie die Vendor-Kopie anpassen. */
 
 describe('vendored kit modules', () => {
@@ -28,7 +28,7 @@ describe('vendored kit modules', () => {
 
   /* Seit code-kit 0.5.0 liest parseSSE `choices[0].message`, wenn `delta` fehlt — manche
      Server schicken trotz `stream: true` volle Message-Objekte. DAS ist der Teil der 0.5.0-
-     Erweiterung, der KuroChatClient erreicht: er liest `parsed.content`. Vorher kam bei
+     Erweiterung, den Kuros Chat erreicht (über den Kit-Client): er liest `parsed.content`. Vorher kam bei
      solchen Servern gar kein Text an, ohne Fehlermeldung. */
   it('parseSSE falls back to choices[0].message when delta is absent', () => {
     const out = parseSSE('data: {"choices":[{"message":{"content":"voll"}}]}\n\n');
@@ -36,10 +36,8 @@ describe('vendored kit modules', () => {
   });
 
   /* Die drei Reasoning-Feldvarianten derselben 0.5.0-Erweiterung, als Charakterisierung.
-     ⚠️ KuroChatClient liest `parsed.reasoning` NICHT — sein Denk-Text kommt aus dem
-     ThinkSplitter (<think>-Tags im content-Strom). Der Test haelt die Kit-Zusage fest, nicht
-     eine Faehigkeit dieses Plugins; wer den Client spaeter auf SSE-Reasoning umstellt, findet
-     hier, was er erwarten darf. */
+     Der Kit-Client liefert Reasoning; Kuro zeigt es bewusst nicht (`onReasoning` fehlt). Der Test
+     haelt die Kit-Zusage fest, nicht eine Faehigkeit dieses Plugins. */
   it('parseSSE reads reasoning from all three delta field variants', () => {
     const of = (b: string) => parseSSE(b).reasoning.join('');
     expect(of('data: {"choices":[{"delta":{"reasoning_content":"ds"}}]}\n\n')).toBe('ds');

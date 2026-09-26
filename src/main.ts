@@ -34,8 +34,9 @@ import { fmtNum } from './utils/progressBar';
 import { t, detectLang } from './i18n';
 import { defaultHabits } from './data/default-habits';
 import { ChatSession } from './llm/ChatSession';
-import { KuroChatClient } from './llm/KuroChatClient';
-import { XhrSseTransport } from './llm/XhrSseTransport';
+import { streamKuro } from './llm/kuroChat';
+import { createChatClient, type ChatClient } from './vendor/kit-obsidian/chat-client';
+import { requestUrlTransport, xhrSseTransport } from './vendor/kit-obsidian/chat-transport';
 import { buildContext } from './llm/kuroContext';
 import { buildMessages, resolvePersona } from './llm/kuroPrompt';
 import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
@@ -72,7 +73,10 @@ export default class KuroPlugin extends Plugin {
   private xpEventPending = false;
   private debouncedSave!: () => void;
   private midnightTimeout: number | null = null;
-  private chatClient = new KuroChatClient(new XhrSseTransport());
+  /** Der Kit-Client merkt sich je Instanz, dass der Endpunkt den Stream verweigert hat — nach
+   *  einem Endpunktwechsel also neu erzeugen (MIGRATION 0.42.0 Punkt 2). */
+  private chatClient: ChatClient | null = null;
+  private chatClientKey = '';
   private chatAbort: AbortController | null = null;
 
   private readonly httpJson: KuroLlmHttpJson = async (url, headers) => {
@@ -390,10 +394,10 @@ export default class KuroPlugin extends Plugin {
     }
 
     this.chatAbort = new AbortController();
-    const outcome = await this.chatClient.stream(
+    const outcome = await streamKuro(
+      this.chatClientFor(active.config),
       {
-        endpoint: active.config.url,
-        apiKey: active.config.apiKey ?? '',
+        endpoint: active.config,
         model: active.model,
         suppressThinking: s.chatSuppressThinking,
       },
@@ -411,6 +415,8 @@ export default class KuroPlugin extends Plugin {
 
     if (outcome.ok) {
       this.chatSession.append({ role: 'assistant', text: outcome.content });
+      // Gültig, aber am Token-Limit abgeschnitten: sagen, statt es wie eine fertige Antwort stehen zu lassen.
+      if (outcome.truncated) this.chatSession.append({ role: 'error', text: t('chat.warn.truncated', lang) });
     } else {
       // Teiltext bleibt stehen, statt beim Fehler zu verschwinden.
       if (outcome.partial !== '') {
@@ -456,6 +462,15 @@ export default class KuroPlugin extends Plugin {
       return null;
     }
     return { config: r.config, model: r.model };
+  }
+
+  private chatClientFor(cfg: EndpointConfig): ChatClient {
+    const key = `${cfg.url}\n${cfg.apiKey ?? ''}`;
+    if (this.chatClient === null || key !== this.chatClientKey) {
+      this.chatClient = createChatClient({ transport: xhrSseTransport, fallbackTransport: requestUrlTransport });
+      this.chatClientKey = key;
+    }
+    return this.chatClient;
   }
 
   abortChat(): void { this.chatAbort?.abort(); }

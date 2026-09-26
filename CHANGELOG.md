@@ -5,6 +5,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **Companion-Chat: Kit-Chat-Client statt eigenem Client** (`obsidian-kit` 0.43.0, `chat-client` + `chat-transport`). Sichtbare Folgen: (1) Die Frist misst jetzt **Stille**, nicht Dauer — eine lange, gesunde Antwort bricht nicht mehr nach 120 s ab, ein schweigender Server nach 120 s ohne Daten (Text: „Seit 120 Sekunden kommt nichts mehr vom Endpunkt“). (2) Bei einem HTTP-Fehler zeigt die Detailzeile die Servermeldung statt „HTTP 500: …“. (3) Verweigert ein Server den Stream (Origin-/CORS-Prüfung), wiederholt der Client die Anfrage einmal ohne Stream, statt „keine Verbindung“ zu melden. (4) Reasoning kommt jetzt vom Client, wird aber wie bisher nicht angezeigt. (5) Neue Fehlertexte für ein zu langes Gespräch und für eine Antwort, die vor dem ersten Wort am Token-Limit endet; eine am Limit abgeschnittene Antwort mit Text trägt einen Hinweis darunter.
+- Kit-Pin auf `obsidian-kit` 0.43.0; die Endpunkt-Zeile in den Einstellungen bekommt die Kindselektoren des Kits (`.okit-ep-row > …`), damit ein Setting innerhalb der Zeile seine Beschriftung nicht verliert.
+
 ## [1.6.0] — 2026-09-26
 
 ### Added

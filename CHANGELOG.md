@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-09-26
+
 ### Added
 
 - **Hilfe-Zeile ganz oben in den Einstellungen** mit Links auf die Dokumentation und den Issue-Tracker (Deutsch und Englisch, Kit 0.43.0 `help-setting.ts`, einzeln vendort).

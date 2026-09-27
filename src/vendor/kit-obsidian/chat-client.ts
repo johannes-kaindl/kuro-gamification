@@ -1,4 +1,3 @@
-// ONE mechanical deviation from verbatim: kit-internal imports of the code-kit layer → ../kit/ (vendor layout); reproduce on every re-vendor, nothing else may differ.
 // vendored from obsidian-kit@0.43.0, src/obsidian/chat-client.ts — do not hand-edit; re-vendor via tools/sync-kit.sh
 /** Ein Chat-Aufruf gegen `/v1/chat/completions` (OpenAI-kompatibel) — Streaming, Tool-Calls,
  *  Abbruch, Idle-Timeout, Fehlerbody, Fallback ohne Stream. Kein `obsidian`-Import: der Transport

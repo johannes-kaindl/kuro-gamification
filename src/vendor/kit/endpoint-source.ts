@@ -1,4 +1,3 @@
-// ONE mechanical deviation from verbatim: kit-internal import (../vendor/code-kit/{pure,web}/) → ./ (flat vendor layout, sibling module in src/vendor/kit/); reproduce on every re-vendor, nothing else may differ.
 // vendored from obsidian-kit@0.43.0, src/pure/endpoint-source.ts — do not hand-edit; re-vendor via tools/sync-kit.sh
 import { resolveActiveEndpointConfig, type EndpointConfig } from "./endpoint_config";
 import { familyFromName, type BackendId, type FamilyId } from "./sampling-profiles";

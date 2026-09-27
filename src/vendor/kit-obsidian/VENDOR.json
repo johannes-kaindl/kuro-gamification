@@ -4,6 +4,6 @@
   "version": "0.43.0",
   "sha": "bcd1805",
   "date": "2026-09-26",
-  "vendored": "chat-client.ts, chat-transport.ts, clipboard.ts, clock.ts, confirm.ts, endpoint-list.ts, endpoint-source.ts, model-picker.ts, stable-writer.ts, stream-area.ts, help-setting.ts",
+  "vendored": "chat-client.ts (obsidian-kit@0.44.0, 127c3a8), chat-transport.ts, clipboard.ts, clock.ts, confirm.ts, endpoint-list.ts, endpoint-source.ts, model-picker.ts, stable-writer.ts, stream-area.ts, help-setting.ts",
   "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). Pins in tools/kit-sync.json, re-vendor via tools/sync-kit.sh (zentrales kit-sync im Dach). Never hand-edit."
 }

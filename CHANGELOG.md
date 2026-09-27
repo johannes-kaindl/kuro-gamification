@@ -9,6 +9,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 - The GitHub release now also carries a ready-to-unpack `kuro-gamification.zip` (the plugin folder with `main.js`, `manifest.json` and `styles.css`) and a `checksums.sha256` file. For a manual install, download the zip and unpack it into `.obsidian/plugins/` instead of creating the folder and saving three files by hand.
 
+### Changed
+
+- Kit chat client 0.44.0 (no user-visible change)
+
 ## [1.7.0] — 2026-09-26
 
 ### Changed

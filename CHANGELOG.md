@@ -7,10 +7,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Added
 
+- **Request section in the companion chat settings** (sampling profiles, `obsidian-kit` 0.45.1 `request-section`, `code-kit` 0.8.0 `capabilities`). It shows which model family and backend Kuro talks to, which sampling values are sent (temperature, top_p, top_k, min_p, presence penalty, thinking effort) and whether they are known to work on that backend. You can override any value per model family, reset it, see the last request sent this session (copyable) and any deviation the server answered with.
 - The GitHub release now also carries a ready-to-unpack `kuro-gamification.zip` (the plugin folder with `main.js`, `manifest.json` and `styles.css`) and a `checksums.sha256` file. For a manual install, download the zip and unpack it into `.obsidian/plugins/` instead of creating the folder and saving three files by hand.
 
 ### Changed
 
+- **The companion chat now sends its sampling values from the shared profile table** for the mode "companion" instead of fixed code values. Temperature stays 0.7; with a known model family it adds the family's recommended top_p/top_k and a thinking effort (default: off). With an unknown family it still sends only the temperature and the token budget (1024). When you turn thinking on, a family with a known reserve raises the budget so thinking cannot use it all.
+- The **Suppress thinking** switch is replaced by the **Thinking level** dropdown in the new section (off / low / medium / high). Your old choice moves over once: suppress on becomes "off", suppress off becomes "low". The "Level picker in chat" switch in that section has no effect in this plugin (there is no chat button for it).
+- The model is sent under the spelling the endpoint knows (alias resolved by the LLM Endpoint Manager), not always under the name shown in the list. Without the manager the model family is now also recognised from the model name, so local endpoints get the family's values too.
 - Kit chat client 0.44.0 (no user-visible change)
 
 ## [1.7.0] — 2026-09-26

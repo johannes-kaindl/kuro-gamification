@@ -424,10 +424,11 @@ const MANAGER_DEFAULT_MODEL = 'smoke-manager-modell';
 /** Fake-Chat-Endpunkt: streamt eine Antwort mit Markdown und merkt sich Anfragen und Modell.
  *  CORS ist Pflicht — der Renderer läuft unter app://obsidian.md, ohne die Header sieht der
  *  Server die Anfrage nie (gemessen 2026-09-15 in lingotuner, dort dieselbe Bauart). */
-interface FakeChat { url: string; close: () => Promise<void>; calls: () => number; lastModel: () => string | null }
+interface FakeChat { url: string; close: () => Promise<void>; calls: () => number; lastModel: () => string | null; lastBody: () => Record<string, unknown> | null }
 async function startFakeChat(): Promise<FakeChat> {
   let calls = 0;
   let lastModel: string | null = null;
+  let lastBody: Record<string, unknown> | null = null;
   const server: Server = createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -443,7 +444,7 @@ async function startFakeChat(): Promise<FakeChat> {
       req.on('data', (chunk: Buffer) => { body += chunk.toString('utf8'); });
       req.on('end', () => {
         calls += 1;
-        try { lastModel = ((JSON.parse(body) as { model?: unknown }).model as string | undefined) ?? null; } catch { lastModel = null; }
+        try { lastBody = JSON.parse(body) as Record<string, unknown>; lastModel = (lastBody.model as string | undefined) ?? null; } catch { lastBody = null; lastModel = null; }
         res.writeHead(200, { 'Content-Type': 'text/event-stream' });
         for (const stueck of ['Antwort mit **Fettung**', '\n\n', '- eins\n- zwei']) {
           res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: stueck }, finish_reason: null }] })}\n\n`);
@@ -463,6 +464,7 @@ async function startFakeChat(): Promise<FakeChat> {
     close: () => new Promise<void>((resolve) => { server.close(() => { resolve(); }); }),
     calls: () => calls,
     lastModel: () => lastModel,
+    lastBody: () => lastBody,
   };
 }
 
@@ -706,6 +708,123 @@ async function sektionManager(cdp: Cdp): Promise<void> {
   }
 }
 
+/* ------------------------------------- 13 · Sampling-Profile (Abschnitt „Anfrage“) */
+
+/** Einstellungen öffnen und die Wurzel liefern, in der der Tab gezeichnet ist: Modal (< 1.13)
+ *  oder eigenes Fenster (≥ 1.13). */
+interface SettingsUi { cdp: Cdp; wurzel: string; eigenes: boolean }
+async function oeffneEinstellungen(cdp: Cdp): Promise<SettingsUi | null> {
+  await cdp.evaluate(`
+    await app.setting.open();
+    await app.setting.openTabById(${JSON.stringify(PLUGIN_ID)});
+    await new Promise((r) => setTimeout(r, 900));
+    return true;
+  `);
+  const imModal = await cdp.evaluate<boolean>(`const m = document.querySelector(".modal.mod-settings"); return Boolean(m) && m.textContent.includes("Kuro");`);
+  if (imModal) return { cdp, wurzel: 'document.querySelector(".modal.mod-settings")', eigenes: false };
+  const fenster = await attachTo('settings', PORT);
+  return fenster ? { cdp: fenster, wurzel: 'document', eigenes: true } : null;
+}
+async function schliesseEinstellungen(cdp: Cdp, ui: SettingsUi | null): Promise<void> {
+  if (ui?.eigenes) ui.cdp.close();
+  await cdp.evaluate(`app.setting.close?.(); await new Promise((r) => setTimeout(r, 200)); return true;`);
+}
+
+/** N-Punkte: Sampling-Profile. Gegen einen Fake-Endpunkt mit Qwen-Modellnamen (die Familie
+ *  wird aus dem Namen erkannt), lokaler Pfad ohne Manager. Die Werte stehen NICHT hier, sondern
+ *  an der Quelle: Temperatur 0.7 und Denken „aus“ sind die Modus-Defaults aus `code-kit`
+ *  sampling-profiles (MODES.companion) — der Body-Punkt misst den tatsächlich GESENDETEN Body,
+ *  nicht die Anzeige. Zwei Bearbeitungen hintereinander, weil ein Einklappen nach der ersten im
+ *  Pilot nur so sichtbar wurde. */
+const ANFRAGE_MODELL = 'qwen/qwen3.6-35b-a3b';
+
+async function sektionAnfrage(cdp: Cdp): Promise<void> {
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  const NAMEN = [
+    'anfrage/abschnitt-klappt-auf-und-zeigt-die-felder',
+    'anfrage/zwei-bearbeitungen-hintereinander-lassen-ihn-offen',
+    'anfrage/body-traegt-die-modus-defaults',
+    'anfrage/body-folgt-den-einstellungen',
+    'anfrage/zuruecksetzen-entfernt-die-ueberschreibung',
+    'anfrage/letzte-anfrage-steht-beim-oeffnen-da',
+  ];
+  let fake: FakeChat | null = null;
+  let ui: SettingsUi | null = null;
+  try {
+    await removeFakeManager(cdp);
+    fake = await startFakeChat();
+    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url }]);
+    await setSetting(cdp, 'chatModel', ANFRAGE_MODELL);
+    await setSetting(cdp, 'chatChoice', {});
+    await setSetting(cdp, 'request', { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false });
+    const frage = async (): Promise<void> => {
+      await cdp.evaluate(`${P}.endpointResolver.invalidate(); ${P}.chatSession.reset(); await ${P}.askKuro("Hallo"); return true;`);
+    };
+
+    // Body mit Modus-Defaults.
+    await frage();
+    const body1 = fake.lastBody();
+    record(NAMEN[2]!, body1?.temperature === 0.7 && body1?.reasoning_effort === 'none' && body1?.max_tokens === 1024 && body1?.model === ANFRAGE_MODELL,
+      `Body: temperature=${JSON.stringify(body1?.temperature)}, reasoning_effort=${JSON.stringify(body1?.reasoning_effort)}, max_tokens=${JSON.stringify(body1?.max_tokens)}, Modell ${JSON.stringify(body1?.model)}`);
+
+    // Aufklappen.
+    ui = await oeffneEinstellungen(cdp);
+    if (!ui) { for (const n of NAMEN.filter((_, i) => i !== 2)) skipped(n, 'Einstellungs-Oberfläche nicht gefunden'); return; }
+    const w = ui.wurzel;
+    const vorKlick = await ui.cdp.evaluate<string | null>(`return (${w}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded") ?? null;`);
+    await ui.cdp.evaluate(`(${w}).querySelector(".okit-collapsible-header")?.click(); return true;`);
+    const felder = await pollUntil<number>(ui.cdp, `const n = (${w}).querySelectorAll('.okit-collapsible-body input[data-field]').length; return n > 0 ? n : null;`, 4000, 200);
+    const nachKlick = await ui.cdp.evaluate<string | null>(`return (${w}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded") ?? null;`);
+    record(NAMEN[0]!, vorKlick === 'false' && nachKlick === 'true' && (felder ?? 0) >= 2,
+      `aria-expanded ${String(vorKlick)} → ${String(nachKlick)}, ${String(felder)} Eingabefelder`);
+
+    const letzte = await ui.cdp.evaluate<string>(`return (${w}).querySelector(".okit-request-last")?.textContent ?? "";`);
+    record(NAMEN[5]!, letzte.includes('"temperature": 0.7') && letzte.includes('"reasoning_effort": "none"'),
+      letzte ? `Anzeige: ${letzte.replace(/\s+/g, ' ').slice(0, 120)}` : 'kein .okit-request-last im Tab');
+
+    // Bearbeitung 1: Temperatur 0.9; Bearbeitung 2: Denkstufe medium.
+    await ui.cdp.evaluate(`
+      const i = (${w}).querySelector('input[data-field="temperature"]');
+      i.value = "0.9"; i.dispatchEvent(new Event("input", { bubbles: true })); i.dispatchEvent(new Event("blur"));
+      return true;`);
+    const ov = await pollUntil<boolean>(cdp, `return ${P}.data.settings.request.overrides?.companion?.["qwen3.6"]?.temperature === 0.9 ? true : null;`, 4000, 200);
+    const offen1 = await pollUntil<string>(ui.cdp, `const a = (${w}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded"); return a === "true" ? a : null;`, 2000, 200);
+    await ui.cdp.evaluate(`
+      const sel = [...(${w}).querySelectorAll(".okit-collapsible-body select")].find((s) => [...s.options].some((o) => o.value === "medium"));
+      sel.value = "medium"; sel.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;`);
+    const stufe = await pollUntil<boolean>(cdp, `return ${P}.data.settings.request.thinking?.companion === "medium" ? true : null;`, 4000, 200);
+    const offen2 = await pollUntil<string>(ui.cdp, `const a = (${w}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded"); return a === "true" ? a : null;`, 2000, 200);
+    record(NAMEN[1]!, ov === true && offen1 === 'true' && stufe === true && offen2 === 'true',
+      `Überschreibung ${ov ? 'gespeichert' : 'fehlt'}, Stufe ${stufe ? 'medium' : 'nicht gesetzt'}, Abschnitt nach Bearbeitung 1: ${String(offen1 ?? 'zu')}, nach 2: ${String(offen2 ?? 'zu')}`);
+    await schliesseEinstellungen(cdp, ui);
+    ui = null;
+
+    // Zweiter Lauf: der Body folgt den Einstellungen.
+    await frage();
+    const body2 = fake.lastBody();
+    record(NAMEN[3]!, body2?.temperature === 0.9 && body2?.reasoning_effort === 'medium',
+      `Body: temperature=${JSON.stringify(body2?.temperature)}, reasoning_effort=${JSON.stringify(body2?.reasoning_effort)}`);
+
+    // Zurücksetzen der Temperatur über den Knopf der Zeile.
+    ui = await oeffneEinstellungen(cdp);
+    if (!ui) { skipped(NAMEN[4]!, 'Einstellungs-Oberfläche nicht gefunden'); return; }
+    const w2 = ui.wurzel;
+    await ui.cdp.evaluate(`
+      const zeile = (${w2}).querySelector('input[data-field="temperature"]')?.closest(".setting-item");
+      zeile?.querySelector(".extra-setting-button")?.click();
+      return true;`);
+    const weg = await pollUntil<boolean>(cdp, `return ${P}.data.settings.request.overrides?.companion?.["qwen3.6"]?.temperature === undefined ? true : null;`, 4000, 200);
+    const offen3 = await pollUntil<string>(ui.cdp, `const a = (${w2}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded"); return a === "true" ? a : null;`, 2000, 200);
+    record(NAMEN[4]!, weg === true && offen3 === 'true', `Überschreibung ${weg ? 'entfernt' : 'noch da'}, Abschnitt ${offen3 === 'true' ? 'offen' : 'zugeklappt'}`);
+  } catch (e) {
+    for (const n of NAMEN) if (!results.some((c) => c.name === n)) skipped(n, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    if (ui) await schliesseEinstellungen(cdp, ui);
+    if (fake) await fake.close().catch(() => undefined);
+  }
+}
+
 /* ------------------------------------- 12 · Echter Endpunkt (Kit-Chat-Client) */
 
 /** Ein bereits GELADENES Chat-Modell auf dem lokalen LM-Studio-Endpunkt, sonst `null`.
@@ -731,7 +850,7 @@ async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
   }
   await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
   await setSetting(cdp, 'chatModel', modell);
-  await setSetting(cdp, 'chatSuppressThinking', true);
+  await setSetting(cdp, 'request', { overrides: {}, thinking: { companion: 'off' }, lastOnLevel: {}, levelPickerInChat: false });
   await cdp.evaluate(`app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].endpointResolver.invalidate(); return true;`);
   await rebuildSidebar(cdp);
   await oeffneChatTab(cdp);
@@ -1269,6 +1388,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 12 · Echter Endpunkt');
     await sektionEchterEndpunkt(cdp);
+    console.log('');
+    console.log('── 13 · Sampling-Profile (Abschnitt „Anfrage“, Modus companion)');
+    await sektionAnfrage(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

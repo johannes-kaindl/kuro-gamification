@@ -44,7 +44,7 @@ describe('KuroPlugin.resolveChatEndpoint', () => {
     const plugin = await makePlugin(api);
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
     const r = await plugin.resolveChatEndpoint();
-    expect(r).toEqual({ config: { url: 'http://mgr:1', apiKey: 'k' }, model: 'm-mgr' });
+    expect(r).toMatchObject({ config: { url: 'http://mgr:1', apiKey: 'k' }, model: 'm-mgr' });
     expect(seen).toEqual({ caller: 'kuro-gamification', capability: 'chat' });
   });
 
@@ -71,7 +71,18 @@ describe('KuroPlugin.resolveChatEndpoint', () => {
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1', model: 'zeile' }];
     plugin.data.settings.chatModel = 'global';
     plugin.endpointResolver.resolve = async () => ({ url: 'http://lokal:1', model: 'zeile' });
-    expect(await plugin.resolveChatEndpoint()).toEqual({ config: { url: 'http://lokal:1', model: 'zeile' }, model: 'zeile' });
+    const r = await plugin.resolveChatEndpoint();
+    expect(r).toMatchObject({ config: { url: 'http://lokal:1', model: 'zeile' }, model: 'zeile' });
+    // Der lokale Pfad läuft durch resolveEndpointSource: Familie/Backend/sentModel kommen auch ohne Manager an.
+    expect(r.source).toMatchObject({ kind: 'local', model: 'zeile', sentModel: 'zeile' });
+  });
+
+  it('ohne Manager erkennt der lokale Pfad die Modellfamilie aus dem Namen (Sampling-Profile)', async () => {
+    const plugin = await makePlugin(null);
+    plugin.data.settings.chatModel = 'qwen/qwen3.6-35b-a3b';
+    plugin.endpointResolver.resolve = async () => ({ url: 'http://lokal:1' });
+    const r = await plugin.resolveChatEndpoint();
+    expect(r.source).toMatchObject({ family: 'qwen3.6', familySource: 'name', sentModel: 'qwen/qwen3.6-35b-a3b' });
   });
 
   it('hasChatEndpointSource: lokale Liste ODER Manager', async () => {

@@ -48,6 +48,7 @@ import { ENDPOINT_PRESETS } from '../vendor/kit/endpoint_diagnostics';
 import type { EndpointStatus, EndpointWarning, EndpointPreset } from '../vendor/kit/endpoint_diagnostics';
 import type { EndpointRole } from '../vendor/kit/endpoint_config';
 import { statusKindKey, warnRuleKey, roleKindKey } from './endpointListModel';
+import { renderRequestSection } from './requestSection';
 
 /** Local alias for the one group shape this tab builds — every `_*Group()`
  *  returns it, and `_groups()` hands the array straight to Obsidian. */
@@ -636,8 +637,13 @@ export class KuroSettingsTab extends PluginSettingTab {
           render: (setting) => this._renderChatEndpoints(setting, lang) },
         { name: t('set.chatModel.name', lang), desc: t('set.chatModel.desc', lang),
           render: (setting) => this._renderGlobalModel(this._hostFor(setting), lang) },
-        { name: t('set.chatSuppressThinking.name', lang), desc: t('set.chatSuppressThinking.desc', lang),
-          control: { type: 'toggle', key: 'chatSuppressThinking' } },
+        // Ersetzt den Schalter „Denken unterdrücken“ (bis 1.7.0): Denkstufe, Temperatur & Co. für den
+        // Begleiter-Chat stehen im Abschnitt „Anfrage“. Der Tab ist rein deklarativ — der Abschnitt
+        // hängt deshalb als `render`-Zeile in der Chat-Gruppe (es gibt kein `containerEl`, das wir
+        // selbst zeichnen). `aliases`: ohne lesbaren Wert wäre die Zeile in der Suche unauffindbar.
+        { name: t('request.title', lang),
+          aliases: [t('request.thinkingLevel', lang), t('request.field.temperature', lang), 'temperature', 'thinking', 'sampling'],
+          render: (setting) => renderRequestSection(this._hostFor(setting), this.plugin, lang, () => this._refreshUi()) },
         { name: t('set.chatDailyContext.name', lang), desc: t('set.chatDailyContext.desc', lang),
           control: { type: 'dropdown', key: 'chatDailyContext', options: {
             none: t('set.chatDailyContext.none', lang),

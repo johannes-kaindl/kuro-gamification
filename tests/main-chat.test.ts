@@ -17,7 +17,7 @@ const nodeClock: ClockPort = {
   clearTimeout: (id) => clearTimeout(id as unknown as NodeJS.Timeout),
 };
 
-const CFG: KuroChatConfig = { endpoint: { url: 'http://x', apiKey: '' }, model: 'm', suppressThinking: false };
+const CFG: KuroChatConfig = { endpoint: { url: 'http://x', apiKey: '' }, model: 'm', params: {} };
 
 const sse = (t: string): string =>
   `data: ${JSON.stringify({ choices: [{ delta: { content: t } }] })}\n\n`;

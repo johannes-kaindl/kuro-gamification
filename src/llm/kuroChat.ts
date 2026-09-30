@@ -1,43 +1,48 @@
 /* ==========================================================
    Kuros Chat-Aufruf über den Kit-Client (`createChatClient`, obsidian-kit 0.42.0) — pure,
    kein Obsidian-Import. Der Client und seine Transporte kommen aus `vendor/kit-obsidian`;
-   hier steht nur, was DIESES Plugin dazutut: die Companion-Sampling-Werte als `params` (der
-   Kit-Client schickt keine eigenen) und die Übersetzung von Kuros Nachrichten in die
-   Leitungsform.
+   hier steht nur, was DIESES Plugin dazutut: die Sampling-Parameter des Modus companion als
+   `params` (der Kit-Client schickt keine eigenen) und die Übersetzung von Kuros Nachrichten
+   in die Leitungsform.
 
    Reasoning wird bewusst nicht angezeigt: `onReasoning` bleibt weg.
    ========================================================== */
-import { isAlwaysOnThinker, suppressParams } from '../vendor/kit/reasoning';
+import {
+  resolveRequestParams,
+  type BackendId, type FamilyId, type FieldId, type ResolvedRequest, type ThinkingLevel,
+} from '../vendor/kit/sampling-profiles';
 import type { EndpointConfig } from '../vendor/kit/endpoint_config';
 import type { ChatClient, ChatResult } from '../vendor/kit-obsidian/chat-client';
 import type { LlmMessage } from './kuroPrompt';
+import { MODE } from './requestSettings';
 
 export interface KuroChatConfig {
   endpoint: EndpointConfig;
-  /** Das GESENDETE Modell (`endpoint-source` `sentModel` bzw. die Wahl). */
+  /** Das GESENDETE Modell (`endpoint-source` `sentModel`, nach Alias-Auflösung). */
   model: string;
-  suppressThinking: boolean;
+  /** Fertig aufgelöste Sampling-Parameter (`buildKuroParams(...).params`). */
+  params: Record<string, number | string>;
 }
 
-const COMPANION_TEMPERATURE = 0.7;
-const COMPANION_MAX_TOKENS = 1024;
+/** Token-Budget einer Antwort — Plugin-Wert, kein Nutzerwert; geht als `maxTokens` in die
+ *  Auflösung (die Familie hebt es bei Bedarf auf ihre Reserve). */
+export const COMPANION_MAX_TOKENS = 1024;
 
-/**
- * Unterdrücken nur dann, wenn der Nutzer es will UND das Modell es kann.
- * Ohne dieses Gate gingen Suppress-Parameter auch an Always-on-Thinker.
- */
-export function effectiveSuppress(model: string, wanted: boolean): boolean {
-  return wanted && !isAlwaysOnThinker(model);
-}
-
-/** Sampling-Werte des Companions. Übergangsform nach MIGRATION 0.42.0 Punkt 3 — die Ablösung
- *  durch `resolveRequestParams` (Modus `companion`) ist eine eigene Aufgabe. */
-export function kuroChatParams(model: string, suppressWanted: boolean): Record<string, unknown> {
-  return {
-    temperature: COMPANION_TEMPERATURE,
-    max_tokens: COMPANION_MAX_TOKENS,
-    ...suppressParams(effectiveSuppress(model, suppressWanted)),
-  };
+/** Die Request-Bau-Funktion DES PLUGINS (Rezept 8): nur sie kennt Kuros festen Modus und das
+ *  Budget. Die goldenen Requests laufen dagegen, nicht gegen `resolveRequestParams` direkt —
+ *  sonst prüfte der Test das Kit statt das Plugin. gpt-oss/harmony lehnt Thinking-Felder mit
+ *  HTTP 400 ab; das entscheidet die Familien-Tabelle (`canTurnOff`), nicht mehr ein Namens-Guard. */
+export function buildKuroParams(input: {
+  family: FamilyId | null;
+  backend: BackendId;
+  thinking: ThinkingLevel;
+  overrides?: Partial<Record<FieldId, number | string>>;
+}): ResolvedRequest {
+  return resolveRequestParams({
+    family: input.family, mode: MODE, backend: input.backend, thinking: input.thinking,
+    maxTokens: COMPANION_MAX_TOKENS,
+    ...(input.overrides ? { overrides: input.overrides } : {}),
+  });
 }
 
 export function streamKuro(
@@ -51,7 +56,7 @@ export function streamKuro(
     endpoint: cfg.endpoint,
     model: cfg.model,
     messages,
-    params: kuroChatParams(cfg.model, cfg.suppressThinking),
+    params: cfg.params,
     onToken,
     signal,
   });

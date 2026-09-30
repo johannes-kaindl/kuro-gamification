@@ -4,7 +4,7 @@
    vom Ergebnis anzeigt und wie es Kit-Ergebnisse in Anzeigefälle übersetzt. */
 import { createChatClient, type SseTransport } from '../src/vendor/kit-obsidian/chat-client';
 import type { ClockPort } from '../src/vendor/kit-obsidian/clock';
-import { effectiveSuppress, kuroChatParams, streamKuro, type KuroChatConfig } from '../src/llm/kuroChat';
+import { streamKuro, type KuroChatConfig } from '../src/llm/kuroChat';
 
 const nodeClock: ClockPort = {
   now: () => Date.now(),
@@ -13,7 +13,7 @@ const nodeClock: ClockPort = {
 };
 
 const CFG: KuroChatConfig = {
-  endpoint: { url: 'http://localhost:1234/', apiKey: '' }, model: 'test-model', suppressThinking: false,
+  endpoint: { url: 'http://localhost:1234/', apiKey: '' }, model: 'test-model', params: { temperature: 0.7, max_tokens: 1024 },
 };
 const MSGS = [{ role: 'user' as const, content: 'hallo' }];
 
@@ -45,7 +45,7 @@ describe('streamKuro', () => {
     expect(tokens.join('')).toBe('Antwort');
   });
 
-  it('sends the companion sampling values and the model as params in the body', async () => {
+  it('forwards the given sampling params and the model unchanged into the body (wrapper test: request-golden)', async () => {
     let seen: Record<string, unknown> = {};
     let seenUrl = '';
     const t: SseTransport = { async postStream(url, body) { seenUrl = url; seen = body as Record<string, unknown>; return 200; } };
@@ -110,18 +110,5 @@ describe('streamKuro', () => {
     const finish = `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'length' }] })}\n\n`;
     const out = await streamKuro(clientOf(fake([sse('abgeschn'), finish])), CFG, MSGS, () => {}, new AbortController().signal);
     expect(out).toMatchObject({ ok: true, content: 'abgeschn', truncated: true });
-  });
-});
-
-describe('kuroChatParams / effectiveSuppress', () => {
-  it('always carries the fixed companion values', () => {
-    expect(kuroChatParams('llama-3-8b', false)).toEqual({ temperature: 0.7, max_tokens: 1024 });
-  });
-  it('adds suppress parameters only when wanted and the model can', () => {
-    expect(Object.keys(kuroChatParams('llama-3-8b', true)).length).toBeGreaterThan(2);
-  });
-  it('effectiveSuppress is false when the user does not want it, true for an ordinary model', () => {
-    expect(effectiveSuppress('any-model', false)).toBe(false);
-    expect(effectiveSuppress('llama-3-8b', true)).toBe(true);
   });
 });

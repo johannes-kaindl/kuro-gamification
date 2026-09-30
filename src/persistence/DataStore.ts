@@ -10,8 +10,13 @@ import {
 import { migrateToLibrary } from '../utils/packLibrary';
 import { GOTHIC_LORE, COZY_LORE } from '../data/default-lore';
 import { migrateChatEndpoints } from '../llm/migrateChatEndpoints';
+import { loadRequestSettings } from '../llm/requestSettings';
 
 export class DataStore {
+  /** Pfade des gespeicherten `request`-Blocks, die das letzte `merge` verworfen hat — der
+   *  Aufrufer (main.onload) meldet sie (Notice + Log), statt sie still zu schlucken. */
+  lastRequestDropped: string[] = [];
+
   constructor(private readonly plugin: Plugin) {}
 
   async load(): Promise<KuroPluginData> {
@@ -39,9 +44,16 @@ export class DataStore {
   }
 
   private mergeSettings(raw: Partial<KuroSettings>): KuroSettings {
+    // Sampling-Profile: `request` säubern und das alte `chatSuppressThinking` einmalig nach
+    // `request.thinking.companion` migrieren — aus dem ROHEN Bestand; das Altfeld wird danach
+    // nicht mehr durchgereicht (sonst schriebe saveData es als Leiche weiter).
+    const { request, dropped } = loadRequestSettings(raw);
+    this.lastRequestDropped = dropped;
+    const { chatSuppressThinking: _legacy, ...rest } = raw as Partial<KuroSettings> & { chatSuppressThinking?: unknown };
     return {
       ...DEFAULT_SETTINGS,
-      ...raw,
+      ...rest,
+      request,
       // chatEndpoint/chatApiKey sind Alt-Felder (vor dem Kit-endpoint_config-Umstieg) — im Typ
       // längst weg, aber in gespeicherten data.json-Dateien noch vorhanden. Ohne diese Migration
       // verschwindet ein bestehender API-Schlüssel beim ersten Laden stillschweigend

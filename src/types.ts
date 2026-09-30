@@ -3,6 +3,7 @@
    ========================================================== */
 import type { EndpointConfig } from './vendor/kit/endpoint_config';
 import type { EndpointChoice } from './vendor/kit/endpoint-source';
+import type { RequestSettings } from './vendor/kit/sampling-profiles';
 
 export type KuroLootTier = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type Lang = 'de' | 'en';
@@ -183,7 +184,9 @@ export interface KuroSettings {
   /** Gemerkte Wahl gegenüber dem LLM Endpoint Manager (Endpunkt-ID + Modell). Leer = automatisch.
    *  Gilt nur, solange der Manager installiert ist; die lokale Liste kennt keine Wahl. */
   chatChoice: EndpointChoice;
-  chatSuppressThinking: boolean;
+  /** Sampling-Profile (Modus companion): Überschreibungen, Denkstufe. Die Werte selbst löst
+   *  `resolveRequestParams` aus der Kit-Tabelle auf — sie stehen nie im Plugin. */
+  request: RequestSettings;
   chatDailyContext: ChatDailyContext;
   chatPersonaOverride: string;
 }
@@ -311,7 +314,7 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   chatEndpoints: [],
   chatModel: '',
   chatChoice: {},
-  chatSuppressThinking: true,
+  request: { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false },
   chatDailyContext: 'tasks',
   chatPersonaOverride: '',
 };

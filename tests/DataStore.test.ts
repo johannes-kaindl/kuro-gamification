@@ -138,7 +138,6 @@ describe('DataStore.merge — chat & notes', () => {
     expect(s.chatEndpoints).toEqual([]);
     expect(s.chatModel).toBe('');
     expect(s.chatDailyContext).toBe('tasks');
-    expect(s.chatSuppressThinking).toBe(true);
     expect(s.chatPersonaOverride).toBe('');
   });
 

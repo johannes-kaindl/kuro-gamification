@@ -23,53 +23,53 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Changed
 
-- **Companion-Chat: Kit-Chat-Client statt eigenem Client** (`obsidian-kit` 0.43.0, `chat-client` + `chat-transport`). Sichtbare Folgen: (1) Die Frist misst jetzt **Stille**, nicht Dauer — eine lange, gesunde Antwort bricht nicht mehr nach 120 s ab, ein schweigender Server nach 120 s ohne Daten (Text: „Seit 120 Sekunden kommt nichts mehr vom Endpunkt“). (2) Bei einem HTTP-Fehler zeigt die Detailzeile die Servermeldung statt „HTTP 500: …“. (3) Verweigert ein Server den Stream (Origin-/CORS-Prüfung), wiederholt der Client die Anfrage einmal ohne Stream, statt „keine Verbindung“ zu melden. (4) Reasoning kommt jetzt vom Client, wird aber wie bisher nicht angezeigt. (5) Neue Fehlertexte für ein zu langes Gespräch und für eine Antwort, die vor dem ersten Wort am Token-Limit endet; eine am Limit abgeschnittene Antwort mit Text trägt einen Hinweis darunter.
-- Kit-Pin auf `obsidian-kit` 0.43.0; die Endpunkt-Zeile in den Einstellungen bekommt die Kindselektoren des Kits (`.okit-ep-row > …`), damit ein Setting innerhalb der Zeile seine Beschriftung nicht verliert.
+- **Companion chat: kit chat client instead of its own client** (`obsidian-kit` 0.43.0, `chat-client` + `chat-transport`). Visible consequences: (1) The deadline now measures **silence**, not duration — a long, healthy answer no longer aborts after 120 s; a silent server aborts after 120 s without data (message: "Nothing has come from the endpoint for 120 seconds"). (2) On an HTTP error the detail line shows the server's message instead of "HTTP 500: …". (3) If a server refuses the stream (origin/CORS check), the client retries the request once without streaming instead of reporting "no connection". (4) Reasoning now comes from the client but is still not displayed, as before. (5) New error texts for a conversation that is too long and for an answer that ends at the token limit before the first word; an answer cut off at the limit that has text carries a note below it.
+- Kit pin on `obsidian-kit` 0.43.0; the endpoint row in the settings gets the kit's child selectors (`.okit-ep-row > …`), so a setting inside the row does not lose its label.
 
 ## [1.6.0] — 2026-09-26
 
 ### Added
 
-- **Hilfe-Zeile ganz oben in den Einstellungen** mit Links auf die Dokumentation und den Issue-Tracker (Deutsch und Englisch, Kit 0.43.0 `help-setting.ts`, einzeln vendort).
+- **Help row at the very top of the settings** with links to the documentation and the issue tracker (German and English, kit 0.43.0 `help-setting.ts`, vendored individually).
 
 ## [1.5.0] — 2026-09-25
 
 ### Added
 
-- **Companion-Chat: Endpunkte vom LLM Endpoint Manager.** Ist das Plugin `llm-endpoint-manager` installiert, kommen die Chat-Endpunkte samt Modell von dort (Kit `endpoint-source`, Fähigkeit `chat`); in den Einstellungen erscheint statt der Endpunkt-Liste der Manager-Abschnitt mit Endpunkt- und Modellwahl. Sichtbare Folge: mit Manager wird die lokale Liste nicht mehr befragt (sie bleibt gespeichert), ohne Manager läuft alles wie bisher. Das globale Modell ("Global model") gilt nur noch ohne Manager.
+- **Companion chat: endpoints from the LLM Endpoint Manager.** If the `llm-endpoint-manager` plugin is installed, the chat endpoints including the model come from there (kit `endpoint-source`, capability `chat`); the settings show the manager section with endpoint and model choice instead of the endpoint list. Visible consequence: with the manager, the local list is no longer queried (it stays saved); without the manager everything works as before. The global model ("Global model") now applies only without the manager.
 
 ### Fixed
 
-- **Companion-Chat: Markdown in Antworten wird dargestellt.** Fettung, Listen, Code und Zitate erscheinen als solche statt als Sternchen und Striche. Fertige Antworten werden gerendert; während des Streams werden abgeschlossene Absätze gerendert und nur der laufende bleibt Rohtext. Die eigene Frage und Fehlertexte bleiben Rohtext.
-- **Companion-Chat: die Zeile „Kuro sieht gerade …“ war veraltet.** Sie und die Vorschau darunter folgen jetzt der Tagesnotiz, auch wenn der Chat-Tab offen bleibt; vorher zeigten sie den Stand der letzten eigenen Chat-Aktion.
-- **Companion-Chat (Mobil): die Eingabezeile wird nicht mehr von der System-Leiste unten überdeckt** (`env(safe-area-inset-bottom)`).
+- **Companion chat: Markdown in answers is rendered.** Bold, lists, code and quotes appear as such instead of asterisks and dashes. Finished answers are rendered; during the stream, completed paragraphs are rendered and only the running one stays raw text. Your own question and error texts stay raw text.
+- **Companion chat: the "Kuro sees right now …" line was stale.** It and the preview below it now follow the daily note even when the chat tab stays open; before, they showed the state of the last chat action of your own.
+- **Companion chat (mobile): the input row is no longer covered by the system bar at the bottom** (`env(safe-area-inset-bottom)`).
 
 ### Changed
 
-- Einstellungen: die Beschreibungen von „Eigene Stimme“, „Merkzettel“ und „Aus der Tagesnotiz“ sind ohne Vorwissen verständlich (mit Beispiel; bei der Tagesnotiz steht, dass nur Checkbox-Zeilen und Habit-Felder zählen, keine bloße Zahl im Notiz-Kopf).
-- **Companion-Chat: Streaming-Antwortbereich kommt jetzt aus dem Kit** (`buildStreamArea`,
-  `obsidian-kit@0.35.0`, UI-STANDARD §8) statt aus einem Eigenbau. Sichtbare Folge: der
-  laufende Absatz scrollt nur noch mit, solange man selbst am unteren Rand steht (`atBottom`,
-  40 px Toleranz) — wer während des Streams hochscrollt, bleibt jetzt oben stehen, statt bei
-  jedem Token nach unten gerissen zu werden. Kein Gedankenblock betroffen: Kuro streamt kein
-  Reasoning.
-- **Kit-Pin: `obsidian-kit` 0.29.0 → 0.41.1, `code-kit` 0.5.0 → 0.7.0** (`tools/sync-kit.sh`, feste Refs, nicht der Kit-Arbeitsstand). Neu vendoriert: `stable-writer`, `endpoint-source`, `stream-blocks`, `sampling-profiles`. `tools/sync-kit.sh` zeigt auf `../../libs/code-kit`; der alte Pfad `../../code-kit` gab es nicht.
+- Settings: the descriptions of "Own voice", "Notepad" and "From the daily note" are understandable without prior knowledge (with an example; for the daily note it says that only checkbox lines and habit fields count, not a bare number in the note header).
+- **Companion chat: the streaming answer area now comes from the kit** (`buildStreamArea`,
+  `obsidian-kit@0.35.0`, UI-STANDARD §8) instead of a home-grown one. Visible consequence: the
+  running paragraph only scrolls along while you are at the bottom edge yourself (`atBottom`,
+  40 px tolerance) — if you scroll up during the stream, you now stay where you are instead of
+  being pulled down on every token. No thinking block affected: Kuro does not stream
+  reasoning.
+- **Kit pin: `obsidian-kit` 0.29.0 → 0.41.1, `code-kit` 0.5.0 → 0.7.0** (`tools/sync-kit.sh`, fixed refs, not the kit working tree). Newly vendored: `stable-writer`, `endpoint-source`, `stream-blocks`, `sampling-profiles`. `tools/sync-kit.sh` points to `../../libs/code-kit`; the old path `../../code-kit` did not exist.
 
 ## [1.4.1] — 2026-09-03
 
 ### Fixed
 
-- **Companion-Chat: Antworten von Servern, die trotz `stream: true` volle Message-Objekte
-  senden, kommen jetzt an.** Der SSE-Parser las nur `choices[0].delta`; fehlte das Feld, blieb
-  der Text aus — ohne Fehlermeldung. Er liest jetzt ersatzweise `choices[0].message`
-  (aus code-kit 0.5.0).
+- **Companion chat: answers from servers that send full message objects despite
+  `stream: true` now arrive.** The SSE parser only read `choices[0].delta`; if the field was
+  missing, the text was missing — without an error message. It now falls back to
+  `choices[0].message` (from code-kit 0.5.0).
 
 ### Changed
 
-- **Vendoring auf zwei Quellen umgestellt** (intern, keine Verhaltensaenderung): die
-  plattformneutrale Schicht kommt seit dem code-kit-Split direkt aus `code-kit@0.5.0`, die
-  Obsidian-Schicht weiter aus `obsidian-kit@0.29.0`. Vier Module (`num`, `reasoning`, `sse`,
-  `think-splitter`) gibt es im Kit gar nicht mehr.
+- **Vendoring switched to two sources** (internal, no behaviour change): the
+  platform-neutral layer has come directly from `code-kit@0.5.0` since the code-kit split, the
+  Obsidian layer still from `obsidian-kit@0.29.0`. Four modules (`num`, `reasoning`, `sse`,
+  `think-splitter`) no longer exist in the kit at all.
 
 ## [1.4.0] — 2026-09-01
 

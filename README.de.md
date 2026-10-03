@@ -251,7 +251,7 @@ Issues und Pull-Requests sind auf [GitHub](https://github.com/johannes-kaindl/ku
 
 ## Credits
 
-- Design-Idee von Jay (`v6t2b9`), 2026-03 bis 2026-04
+- Design-Idee von Johannes Kaindl (`v6t2b9`), 2026-03 bis 2026-04
 - Als Plugin kodifiziert 2026-04
 
 ## Lizenz

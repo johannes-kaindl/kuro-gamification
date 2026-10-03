@@ -248,7 +248,7 @@ Issues and pull requests are welcome on [GitHub](https://github.com/johannes-kai
 
 ## Credits
 
-- Design seed by Jay (`v6t2b9`), 2026-03 to 2026-04
+- Design seed by Johannes Kaindl (`v6t2b9`), 2026-03 to 2026-04
 - Codified into a plugin in 2026-04
 
 ## License

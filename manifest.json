@@ -4,7 +4,7 @@
   "version": "1.8.0",
   "minAppVersion": "1.13.0",
   "description": "Neurodivergence-friendly gamification: XP, levels, streaks with freeze tokens, deterministic loot, and lore. Off-by-default for anything that could escalate.",
-  "author": "Jay",
+  "author": "Johannes Kaindl",
   "authorUrl": "https://github.com/johannes-kaindl",
   "isDesktopOnly": false
 }

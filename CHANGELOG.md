@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-10-03
+
 ### Changed
 
 - The author shown in Obsidian's plugin list is now "Johannes Kaindl".

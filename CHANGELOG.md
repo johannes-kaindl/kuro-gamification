@@ -8,6 +8,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 ### Changed
 
 - The author shown in Obsidian's plugin list is now "Johannes Kaindl".
+- The changelog is now written entirely in English.
+- Internal design notes moved out of the repository; the user documentation is unchanged.
 
 ## [1.8.0] — 2026-09-30
 

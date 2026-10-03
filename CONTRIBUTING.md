@@ -49,7 +49,7 @@ All user-facing strings (UI labels, commands, notices) go through the i18n modul
 ## Where to work
 
 - File issues and open pull requests on **Forgejo**: <https://git.jkaindl.de/jkaindl/kuro-gamification>. (GitHub is a mirror, not the place for contributions.)
-- For larger features, work through **brainstorm → spec → plan → TDD**, and keep the resulting artefacts under `docs/superpowers/`. Smaller fixes can go straight to a `feat/<name>` branch with tests.
+- For larger features, work through **brainstorm → spec → plan → TDD**, and describe the resulting design in the pull request. Smaller fixes can go straight to a `feat/<name>` branch with tests.
 
 ## License of contributions
 

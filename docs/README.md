@@ -19,4 +19,4 @@ The [README](https://github.com/johannes-kaindl/kuro-gamification/blob/main/READ
 
 ---
 
-`SMOKE.md`, `images/README.md` and `superpowers/` hold maintainer material (the GUI smoke checklist, the screenshot contract, historical specs and plans) and are not user documentation.
+`SMOKE.md` and `images/README.md` hold maintainer material (the GUI smoke checklist and the screenshot contract) and are not user documentation.

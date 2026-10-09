@@ -379,17 +379,31 @@ export default class KuroPlugin extends Plugin {
     });
 
     this.chatAbort = new AbortController();
-    const result = await this.llm.complete(
-      { messages },
-      {
-        // Reasoning wird bewusst nicht angezeigt: kein `onReasoning`.
-        onToken: (token) => {
-          for (const view of this.chatViews()) view.appendChatToken(token);
-          this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
+    let result: Awaited<ReturnType<LlmConnection['complete']>>;
+    try {
+      result = await this.llm.complete(
+        { messages },
+        {
+          // Reasoning wird bewusst nicht angezeigt: kein `onReasoning`.
+          onToken: (token) => {
+            for (const view of this.chatViews()) view.appendChatToken(token);
+            this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
+          },
+          signal: this.chatAbort.signal,
         },
-        signal: this.chatAbort.signal,
-      },
-    );
+      );
+    } catch (err) {
+      // Die Verbindung wirft nur bei einem Fehler VOR dem Senden (Auflösung, Manager-API). Ohne diesen Zweig
+      // bliebe `busy` für immer gesetzt und die Eingabe gesperrt.
+      this.chatSession.busy = false;
+      this.chatSession.streaming = null;
+      this.chatAbort = null;
+      const detail = err instanceof Error ? err.message : String(err);
+      this.chatSession.append({ role: 'error', text: t('chat.err.network', lang), detail });
+      this.logger.error('chat failed before sending', detail);
+      this.syncChat();
+      return;
+    }
 
     this.chatSession.busy = false;
     this.chatSession.streaming = null;

@@ -44,6 +44,17 @@ describe('chat round trip (askKuro)', () => {
     expect(p.chatSession.entries[1]).toMatchObject({ role: 'error', text: expect.stringContaining('No endpoint') });
   });
 
+  it('wirft die Verbindung vor dem Senden, bleibt die Eingabe nicht gesperrt', async () => {
+    const p = await makePlugin();
+    p.chatSession = new ChatSession();
+    p.logger = { error: () => {}, info: () => {} };
+    p.llm = { complete: async () => { throw new Error('manager kaputt'); } };
+    await p.askKuro('Frage');
+    expect(p.chatSession.busy).toBe(false);
+    expect(p.chatSession.streaming).toBeNull();
+    expect(p.chatSession.entries[1]).toMatchObject({ role: 'error', detail: 'manager kaputt' });
+  });
+
   it('Fristfehler nennen die Sekunden aus dem Kit-Detail statt einer festen Zahl', async () => {
     const p = await makePlugin();
     p.chatSession = new ChatSession();

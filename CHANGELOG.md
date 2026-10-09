@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-10-09
+
 ### Changed
 
 - **Companion chat: the kit's shared LLM connection instead of Kuro's own endpoint code** (`obsidian-kit` 0.51.2, `code-kit` 0.15.0). Visible consequences:

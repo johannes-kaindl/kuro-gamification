@@ -2,7 +2,8 @@
    Chat-Endpunkt: Manager-Vorrang, lokale Liste als Rückfall
    (Kit endpoint-source, capability "chat").
    ========================================================== */
-import KuroPlugin from '../src/main';
+import { __setMockRequestUrl } from 'obsidian';
+import { makePlugin } from './helpers/connection';
 
 type Fake = { resolved: unknown; materialized: unknown };
 
@@ -22,19 +23,7 @@ function managerApi(fake: Fake, seen: { caller?: string | undefined; capability?
   };
 }
 
-async function makePlugin(manager: unknown) {
-  const app = {
-    vault: { on: () => ({}) },
-    workspace: { onLayoutReady: () => {}, getLeavesOfType: () => [], getRightLeaf: () => null, revealLeaf: () => {} },
-    plugins: { plugins: manager ? { 'llm-endpoint-manager': { api: manager } } : {} },
-  };
-  const plugin: any = new (KuroPlugin as any)();
-  plugin.app = app;
-  await plugin.onload();
-  return plugin;
-}
-
-describe('KuroPlugin.resolveChatEndpoint', () => {
+describe('KuroPlugin.llm.resolve (Chat-Endpunkt)', () => {
   it('nimmt den Endpunkt des Managers, wenn er installiert ist (capability chat, caller kuro-gamification)', async () => {
     const seen: { caller?: string; capability?: string } = {};
     const api = managerApi({
@@ -43,7 +32,7 @@ describe('KuroPlugin.resolveChatEndpoint', () => {
     }, seen);
     const plugin = await makePlugin(api);
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
-    const r = await plugin.resolveChatEndpoint();
+    const r = await plugin.llm.resolve();
     expect(r).toMatchObject({ config: { url: 'http://mgr:1', apiKey: 'k' }, model: 'm-mgr' });
     expect(seen).toEqual({ caller: 'kuro-gamification', capability: 'chat' });
   });
@@ -55,34 +44,47 @@ describe('KuroPlugin.resolveChatEndpoint', () => {
     }, {});
     const plugin = await makePlugin(api);
     plugin.data.settings.chatChoice = { endpointId: 'b', model: 'meins' };
-    expect((await plugin.resolveChatEndpoint())?.model).toBe('meins');
+    expect((await plugin.llm.resolve()).model).toBe('meins');
   });
 
   it('Manager da, aber ohne Endpunkt: kein Rückfall auf die lokale Liste — die eine Wahrheit, die eine Meldung', async () => {
     const api = managerApi({ resolved: { error: 'no-endpoint' }, materialized: { error: 'not-found' } }, {});
     const plugin = await makePlugin(api);
-    plugin.logger = { error: () => {}, info: () => {} };
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
-    expect(await plugin.resolveChatEndpoint()).toBeNull();
+    const r = await plugin.llm.resolve();
+    expect(r.config).toBeNull();
   });
 
+  // Die lokale Zeile gilt als erreichbar, wenn /v1/models antwortet (Standard-Probe der Verbindung).
+  function reachable(models: string[] = ['x']) {
+    __setMockRequestUrl(async () => ({ status: 200, json: { data: models.map((id) => ({ id })) }, text: '' }));
+  }
+
   it('ohne Manager läuft die lokale Liste wie bisher (Modell: Zeile vor globalem Modell)', async () => {
+    reachable();
     const plugin = await makePlugin(null);
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1', model: 'zeile' }];
     plugin.data.settings.chatModel = 'global';
-    plugin.endpointResolver.resolve = async () => ({ url: 'http://lokal:1', model: 'zeile' });
-    const r = await plugin.resolveChatEndpoint();
-    expect(r).toMatchObject({ config: { url: 'http://lokal:1', model: 'zeile' }, model: 'zeile' });
-    // Der lokale Pfad läuft durch resolveEndpointSource: Familie/Backend/sentModel kommen auch ohne Manager an.
-    expect(r.source).toMatchObject({ kind: 'local', model: 'zeile', sentModel: 'zeile' });
+    const r = await plugin.llm.resolve();
+    expect(r).toMatchObject({ kind: 'local', config: { url: 'http://lokal:1' }, model: 'zeile', sentModel: 'zeile' });
   });
 
   it('ohne Manager erkennt der lokale Pfad die Modellfamilie aus dem Namen (Sampling-Profile)', async () => {
+    reachable();
     const plugin = await makePlugin(null);
+    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
     plugin.data.settings.chatModel = 'qwen/qwen3.6-35b-a3b';
-    plugin.endpointResolver.resolve = async () => ({ url: 'http://lokal:1' });
-    const r = await plugin.resolveChatEndpoint();
-    expect(r.source).toMatchObject({ family: 'qwen3.6', familySource: 'name', sentModel: 'qwen/qwen3.6-35b-a3b' });
+    const r = await plugin.llm.resolve();
+    expect(r).toMatchObject({ family: 'qwen3.6', familySource: 'name', sentModel: 'qwen/qwen3.6-35b-a3b' });
+  });
+
+  it('die gemerkte Manager-Wahl übersteuert ein lokales Modell nicht (choice gilt nur mit Manager)', async () => {
+    reachable();
+    const plugin = await makePlugin(null);
+    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
+    plugin.data.settings.chatModel = 'lokal-modell';
+    plugin.data.settings.chatChoice = { endpointId: 'alt', model: 'alte-wahl' };
+    expect((await plugin.llm.resolve()).model).toBe('lokal-modell');
   });
 
   it('hasChatEndpointSource: lokale Liste ODER Manager', async () => {

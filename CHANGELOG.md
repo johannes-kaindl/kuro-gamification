@@ -5,6 +5,20 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **Companion chat: the kit's shared LLM connection instead of Kuro's own endpoint code** (`obsidian-kit` 0.51.2, `code-kit` 0.15.0). Visible consequences:
+  - **Deadlines:** the wait for the first data is now **10 minutes** (was 2 minutes), so a model that is still loading no longer aborts the first question. Once data flows, 2 minutes of silence still end the answer; the message names the real number of seconds.
+  - **Endpoint and request settings look like in the other plugins that use the kit.** The endpoint list and the **Request** section are drawn by the kit with its own wording (for example **Test connection**, **Try this endpoint first**, status **Timed out**). The **Level picker in chat** switch in the Request section is gone: Kuro has no chat button for it, so it never did anything.
+  - **A saved manager choice only counts while the LLM Endpoint Manager is installed.** Without the manager, the local list's model (the row's model, then the global **Model**) is used; an old manager choice can no longer override it.
+  - **If the chat has no endpoint at all** the error line now also names the reason the manager or the list gave.
+  - **Choosing the global Model** takes effect for the next question immediately (the connection is resolved again).
+  - The kit's wording replaces Kuro's own endpoint and request texts, so a few labels in the settings changed.
+- **API keys of local endpoints now live in Obsidian's keychain**, not in `data.json`. Existing keys move over the first time the chat resolves an endpoint (or when you open the settings); nothing to do.
+- **Secrets are masked before a question leaves your machine** (API keys and tokens, `Bearer …` headers, private-key blocks). The model sees a placeholder such as `[redacted-token]`; Kuro's answer shows your original again. E-mail addresses are not masked.
+- **Model answers can no longer pull in pictures, run code blocks or insert HTML.** An image in an answer is shown as plain text (so a prompt-injected answer cannot send your text to an address by loading an image), a ```` ```dataviewjs ```` block is displayed as text instead of running, and `<` is escaped. Ordinary Markdown (bold, lists, links) renders as before. Links stay clickable.
+- Kit pin on `obsidian-kit` 0.51.2 / `code-kit` 0.15.0; the endpoint, request and streaming-area styles in `styles.css` are the kit's current text again, and a test now fails when they drift apart.
+
 ## [1.8.1] — 2026-10-03
 
 ### Changed

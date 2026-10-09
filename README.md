@@ -197,6 +197,8 @@ preset provider and no cloud default; it is meant for a local server such as
 
 If you have the **LLM Endpoint Manager** plugin installed, the chat takes its endpoints and model from there instead, and the settings show the manager's endpoint choice in place of the list.
 
+An API key you enter for a local endpoint is stored in **Obsidian's keychain**, not in the plugin's `data.json`. Before a question is sent, keys, tokens, `Bearer` headers and private-key blocks in your text are replaced by placeholders; the answer shows your original again. The chat waits up to 10 minutes for the first data (a model that is still loading), then up to 2 minutes of silence. Pictures, executable code blocks and HTML in an answer are shown as plain text, not rendered.
+
 **What is sent, and when.** Nothing is sent until you ask a question. With each question go:
 
 | Always | Depending on `From today's note` |

@@ -15,6 +15,7 @@ import type { Lang } from '../types';
 import { t } from '../i18n';
 import type { ChatEntry, ChatSession } from '../llm/ChatSession';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
+import { neutralizeModelMarkdown } from '../vendor/kit/safe-markdown';
 import { buildStreamArea, type StreamArea } from '../vendor/kit-obsidian/stream-area';
 import { createStableWriter, type StableMarkdownWriter } from '../vendor/kit-obsidian/stable-writer';
 
@@ -179,7 +180,9 @@ export class KuroChatPanel {
     if (e.role === 'assistant' && this.cb.renderMarkdown !== undefined) {
       // Nur Kuros Antworten sind Markdown; die eigene Frage und Fehlertexte bleiben Rohtext.
       const box = line.createDiv({ cls: 'kuro-chat-text kuro-chat-md markdown-rendered' });
-      this.renderMd(box, e.text).catch(() => { box.setText(e.text); });
+      // Modell-Ausgabe: Bilder, aktive Codeblöcke und HTML vorher entschärfen (der Schreiber tut das nur für seinen
+      // eigenen Weg; fertige Antworten und `syncChat` zeichnen hier, am Schreiber vorbei).
+      this.renderMd(box, neutralizeModelMarkdown(e.text)).catch(() => { box.setText(e.text); });
     } else {
       line.createSpan({ cls: 'kuro-chat-text', text: e.text });
     }

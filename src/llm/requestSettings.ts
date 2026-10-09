@@ -8,6 +8,10 @@ import { onLevelFor, sanitizeRequestSettings, type RequestSettings } from '../ve
  *  (Spec § 4.1: "companion"). Nur EIN Modus, deshalb fest verdrahtet. */
 export const MODE = 'companion';
 
+/** Token-Budget einer Antwort — Plugin-Wert, kein Nutzerwert; geht als `maxTokens` an die Verbindung (die
+ *  Familie hebt es bei Bedarf auf ihre Reserve). */
+export const COMPANION_MAX_TOKENS = 1024;
+
 export interface RequestLoadResult { request: RequestSettings; dropped: string[] }
 
 /** Säubert den gespeicherten `request`-Block und migriert das alte `chatSuppressThinking`

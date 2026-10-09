@@ -39,16 +39,9 @@ import { taskRuleFromSettings, readTaskNotesConfig } from '../utils/taskNotesBri
 import {
   diagnoseSources, sourceStateClass, sourceStateIcon, taskRuleSuggestion,
 } from '../engine/TaskNotesXp';
-import { buildEndpointList, type EndpointListStrings } from '../vendor/kit-obsidian/endpoint-list';
-import { buildEndpointSourceSection, findEndpointManager } from '../vendor/kit-obsidian/endpoint-source';
+import { findEndpointManager } from '../vendor/kit-obsidian/endpoint-source';
 import { renderModelPicker } from '../vendor/kit-obsidian/model-picker';
-import { resolveModelChoice, type ModelHintKey } from '../vendor/kit/model-choice';
-import { createModelListCache, type ModelListCache } from '../vendor/kit/model-list-cache';
-import { ENDPOINT_PRESETS } from '../vendor/kit/endpoint_diagnostics';
-import type { EndpointStatus, EndpointWarning, EndpointPreset } from '../vendor/kit/endpoint_diagnostics';
-import type { EndpointRole } from '../vendor/kit/endpoint_config';
-import { statusKindKey, warnRuleKey, roleKindKey } from './endpointListModel';
-import { renderRequestSection } from './requestSection';
+import { resolveModelChoice } from '../vendor/kit/model-choice';
 
 /** Local alias for the one group shape this tab builds — every `_*Group()`
  *  returns it, and `_groups()` hands the array straight to Obsidian. */
@@ -164,11 +157,11 @@ export class KuroSettingsTab extends PluginSettingTab {
     await this._save();
   }
 
-  /** Obsidian ruft dies beim Schließen des Tabs. Der Modell-Cache hält Promises und
-   *  überlebt Tab-Neuaufbauten bewusst — ohne diesen Aufruf bliebe ein einmal als
+  /** Obsidian ruft dies beim Schließen des Tabs. Die Verbindung hält die Modell-Listen des Tabs
+   *  und überlebt Neuaufbauten bewusst — ohne diesen Aufruf bliebe ein einmal als
    *  "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so stehen. */
   hide(): void {
-    this._modelCache.clear();
+    this.plugin.llm.hideSettings();
     super.hide();
   }
 
@@ -633,17 +626,14 @@ export class KuroSettingsTab extends PluginSettingTab {
       items: [
         { name: t('set.enableChat.name', lang), desc: t('set.enableChat.desc', lang),
           control: { type: 'toggle', key: 'enableChat' } },
-        { name: t('set.chatEndpoints.name', lang), desc: t('set.chatEndpoints.desc', lang),
-          render: (setting) => this._renderChatEndpoints(setting, lang) },
+        // Quelle, Liste und Abschnitt „Anfrage“ (Denkstufe, Temperatur & Co.) zeichnet die Verbindung in
+        // einem Zug — der Tab ist rein deklarativ, deshalb hängt das Ganze als `render`-Zeile in der Gruppe.
+        // `aliases`: ohne lesbaren Wert wäre der Abschnitt in der Suche unauffindbar.
+        { name: t('set.chatEndpoints.name', lang),
+          aliases: ['endpoint', 'request', 'temperature', 'thinking', 'sampling'],
+          render: (setting) => this.plugin.llm.renderSettings(this._hostFor(setting).createDiv(), { lang }) },
         { name: t('set.chatModel.name', lang), desc: t('set.chatModel.desc', lang),
           render: (setting) => this._renderGlobalModel(this._hostFor(setting), lang) },
-        // Ersetzt den Schalter „Denken unterdrücken“ (bis 1.7.0): Denkstufe, Temperatur & Co. für den
-        // Begleiter-Chat stehen im Abschnitt „Anfrage“. Der Tab ist rein deklarativ — der Abschnitt
-        // hängt deshalb als `render`-Zeile in der Chat-Gruppe (es gibt kein `containerEl`, das wir
-        // selbst zeichnen). `aliases`: ohne lesbaren Wert wäre die Zeile in der Suche unauffindbar.
-        { name: t('request.title', lang),
-          aliases: [t('request.thinkingLevel', lang), t('request.field.temperature', lang), 'temperature', 'thinking', 'sampling'],
-          render: (setting) => renderRequestSection(this._hostFor(setting), this.plugin, lang, () => this._refreshUi()) },
         { name: t('set.chatDailyContext.name', lang), desc: t('set.chatDailyContext.desc', lang),
           control: { type: 'dropdown', key: 'chatDailyContext', options: {
             none: t('set.chatDailyContext.none', lang),
@@ -677,115 +667,6 @@ export class KuroSettingsTab extends PluginSettingTab {
     });
   }
 
-  /** Modell-Listen je Endpunkt, geteilt von jeder Zeile des Kit-Editors — gehört der
-   *  Lebensdauer des Tabs, nicht eines einzelnen Render-Durchlaufs (sonst würde jede
-   *  Zeile ihre eigene /v1/models-Anfrage feuern). Geleert in hide() — sonst bliebe ein
-   *  einmal als "nicht erreichbar" gemessener Endpunkt für die restliche Sitzung so
-   *  stehen, selbst nachdem der Server gestartet wurde. */
-  private readonly _modelCache: ModelListCache = createModelListCache();
-  /** URL des Endpunkts, den der Resolver aktuell wählt — der Kit-Editor fragt das
-   *  SYNCHRON pro Zeile ab ("aktiv" vs. "erreichbar, Platz N"), während die Antwort
-   *  eine Netzwerk-Frage ist; deshalb einmal pro Render aufgelöst und hier abgelegt. */
-  private _activeChatEndpointUrl: string | null = null;
-
-  /** Manager da → „Endpunkte kommen vom LLM Endpoint Manager" (Wahl + Modell + Import);
-   *  sonst der lokale Listen-Editor. Gespeichert wird nur die Wahl (`chatChoice`). */
-  private _renderChatEndpoints(setting: Setting, lang: Lang): void {
-    const host = this._hostFor(setting);
-    buildEndpointSourceSection({
-      app: this.app, containerEl: host, capability: 'chat', caller: 'kuro-gamification',
-      choice: () => this.plugin.data.settings.chatChoice,
-      setChoice: async (c) => { this.plugin.data.settings.chatChoice = c; await this._persistOnly(); },
-      local: () => this.plugin.data.settings.chatEndpoints,
-      strings: {
-        managed: t('src.managed', lang), managedDesc: t('src.managedDesc', lang),
-        openManager: t('src.openManager', lang), pickEndpoint: t('src.pickEndpoint', lang),
-        automatic: t('src.automatic', lang), model: t('set.chatModel.name', lang),
-        importLocal: t('src.importLocal', lang),
-        imported: (r) => t('src.imported', lang, { 0: r.added.length, 1: r.merged.length }),
-        importFailed: t('src.importFailed', lang),
-        modelHint: (key: ModelHintKey) => (key ? t(`set.model.hint.${key}`, lang) : ''),
-        savedSuffix: t('set.model.saved', lang), refreshModels: t('set.chatModel.refresh', lang),
-        saveFailed: t('set.chatEndpoints.saveFailed', lang),
-      },
-      renderLocalList: () => { this._renderLocalChatEndpoints(host, lang); },
-      rerender: () => this._refreshUi(),
-    });
-  }
-
-  private _renderLocalChatEndpoints(host: HTMLElement, lang: Lang): void {
-    buildEndpointList({
-      containerEl: host,
-      label: t('set.chatEndpoints.name', lang),
-      desc: t('set.chatEndpoints.desc', lang),
-      placeholder: ENDPOINT_PRESETS[0]?.url ?? '',
-      strings: this._endpointListStrings(lang),
-      cache: this._modelCache,
-      get: () => this.plugin.data.settings.chatEndpoints,
-      set: (eps) => { this.plugin.data.settings.chatEndpoints = eps; },
-      active: () => this._activeChatEndpointUrl,
-      // EIN Client je Zeile trägt sowohl die Erreichbarkeits-Probe (Status-Icon) als
-      // auch die Modell-Liste (Dropdown) — Status und Liste können so nie über
-      // verschiedene Endpunkte auseinanderlaufen.
-      clientFor: (cfg) => this.plugin.clientFor(cfg),
-      globalModel: () => this.plugin.data.settings.chatModel,
-      save: () => this._persistOnly(),
-      reconnect: () => {
-        this.plugin.endpointResolver.invalidate();
-        return this._syncActiveChatEndpoint().then(() => undefined);
-      },
-      rerender: () => this._refreshUi(),
-    });
-    // Erster Resolve dieses Render-Durchlaufs. Erneutes Rendern nur bei echter Änderung —
-    // terminiert, weil der Folge-Durchlauf denselben (gecachten) Wert liefert und dort stoppt.
-    void this._syncActiveChatEndpoint().then((changed) => { if (changed) this._refreshUi(); });
-  }
-
-  private async _syncActiveChatEndpoint(): Promise<boolean> {
-    const before = this._activeChatEndpointUrl;
-    const active = await this.plugin.endpointResolver.resolve();
-    this._activeChatEndpointUrl = active?.url ?? null;
-    return this._activeChatEndpointUrl !== before;
-  }
-
-  /** Jeder nutzersichtbare Text des Kit-Editors. Das Kit formuliert nichts selbst
-   *  (endpoint_diagnostics.klartext ist hart deutsch, dieses Plugin ist EN+DE) —
-   *  Übersetzung passiert ausschließlich hier, über dieselbe t()-Vokabel wie der Rest
-   *  des Tabs. */
-  private _endpointListStrings(lang: Lang): EndpointListStrings {
-    return {
-      addPlaceholder: t('set.chatEndpoints.addPlaceholder', lang),
-      apiKeyPlaceholder: t('set.chatEndpoints.keyPlaceholder', lang),
-      modelPlaceholder: t('set.chatEndpoints.modelPlaceholder', lang),
-      ariaUrl: t('set.chatEndpoints.ariaUrl', lang),
-      ariaAdd: t('set.chatEndpoints.ariaAdd', lang),
-      ariaApiKey: (url) => t('set.chatEndpoints.ariaKeyFor', lang, { 0: url }),
-      ariaModel: (url) => t('set.chatEndpoints.ariaModelFor', lang, { 0: url }),
-      // globalModel kann leer sein — "Globales Modell ()" wäre falsch, also hier den
-      // Ersatztext in der jeweiligen Sprache ausschreiben statt einen Kit-Fallback zu nutzen.
-      emptyModelLabel: (globalModel) => t('set.chatEndpoints.modelGlobal', lang,
-        { 0: globalModel || t('set.chatEndpoints.modelGlobalUnset', lang) }),
-      modelHint: (key: ModelHintKey) => (key ? t(`set.model.hint.${key}`, lang) : ''),
-      savedSuffix: t('set.model.saved', lang),
-      refreshModels: t('set.chatModel.refresh', lang),
-      moveToFront: t('set.chatEndpoints.moveToFront', lang),
-      remove: t('set.chatEndpoints.remove', lang),
-      thirdParty: t('set.chatEndpoints.thirdParty', lang),
-      probing: t('set.chatEndpoints.probing', lang),
-      // status.raw erscheint nur bei kind "unknown" — jeder andere Grund ist vollständig
-      // übersetzt; das Kit-eigene klartext (hart deutsch) geht nie in die UI.
-      statusTooltip: (status: EndpointStatus) => t(statusKindKey(status.kind), lang),
-      role: (role: EndpointRole) => t(roleKindKey(role), lang,
-        { 0: role.kind === 'standby' ? String(role.position) : '' }),
-      warnings: (warnings: EndpointWarning[]) => warnings.map((w) => t(warnRuleKey(w.rule), lang)).join(' · '),
-      presetTooltip: (preset: EndpointPreset) =>
-        t('set.chatEndpoints.presetTooltip', lang, { 0: preset.label, 1: preset.url }),
-      presetLabel: (preset: EndpointPreset) => t('set.chatEndpoints.addPreset', lang, { 0: preset.label }),
-      checkConnection: t('set.chatEndpoints.checkConnection', lang),
-      saveFailed: t('set.chatEndpoints.saveFailed', lang),
-    };
-  }
-
   /** Globales Modell: gilt, wenn der aktive Endpunkt keinen Override trägt. Nutzt
    *  denselben Picker wie das Override je Endpunkt-Zeile (resolveModelChoice +
    *  renderModelPicker) — ein Dropdown aus der Liste des AKTIVEN Endpunkts, sobald
@@ -801,7 +682,7 @@ export class KuroSettingsTab extends PluginSettingTab {
     // zweite Wahrheit, die nichts mehr bewirkt.
     if (findEndpointManager(this.app) !== null) { setting.setDesc(t('src.modelManaged', lang)); return; }
 
-    void this._activeModelChoiceInputs().then(({ models, reachable }) => {
+    void this.plugin.llm.models().then(({ models, reachable }) => {
       const choice = resolveModelChoice({ reachable, models, current: s.chatModel });
       renderModelPicker({
         setting,
@@ -812,16 +693,11 @@ export class KuroSettingsTab extends PluginSettingTab {
         hintAs: 'tooltip',
         savedSuffix: t('set.model.saved', lang),
         refreshTooltip: t('set.chatModel.refresh', lang),
-        onPick: (v) => { s.chatModel = v; void this._persistOnly(); },
+        // Die Auflösung der lokalen Liste merkt sich das Modell: nach einer Wahl neu auflösen.
+        onPick: (v) => { s.chatModel = v; this.plugin.llm.invalidate(); void this._persistOnly(); },
         onRefresh: () => { this._refreshUi(); },
       });
     });
-  }
-
-  private async _activeModelChoiceInputs(): Promise<{ models: string[]; reachable: boolean }> {
-    const active = await this.plugin.endpointResolver.resolve();
-    if (!active) return { models: [], reachable: false };
-    return { models: await this.plugin.clientFor(active).listModels(), reachable: true };
   }
 
   /* ── §13 Merkzettel ───────────────────────────────────── */

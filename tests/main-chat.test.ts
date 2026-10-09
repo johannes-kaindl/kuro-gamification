@@ -2,50 +2,63 @@
    Zusammenspiel der Chat-Bausteine, wie askKuro() es herstellt.
    Der onload-Pfad selbst ist in main-onload.test.ts abgedeckt.
    ========================================================== */
-import { ChatSession } from '../src/llm/ChatSession';
-import { createChatClient, type SseTransport } from '../src/vendor/kit-obsidian/chat-client';
-import { streamKuro, type KuroChatConfig } from '../src/llm/kuroChat';
 import { addNote, extractNoteFromMessage, MAX_NOTES } from '../src/llm/kuroNotes';
 import { buildMessages, resolvePersona } from '../src/llm/kuroPrompt';
 import { buildContext } from '../src/llm/kuroContext';
+import { ChatSession } from '../src/llm/ChatSession';
 import { DEFAULT_SETTINGS } from '../src/types';
-import type { ClockPort } from '../src/vendor/kit-obsidian/clock';
+import { makePlugin, recordingTransport, sse, useTransport } from './helpers/connection';
+import type { SseTransport } from '../src/vendor/kit-obsidian/chat-client';
 
-const nodeClock: ClockPort = {
-  now: () => Date.now(),
-  setTimeout: (fn, ms) => setTimeout(fn, ms) as unknown as number,
-  clearTimeout: (id) => clearTimeout(id as unknown as NodeJS.Timeout),
-};
+async function plugin(transport: SseTransport) {
+  const p = await makePlugin();
+  p.chatSession = new ChatSession();
+  p.logger = { error: () => {}, info: () => {} };
+  useTransport(p, transport);
+  p.data.settings.chatEndpoints = [{ url: 'http://x' }];
+  return p;
+}
 
-const CFG: KuroChatConfig = { endpoint: { url: 'http://x', apiKey: '' }, model: 'm', params: {} };
-
-const sse = (t: string): string =>
-  `data: ${JSON.stringify({ choices: [{ delta: { content: t } }] })}\n\n`;
-
-describe('chat round trip', () => {
+describe('chat round trip (askKuro)', () => {
   it('records question and answer in the session', async () => {
-    const session = new ChatSession();
-    const transport: SseTransport = {
-      async postStream(_u, _b, _h, onChunk) { onChunk(sse('Antwort')); return 200; },
-    };
-    session.append({ role: 'user', text: 'Frage' });
-    session.busy = true;
-    const out = await streamKuro(createChatClient({ transport, clock: nodeClock }),
-      CFG, session.historyForPrompt(), () => {}, new AbortController().signal);
-    session.busy = false;
-    if (out.ok) session.append({ role: 'assistant', text: out.content });
-    expect(session.entries.map((e) => e.text)).toEqual(['Frage', 'Antwort']);
+    const p = await plugin(recordingTransport([sse('Antwort')]).transport);
+    await p.askKuro('Frage');
+    expect(p.chatSession.entries.map((e: { text: string }) => e.text)).toEqual(['Frage', 'Antwort']);
+    expect(p.chatSession.busy).toBe(false);
   });
 
   it('records an error line that stays out of the prompt history', async () => {
-    const session = new ChatSession();
-    const transport: SseTransport = { async postStream() { throw new Error('refused'); } };
-    session.append({ role: 'user', text: 'Frage' });
-    const out = await streamKuro(createChatClient({ transport, clock: nodeClock }),
-      CFG, session.historyForPrompt(), () => {}, new AbortController().signal);
-    if (!out.ok) session.append({ role: 'error', text: 'Fehler', detail: out.detail });
-    expect(session.entries).toHaveLength(2);
-    expect(session.historyForPrompt()).toHaveLength(1);
+    const p = await plugin({ async postStream() { throw new Error('refused'); } });
+    await p.askKuro('Frage');
+    expect(p.chatSession.entries).toHaveLength(2);
+    expect(p.chatSession.entries[1]).toMatchObject({ role: 'error' });
+    expect(p.chatSession.historyForPrompt()).toHaveLength(1);
+  });
+
+  it('ohne Endpunkt: Einrichtungs-Fehlerzeile mit dem Grund des Managers', async () => {
+    const p = await makePlugin();
+    p.chatSession = new ChatSession();
+    p.logger = { error: () => {}, info: () => {} };
+    useTransport(p, recordingTransport([]).transport);
+    await p.askKuro('Frage');
+    expect(p.chatSession.entries[1]).toMatchObject({ role: 'error', text: expect.stringContaining('No endpoint') });
+  });
+
+  it('Fristfehler nennen die Sekunden aus dem Kit-Detail statt einer festen Zahl', async () => {
+    const p = await makePlugin();
+    p.chatSession = new ChatSession();
+    p.logger = { error: () => {}, info: () => {} };
+    p.data.settings.chatEndpoints = [{ url: 'http://x' }];
+    const silent: SseTransport = {
+      postStream: (_u, _b, _h, _c, signal) => new Promise<number>((_res, reject) => {
+        signal.addEventListener('abort', () => { const e = new Error('aborted'); e.name = 'AbortError'; reject(e); }, { once: true });
+      }),
+    };
+    // Kurze Frist für den ersten Chunk, sonst wartete der Test 600 s.
+    useTransport(p, silent, { timeouts: { firstChunkMs: 1500 } });
+    await p.askKuro('Frage');
+    expect(p.chatSession.entries[1].text).toContain('for 2 seconds');
+    expect(p.chatSession.entries[1].text).not.toContain('120');
   });
 
   it('sends the previous turns but not the current question twice', () => {

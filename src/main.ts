@@ -2,7 +2,7 @@
    Kuro Gamification — main plugin entrypoint.
    ========================================================== */
 import {
-  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice, requestUrl,
+  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice,
 } from 'obsidian';
 
 import {
@@ -34,25 +34,19 @@ import { fmtNum } from './utils/progressBar';
 import { t, detectLang } from './i18n';
 import { defaultHabits } from './data/default-habits';
 import { ChatSession } from './llm/ChatSession';
-import { buildKuroParams, streamKuro } from './llm/kuroChat';
-import { MODE as CHAT_MODE } from './llm/requestSettings';
-import { deviationNotice } from './llm/requestText';
-import { createBackendProbe } from './llm/backendProbe';
-import { createRequestSession, type RequestSession } from './vendor/kit-obsidian/request-session';
-import type { RequestSectionState } from './vendor/kit-obsidian/request-section';
-import { checkResponse, thinkingFor, type BackendId, type RequestSettings, type ResponseFacts } from './vendor/kit/sampling-profiles';
-import type { CapabilityFetch } from './vendor/kit/capabilities';
-import { createChatClient, type ChatClient } from './vendor/kit-obsidian/chat-client';
-import { requestUrlTransport, xhrSseTransport } from './vendor/kit-obsidian/chat-transport';
+import { kuroConnectionOptions } from './llm/kuroConnection';
+import { createLlmConnection, type LlmConnection } from './vendor/kit-obsidian/llm-connection';
 import { buildContext } from './llm/kuroContext';
 import { buildMessages, resolvePersona } from './llm/kuroPrompt';
 import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
-import { KuroLlmClient, type KuroLlmHttpJson } from './llm/KuroLlmClient';
-import { ChatEndpointResolver } from './llm/ChatEndpointResolver';
-import { effectiveModel, type EndpointConfig } from './vendor/kit/endpoint_config';
-import { resolveEndpointSource, type EndpointSourceResult } from './vendor/kit/endpoint-source';
 import { findEndpointManager, onEndpointManagerChanged } from './vendor/kit-obsidian/endpoint-source';
 import { activePersona } from './utils/packLibrary';
+
+/** Die Frist steht nur im Fehlertext des Kit-Clients („no data for 600s“) — von dort lesen statt eine Zahl zu raten. */
+function secondsOf(detail: string): number {
+  const m = /no data for (\d+(?:\.\d+)?)s/.exec(detail);
+  return m ? Math.round(Number(m[1])) : 600;
+}
 
 export default class KuroPlugin extends Plugin {
   // public so views/modals/settings can read/mutate
@@ -65,12 +59,9 @@ export default class KuroPlugin extends Plugin {
   public chatSession = new ChatSession();
   /** Rohtext der heutigen Daily — nur gefüllt, wenn der Chat aktiv ist. */
   public lastDailyText: string | null = null;
-  /** Erster erreichbarer Eintrag aus chatEndpoints, gecacht — invalidate() nach jeder
-   *  Listen-Änderung (buildEndpointList's reconnect-Callback). */
-  public endpointResolver = new ChatEndpointResolver(
-    () => this.data.settings.chatEndpoints,
-    (cfg) => this.clientFor(cfg).ping(),
-  );
+  /** Die ganze LLM-Anbindung: Endpunkt-Quelle (Manager oder lokale Liste mit Schlüsselbund), Modellliste,
+   *  Anfrage-Parameter, Client, Prüfung der Antwort und die Settings-Abschnitte (obsidian-kit 0.51.2). */
+  public llm!: LlmConnection;
 
   private statusBarEl: HTMLElement | null = null;
   private debouncedRefresh!: () => void;
@@ -80,43 +71,7 @@ export default class KuroPlugin extends Plugin {
   private xpEventPending = false;
   private debouncedSave!: () => void;
   private midnightTimeout: number | null = null;
-  /** Der Kit-Client merkt sich je Instanz, dass der Endpunkt den Stream verweigert hat — nach
-   *  einem Endpunktwechsel also neu erzeugen (MIGRATION 0.42.0 Punkt 2). */
-  private chatClient: ChatClient | null = null;
-  private chatClientKey = '';
   private chatAbort: AbortController | null = null;
-
-  /** Letztes Ergebnis der Endpunkt-Auflösung (Familie, Backend, gesendetes Modell) — für den
-   *  Abschnitt „Anfrage“ im Settings-Tab. Vor der ersten Frage leer. */
-  private lastChatSource: EndpointSourceResult | null = null;
-  /** Letzte Anfrage und Abweichungen der laufenden Sitzung (nicht gespeichert). */
-  readonly requestSession: RequestSession = createRequestSession({
-    message: (d) => deviationNotice(d, this.data.settings.language),
-    onChange: () => { /* Der Tab liest die Sitzung beim Zeichnen; kein eigener Redraw nötig. */ },
-  });
-
-  /** `throw: false`, damit ein 401/403 als Nicht-2xx durchkommt statt als Ausnahme — sonst ginge
-   *  ein Endpunkt mit Schlüssel als „kein Endpunkt“ unter (REGISTRY: Anfrage-Profile). */
-  private readonly capabilityFetch: CapabilityFetch = async (req) => {
-    const res = await requestUrl({
-      url: req.url, method: req.method ?? 'GET', headers: req.headers, body: req.body, throw: false,
-    });
-    if (res.status < 200 || res.status >= 300) return null;
-    try { return { json: JSON.parse(res.text) as unknown }; } catch { return null; }
-  };
-  private readonly backendProbe = createBackendProbe(this.capabilityFetch);
-
-  private readonly httpJson: KuroLlmHttpJson = async (url, headers) => {
-    const res = await requestUrl({ url, headers, throw: false });
-    return { status: res.status, json: res.json };
-  };
-
-  /** EIN Client je Endpunkt-Eintrag trägt sowohl die Erreichbarkeits-Probe als auch die
-   *  Modell-Liste — Status-Icon und Modell-Dropdown können so nie über verschiedene
-   *  Einträge auseinanderlaufen (Kit-Vorgabe, s. EndpointListOptions.clientFor). */
-  clientFor(cfg: EndpointConfig): KuroLlmClient {
-    return new KuroLlmClient(cfg, this.httpJson);
-  }
 
   async onload(): Promise<void> {
     this.dataStore = new DataStore(this);
@@ -129,6 +84,13 @@ export default class KuroPlugin extends Plugin {
       new Notice(t('request.dropped', lang, { n: this.dataStore.lastRequestDropped.length }));
       console.warn('[kuro-gamification] ungültige request-Einstellungen verworfen:', this.dataStore.lastRequestDropped);
     }
+
+    this.llm = createLlmConnection(kuroConnectionOptions({
+      app: this.app,
+      pluginId: this.manifest.id,
+      settings: () => this.data.settings,
+      persist: () => this.persist(),
+    }));
 
     // Must precede regenFreezeTokensIfNeeded(): on a fresh vault the regen
     // branch fires (lastRegen '' → current month) and calls debouncedSave().
@@ -166,7 +128,7 @@ export default class KuroPlugin extends Plugin {
       // Erst nach dem Layout abonnieren: lädt der Manager nach uns, bliebe ein früheres Abo
       // für die ganze Sitzung wirkungslos (Kit-Hinweis an onEndpointManagerChanged).
       this.managerUnsubscribe = onEndpointManagerChanged(this.app, () => {
-        this.endpointResolver.invalidate();
+        this.llm.invalidate();
         this.syncChat();
       });
       if (!this.data.onboardingShown) new WelcomeModal(this.app, this).open();
@@ -416,64 +378,41 @@ export default class KuroPlugin extends Plugin {
       question,
     });
 
-    const active = await this.resolveChatEndpoint();
-    if (active === null) {
-      this.chatSession.busy = false;
-      this.chatSession.streaming = null;
-      this.chatSession.append({ role: 'error', text: t('chat.err.noEndpoint', lang) });
-      this.syncChat();
-      return;
-    }
-
-    // Sampling-Profile (Modus companion): die Werte kommen aus der Kit-Tabelle, nie aus dem
-    // Code. Gesendet wird das Modell in der Schreibweise, die der Endpunkt kennt (`sentModel`).
-    const { source } = active;
-    const level = thinkingFor(s.request, CHAT_MODE);
-    const { params } = buildKuroParams({
-      family: source.family, backend: source.backend, thinking: level,
-      overrides: s.request.overrides[CHAT_MODE]?.[source.family ?? 'unknown'] ?? {},
-    });
-    this.requestSession.recordRequest(params);
-
     this.chatAbort = new AbortController();
-    const outcome = await streamKuro(
-      this.chatClientFor(active.config),
-      { endpoint: active.config, model: source.sentModel, params },
-      messages,
-      (token) => {
-        for (const view of this.chatViews()) view.appendChatToken(token);
-        this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
+    const result = await this.llm.complete(
+      { messages },
+      {
+        // Reasoning wird bewusst nicht angezeigt: kein `onReasoning`.
+        onToken: (token) => {
+          for (const view of this.chatViews()) view.appendChatToken(token);
+          this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
+        },
+        signal: this.chatAbort.signal,
       },
-      this.chatAbort.signal,
     );
 
     this.chatSession.busy = false;
     this.chatSession.streaming = null;
     this.chatAbort = null;
 
-    // Nur eine echte Server-Antwort ist prüfbar; Abbruch und Netzfehler haben keinen Status.
-    if (outcome.ok || outcome.status !== undefined) {
-      const facts: ResponseFacts = outcome.ok
-        ? { status: 200, finishReason: outcome.finishReason ?? null, content: outcome.content, reasoning: outcome.reasoning, ...(outcome.model !== undefined ? { responseModel: outcome.model } : {}) }
-        : { status: outcome.status ?? 0, errorText: outcome.body ?? outcome.detail, finishReason: null, content: outcome.partial, reasoning: outcome.reasoning };
-      this.requestSession.report(checkResponse({ family: source.family, thinking: level }, facts));
-    }
-
-    if (outcome.ok) {
-      this.chatSession.append({ role: 'assistant', text: outcome.content });
+    if (result.ok) {
+      this.chatSession.append({ role: 'assistant', text: result.content });
       // Gültig, aber am Token-Limit abgeschnitten: sagen, statt es wie eine fertige Antwort stehen zu lassen.
-      if (outcome.truncated) this.chatSession.append({ role: 'error', text: t('chat.warn.truncated', lang) });
+      if (result.truncated) this.chatSession.append({ role: 'error', text: t('chat.warn.truncated', lang) });
+    } else if (result.kind === 'no-endpoint') {
+      this.chatSession.append({ role: 'error', text: t('chat.err.noEndpoint', lang), detail: result.detail });
+      this.logger.error('chat endpoint: none', result.detail);
     } else {
       // Teiltext bleibt stehen, statt beim Fehler zu verschwinden.
-      if (outcome.partial !== '') {
-        this.chatSession.append({ role: 'assistant', text: outcome.partial });
+      if (result.partial !== '') {
+        this.chatSession.append({ role: 'assistant', text: result.partial });
       }
       this.chatSession.append({
         role: 'error',
-        text: t(`chat.err.${outcome.kind}`, lang, { seconds: 120 }),
-        detail: outcome.detail,
+        text: t(`chat.err.${result.kind}`, lang, { seconds: secondsOf(result.detail) }),
+        detail: result.detail,
       });
-      this.logger.error('chat stream failed', outcome.kind, outcome.detail);
+      this.logger.error('chat stream failed', result.kind, result.detail);
     }
     this.syncChat();
   }
@@ -482,74 +421,6 @@ export default class KuroPlugin extends Plugin {
    *  lokale Zeile? Ohne beides zeigt der Chat-Tab den Einrichtungs-Hinweis. */
   hasChatEndpointSource(): boolean {
     return findEndpointManager(this.app) !== null || this.data.settings.chatEndpoints.length > 0;
-  }
-
-  /** EINZIGER Weg zum Chat-Endpunkt. Ist der LLM Endpoint Manager installiert, entscheidet er
-   *  (bei JEDEM Aufruf frisch gelesen, nie gecacht — das Plugin kann jederzeit deaktiviert
-   *  werden) und die lokale Liste wird bewusst NICHT befragt: eine Wahrheit, eine Meldung.
-   *  Ohne Manager läuft die lokale Fallback-Liste wie bisher, gecacht im Resolver. */
-  async resolveChatEndpoint(): Promise<{ config: EndpointConfig; model: string; source: EndpointSourceResult } | null> {
-    const s = this.data.settings;
-    const manager = findEndpointManager(this.app);
-    const backendOf = (cfg: EndpointConfig): Promise<BackendId | null> =>
-      this.backendProbe(cfg.url, effectiveModel(cfg, s.chatModel));
-    if (manager === null) {
-      // Die lokale Quelle bleibt der Resolver (gecacht, `invalidate()` nach jeder Listen-
-      // Änderung); sein Ergebnis läuft durch `resolveEndpointSource`, damit auch hier Familie,
-      // Backend und `sentModel` ankommen. Der Ping ist schon im Resolver geschehen.
-      const local = await this.endpointResolver.resolve();
-      if (local === null) return null;
-      const r = await resolveEndpointSource({
-        manager: null,
-        local: [local],
-        localModel: s.chatModel,
-        capability: 'chat',
-        caller: 'kuro-gamification',
-        backendOf,
-      }, async () => true);
-      this.lastChatSource = r;
-      return { config: local, model: effectiveModel(local, s.chatModel), source: r };
-    }
-    const r = await resolveEndpointSource({
-      manager,
-      local: s.chatEndpoints,
-      localModel: s.chatModel,
-      capability: 'chat',
-      choice: s.chatChoice,
-      caller: 'kuro-gamification',
-      backendOf,
-    }, (cfg) => this.clientFor(cfg).ping());
-    this.lastChatSource = r;
-    if (r.config === null) {
-      this.logger.error('chat endpoint: manager gave none', r.reason ?? 'unknown');
-      return null;
-    }
-    return { config: r.config, model: r.model, source: r };
-  }
-
-  /** Für `buildRequestSection` im Settings-Tab. */
-  requestSectionState(): RequestSectionState {
-    const s = this.lastChatSource;
-    return {
-      family: s?.family ?? null, familySource: s?.familySource ?? 'none',
-      backend: s?.backend ?? 'unknown', backendSource: s?.backendSource ?? 'none',
-      model: s?.model ?? '', sentModel: s?.sentModel ?? '',
-      ...(s?.defaultModel !== undefined ? { defaultModel: s.defaultModel } : {}),
-    };
-  }
-
-  async saveRequestSettings(next: RequestSettings): Promise<void> {
-    this.data.settings.request = next;
-    await this.persist();
-  }
-
-  private chatClientFor(cfg: EndpointConfig): ChatClient {
-    const key = `${cfg.url}\n${cfg.apiKey ?? ''}`;
-    if (this.chatClient === null || key !== this.chatClientKey) {
-      this.chatClient = createChatClient({ transport: xhrSseTransport, fallbackTransport: requestUrlTransport });
-      this.chatClientKey = key;
-    }
-    return this.chatClient;
   }
 
   abortChat(): void { this.chatAbort?.abort(); }

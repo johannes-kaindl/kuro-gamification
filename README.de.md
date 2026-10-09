@@ -199,6 +199,8 @@ Server wie [LM Studio](https://lmstudio.ai) (`http://localhost:1234`) oder
 
 Ist das Plugin **LLM Endpoint Manager** installiert, holt sich der Chat Endpunkte und Modell von dort, und die Einstellungen zeigen statt der Liste dessen Endpunktwahl.
 
+Ein API-Schlüssel, den du für einen lokalen Endpunkt einträgst, liegt im **Obsidian-Schlüsselbund**, nicht in der `data.json` des Plugins. Bevor eine Frage rausgeht, ersetzt das Plugin Schlüssel, Tokens, `Bearer`-Header und Private-Key-Blöcke in deinem Text durch Platzhalter; in der Antwort siehst du wieder dein Original. Auf die ersten Daten wartet der Chat bis zu 10 Minuten (ein Modell, das noch lädt), danach bis zu 2 Minuten Stille. Bilder, ausführbare Codeblöcke und HTML in einer Antwort werden als einfacher Text gezeigt, nicht gerendert.
+
 **Was wann gesendet wird.** Vor deiner ersten Frage gar nichts. Mit jeder Frage gehen mit:
 
 | Immer | Je nach `Aus der heutigen Notiz` |

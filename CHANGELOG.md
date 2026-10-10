@@ -5,6 +5,22 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- **Streak: the running day no longer counts as a gap.** Until midnight today is neutral, so yesterday's streak no longer reads 0 when today's note is still empty.
+- **Streak: freeze tokens are actually spent.** Each gap now costs exactly one token (tokens reset to the monthly allowance on the 1st; unused ones do not carry over). **FREEZE-TOKENS now shows what is left this month.**
+- **Streak bonus is credited per streak day and kept when the streak ends.** Until now the bonus was recomputed from the current streak only, so it vanished with the streak. The bonus of an unbroken streak is unchanged (7 days = 70 XP, 30 days = 600 XP).
+- **Source panel: the daily-note pomodoro bonus shows its real rule** ("counts · 5 XP when "pomodoros" reaches 4 in a day") instead of raw `{rate}` and `{count}` placeholders. With TaskNotes storing sessions in the daily note and the per-session rate at 0, work sessions and breaks show a hint instead of an error row.
+
+### Added
+
+- **Working days for streaks.** Choose the weekdays you work (Settings → Streaks, all seven by default). A day off without a qualifying note is neutral: it does not count, does not break the streak and costs no token. A daily-note property (**Day-off property**, off by default) with a list of values (`Wochenende, Feiertag, Frei`) marks single days the same way. A qualifying note always counts.
+
+### Changed
+
+- **Total XP rises once** by the streak bonus of streaks that have already ended; streaks longer than 365 days now count in full.
+- **In rare cases the bonus can drop:** if a calendar month has more gaps than freeze tokens, the tokens now cover the oldest gaps first (they used to cover the newest), which can end an old streak earlier than before.
+
 ## [1.9.0] — 2026-10-09
 
 ### Changed

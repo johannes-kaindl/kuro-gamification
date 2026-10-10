@@ -106,7 +106,7 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 | ✅ Tasks & pomodoro | XP for completed tasks, work sessions and breaks; how a task is recognised; source panel |
 | 🎯 Habits | Add/edit/remove your own habit list (frontmatter key + label + XP) |
 | 📅 Weekly | Review/planning frontmatter keys + XP |
-| 🔥 Streaks | Day-qualification threshold, monthly freeze tokens |
+| 🔥 Streaks | Day-qualification threshold, monthly freeze tokens, working weekdays, day-off property |
 | 📊 Levels & loot | Loot enable/disable, options per drop |
 | 📜 Lore | Lore reveal enable/disable |
 | 📚 Packs | Install/switch/delete loot·lore packs; per-unit export/copy/reset to factory |
@@ -127,7 +127,8 @@ defaults match TaskNotes' own defaults, but they are yours to change — if your
 
 If [TaskNotes](https://github.com/callumalpass/tasknotes) is installed and configured
 differently, Kuro offers to adopt its configuration with one click. Pomodoro sessions are read
-from TaskNotes directly, wherever it keeps them.
+from TaskNotes directly when it keeps its history in its own storage. If it writes them into the daily
+note instead, the daily-note pomodoro bonus counts them and the source panel says so.
 
 **The source panel tells you whether any of it works.** It sits in the same section, always
 visible, and shows one line per source: counting (with the rate), readable but sitting at rate
@@ -228,7 +229,7 @@ therapist.
 The plugin watches `vault.modify` events (800 ms debounced) on your daily/weekly notes. On each trigger it re-reads the relevant notes' checkboxes and frontmatter, and pure-function engines compute the result from scratch — XP totals, level, streak state, and (once a new level is reached) a deterministic loot drop:
 
 - **`XpEngine`** sums XP from ticked checkboxes, completion-percentage bonuses, configured habits, and the weekly review/planning bonus, then derives the level from the linear-quadratic curve.
-- **`StreakEngine`** checks whether "today" met the day-qualification threshold, consumes a freeze token on a missed day instead of resetting, and applies streak-tier bonuses (3/7/14/30 days).
+- **`StreakEngine`** replays your daily notes forward from the first qualifying day: the running day is neutral, a freeze token bridges each gap once, days off are neutral, and streak-tier bonuses (3/7/14/30 days) are credited per day and kept when a streak ends.
 - **`LootEngine`** picks a deterministic reward per level-up above 1 (seeded by level + save count, so a drop doesn't change on reload) from a 5-tier pool that's user-replaceable via **packs**.
 - **`LoreEngine`** reveals the narrative fragment tied to the new level, from whichever lore pack is active.
 

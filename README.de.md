@@ -106,7 +106,7 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 | ✅ Aufgaben & Pomodoro | XP für erledigte Aufgaben, Arbeitssessions und Pausen; woran eine Aufgabe erkannt wird; Herkunfts-Panel |
 | 🎯 Habits | Eigene Habit-Liste hinzufügen/bearbeiten/entfernen (Frontmatter-Key + Label + XP) |
 | 📅 Weekly | Review-/Planning-Frontmatter-Keys + XP |
-| 🔥 Streaks | Tagesqualifikations-Schwelle, monatliche Freeze-Tokens |
+| 🔥 Streaks | Tagesqualifikations-Schwelle, monatliche Freeze-Tokens, Arbeitstage, Frei-Eigenschaft |
 | 📊 Level & Loot | Loot an/aus, Optionen pro Drop |
 | 📜 Lore | Lore-Reveal an/aus |
 | 📚 Packs | Loot-/Lore-Packs installieren/wechseln/löschen; pro Einheit export/kopieren/auf Werkszustand zurücksetzen |
@@ -127,8 +127,9 @@ als einen Wert). Voreingestellt sind TaskNotes' eigene Standardwerte, aber sie g
 Wer `type: 💪 Aufgabe` mit `status: 6_erledigt_✅` fährt, trägt das dort ein.
 
 Ist [TaskNotes](https://github.com/callumalpass/tasknotes) installiert und anders konfiguriert,
-bietet Kuro die Übernahme per Klick an. Pomodoro-Sessions liest Kuro direkt aus TaskNotes —
-unabhängig davon, wo es sie ablegt.
+bietet Kuro die Übernahme per Klick an. Pomodoro-Sessions liest Kuro direkt aus TaskNotes,
+wenn es seine Historie im eigenen Speicher führt. Schreibt es sie stattdessen in die Tagesnotiz, zählt
+der Pomodoro-Bonus der Tagesnotiz sie, und das Herkunfts-Panel sagt das.
 
 **Ob das alles wirkt, sagt das Herkunfts-Panel.** Es steht im selben Abschnitt, immer sichtbar,
 mit einer Zeile je Quelle: zählt (mit Satz), lesbar aber auf Satz 0, noch nichts gefunden, oder
@@ -231,7 +232,7 @@ und nicht den Therapeuten zu spielen.
 Das Plugin beobachtet `vault.modify`-Events (800 ms debounced) auf deinen Daily-/Weekly-Notes. Bei jedem Trigger liest es die relevanten Notes (Checkboxen und Frontmatter) neu ein, und pure-function Engines berechnen das Ergebnis komplett neu — XP-Summe, Level, Streak-Status und (bei neuem Level) einen deterministischen Loot-Drop:
 
 - **`XpEngine`** summiert XP aus abgehakten Checkboxen, Abschluss-Prozent-Boni, konfigurierten Habits und dem Weekly-Review/Planning-Bonus, und leitet daraus über die linear-quadratische XP-Kurve das Level ab.
-- **`StreakEngine`** prüft, ob „heute" die Tagesqualifikations-Schwelle erreicht hat, verbraucht bei einem verpassten Tag ein Freeze-Token statt zurückzusetzen, und wendet Streak-Tier-Boni an (Tag 3/7/14/30).
+- **`StreakEngine`** spielt deine Tagesnotizen vom ersten qualifizierenden Tag an vorwärts nach: Der laufende Tag ist neutral, ein Freeze-Token überbrückt jede Lücke genau einmal, freie Tage sind neutral, und die Streak-Boni (Tag 3/7/14/30) werden je Tag gutgeschrieben und bleiben, wenn ein Streak endet.
 - **`LootEngine`** wählt pro Level-up über 1 eine deterministische Belohnung (geseedet aus Level + Save-Zähler, sodass sich ein Drop beim Neuladen nicht ändert) aus einem 5-Tier-Pool, der über **Packs** ersetzbar ist.
 - **`LoreEngine`** enthüllt das Narrativ-Fragment zum neuen Level, aus dem jeweils aktiven Lore-Pack.
 

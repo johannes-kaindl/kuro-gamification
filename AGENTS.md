@@ -186,6 +186,7 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
     Rückmeldung aus; die Zahl kommt aus gelesenem Zustand. Deshalb kosten doppelte Ereignisse
     nichts und Idempotenz entsteht nicht als Problem. Ein Ereignis-Journal in `data.json` wäre ein
     zweiter, nicht rekonstruierbarer Zustand — nicht einführen.
+  - **Streak wird vorwärts nachgespielt, nicht gespeichert.** `StreakEngine.compute` läuft vom frühesten qualifizierenden Tag bis heute (Kalenderschritt, kein Fenster): der laufende Tag ist neutral, ein Freeze-Token überbrückt je Lücke einmal (Reset am Monatsersten), der Bonus ist `bonusFor(L) − bonusFor(L−1)` je Streak-Tag und bleibt nach dem Ende. `data.freezeTokens` und `regenFreezeTokensIfNeeded` sind nur noch Altbestand; die Anzeige liest `tokensLeft`. Tage ohne Arbeit (sieben `streakDay*`-Schalter, `streakSkipKey`/`streakSkipValues`) sind neutral und machen nie einen Tag aktiv. Verbrauchte Tokens oder gutgeschriebene Boni in `data.json` zu persistieren wäre ein zweiter, nicht rekonstruierbarer Zustand — nicht einführen.
 - **CRT/Phosphor-Optik** (`docs/aesthetic-css.{en,de}.md`) wird **nicht** mit dem Plugin
   gebündelt — der User installiert es als Vault-CSS-Snippet. Bewusst als Markdown-Codeblock
   gepflegt, nicht als getrackte `.css`-Datei: eine `assets/kuro-gamification.css` wurde vom

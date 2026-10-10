@@ -72,7 +72,13 @@ A day "qualifies" for your streak when you've ticked ≥ 50 % of the day's check
 - **14–29 days:** +15 XP/day
 - **30+ days:** +20 XP/day
 
-**Freeze tokens** (default: 2 per month) absorb gap days. If you miss a day, the streak continues — as long as a token is available. Tokens regenerate automatically on the 1st of each month.
+**Freeze tokens** (default: 2 per month) absorb gap days. If you miss a day, the streak continues — as long as a token is available. Each gap costs exactly one token, however often Kuro recalculates. Tokens reset to the monthly allowance on the 1st of each month (unused ones do not carry over), and the status shows what is left this month.
+
+**Today is never a gap.** The running day is neutral until midnight: it does not break the streak and does not cost a token. It counts as soon as it qualifies.
+
+**The bonus is credited per streak day and stays.** Each day of the streak adds the difference to the next tier (so an unbroken streak of 7 days adds up to 70 XP, 30 days to 600 XP). When a streak ends, the bonus it earned remains in your total.
+
+**Working days.** Under Settings → 🔥 Streaks you choose the weekdays you work (all seven by default). A day off without a qualifying note is neutral: it does not count, does not break the streak and costs no token. You can also mark single days in the daily note: set a property name under "Day-off property" (for example `tagestyp`) and list the values that make a day neutral (default `Wochenende, Feiertag, Frei`). The property only ever makes a day neutral — a day that qualifies still counts.
 
 > [!tip]+ Streak tracking bothering you?
 > Settings → 🔥 Streaks → "Streak tracking active" → off. Streaks disappear completely from the sidebar: no bonus, no pressure.

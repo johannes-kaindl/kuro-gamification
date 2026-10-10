@@ -70,7 +70,13 @@ Ein Tag „qualifiziert" für deinen Streak, wenn du ≥ 50 % der Checkboxen in 
 - **14-29 Tage:** +15 XP/Tag
 - **30+ Tage:** +20 XP/Tag
 
-**Freeze-Tokens** (Default: 2 pro Monat) absorbieren Lücken-Tage. Vergisst du einen Tag, läuft der Streak weiter — solange ein Token verfügbar ist. Tokens regenerieren sich am 1. jedes Monats automatisch.
+**Freeze-Tokens** (Default: 2 pro Monat) absorbieren Lücken-Tage. Vergisst du einen Tag, läuft der Streak weiter — solange ein Token verfügbar ist. Jede Lücke kostet genau ein Token, egal wie oft Kuro neu rechnet. Am 1. jedes Monats stehen wieder alle Tokens bereit (übrige verfallen), und die Statusanzeige zeigt, was im laufenden Monat noch übrig ist.
+
+**Heute ist nie eine Lücke.** Der laufende Tag ist bis Mitternacht neutral: er bricht den Streak nicht und kostet kein Token. Er zählt, sobald er qualifiziert.
+
+**Der Bonus wird je Streak-Tag gutgeschrieben und bleibt.** Jeder Tag des Streaks bringt die Differenz zur nächsten Stufe (ein lückenloser Streak von 7 Tagen ergibt zusammen 70 XP, 30 Tage 600 XP). Endet ein Streak, bleibt der verdiente Bonus in deiner Gesamtsumme.
+
+**Arbeitstage.** Unter Settings → 🔥 Streaks wählst du die Wochentage, an denen du arbeitest (standardmäßig alle sieben). Ein freier Tag ohne qualifizierende Notiz ist neutral: er zählt nicht, bricht den Streak nicht und kostet kein Token. Einzelne Tage kannst du auch in der Tagesnotiz markieren: Trage unter „Frei-Eigenschaft“ den Namen einer Eigenschaft ein (z. B. `tagestyp`) und die Werte, die einen Tag neutral machen (Standard `Wochenende, Feiertag, Frei`). Die Eigenschaft macht einen Tag immer nur neutral — ein qualifizierender Tag zählt trotzdem.
 
 > [!tip]+ Streak-Tracking nervt dich?
 > Settings → 🔥 Streaks → „Streak-Tracking aktiv" → off. Streaks verschwinden komplett aus der Sidebar, kein Bonus mehr, kein Druck.

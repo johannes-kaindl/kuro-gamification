@@ -630,6 +630,78 @@ async function sektionKontextSync(cdp: Cdp): Promise<void> {
   );
 }
 
+async function sektionStreak(cdp: Cdp): Promise<void> {
+  // Eigener Tagesordner, damit weder das Fixture noch eine echte Tagesnotiz den Streak mitbestimmt.
+  // Gemessen wird der Fehler vom 10.10.: Ohne Notiz für heute war der Streak 0, obwohl gestern und
+  // vorgestern erledigt waren.
+  const lauf = await cdp.evaluate<{ streak: number; seite: string } | { fehler: string }>(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    const ordner = "smoke-streak";
+    const alt = p.data.settings.dailyFolder;
+    const adapter = app.vault.adapter;
+    const iso = (back) => {
+      const d = new Date(); d.setDate(d.getDate() - back);
+      const pad = (n) => String(n).padStart(2, "0");
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    };
+    try {
+      await app.vault.createFolder(ordner).catch(() => {});
+      await adapter.write(ordner + "/" + iso(1) + ".md", "- [x] a\\n- [x] b\\n");
+      await adapter.write(ordner + "/" + iso(2) + ".md", "- [x] a\\n- [x] b\\n");
+      p.data.settings.dailyFolder = ordner;
+      await p.refreshStatus(true);
+      await new Promise((r) => setTimeout(r, 500));
+      return { streak: p.data.lastSnapshot.streak, seite: ${VIEW_EL}?.textContent ?? "" };
+    } catch (e) {
+      return { fehler: String(e) };
+    } finally {
+      p.data.settings.dailyFolder = alt;
+      await adapter.rmdir(ordner, true).catch(() => {});
+      await p.refreshStatus(true);
+    }
+  `);
+  if ('fehler' in lauf) {
+    record('streak/laufender-tag-ist-keine-luecke', false, lauf.fehler);
+  } else {
+    record(
+      'streak/laufender-tag-ist-keine-luecke',
+      lauf.streak === 2 && /2 DAYS/.test(lauf.seite),
+      `lastSnapshot.streak = ${lauf.streak}, Seitenleiste zeigt „2 DAYS“: ${/2 DAYS/.test(lauf.seite)}`,
+    );
+  }
+
+  // Der Bug vom 12.08. sitzt in setControlValue (`default: return` speichert nichts) — deshalb über die Brücke.
+  const bruecke = await cdp.evaluate<{ ok: boolean; wert?: unknown }>(`
+    if (!app.setting) return { ok: false };
+    await app.setting.open();
+    await app.setting.openTabById(${JSON.stringify(PLUGIN_ID)});
+    await new Promise((r) => setTimeout(r, 500));
+    const tab = app.setting.activeTab;
+    if (!tab || typeof tab.setControlValue !== "function") return { ok: false };
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    const vorwert = p.data.settings.streakDaySat;
+    try {
+      await tab.setControlValue("streakDaySat", false);
+      await new Promise((r) => setTimeout(r, 300));
+      const wert = p.data.settings.streakDaySat;
+      const roh = JSON.parse(await app.vault.adapter.read(app.vault.configDir + "/plugins/${PLUGIN_ID}/data.json"));
+      return { ok: true, wert: [wert, roh.settings.streakDaySat] };
+    } finally {
+      await tab.setControlValue("streakDaySat", vorwert);
+    }
+  `);
+  if (!bruecke.ok) {
+    skipped('streak/arbeitstag-schalter-speichert', 'Settings-Tab bietet kein setControlValue');
+  } else {
+    const w = bruecke.wert as unknown[];
+    record(
+      'streak/arbeitstag-schalter-speichert',
+      w[0] === false && w[1] === false,
+      `setControlValue("streakDaySat", false) → Speicher ${JSON.stringify(w[0])}, data.json ${JSON.stringify(w[1])}`,
+    );
+  }
+}
+
 async function sektionManager(cdp: Cdp): Promise<void> {
   const fake = await startFakeChat();
   try {
@@ -1492,6 +1564,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 14 · Verbindung (Schlüsselbund, Schwärzung, Neutralisierung)');
     await sektionVerbindung(cdp);
+    console.log('');
+    console.log('── 15 · Streak (laufender Tag, Arbeitstage)');
+    await sektionStreak(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

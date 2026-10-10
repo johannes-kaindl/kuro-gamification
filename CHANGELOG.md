@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.10.0] — 2026-10-10
+
 ### Fixed
 
 - **Streak: the running day no longer counts as a gap.** Until midnight today is neutral, so yesterday's streak no longer reads 0 when today's note is still empty.

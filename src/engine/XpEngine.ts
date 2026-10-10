@@ -154,7 +154,7 @@ export class XpEngine {
       rows.push({
         source: 'Streak-Bonus',
         amount: inp.streakBonus,
-        reason: 'aktiver Streak',
+        reason: 'Streak-Tage',
       });
     }
 

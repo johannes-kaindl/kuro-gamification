@@ -154,6 +154,18 @@ export interface KuroSettings {
   streakQualifyThreshold: number;
   streakFreezeTokensPerMonth: number;
   streakBonus: KuroStreakBonusTier[];
+  /** Working days: an inactive weekday without a qualifying note is neutral (no gap). Seven booleans — a shared array would be one reference across merges. */
+  streakDayMon: boolean;
+  streakDayTue: boolean;
+  streakDayWed: boolean;
+  streakDayThu: boolean;
+  streakDayFri: boolean;
+  streakDaySat: boolean;
+  streakDaySun: boolean;
+  /** Daily-note frontmatter key that marks a day as neutral ('' = off). */
+  streakSkipKey: string;
+  /** Comma-separated values of that key which make the day neutral. */
+  streakSkipValues: string;
 
   /* Levels & loot */
   levels: KuroLevel[];
@@ -295,6 +307,15 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   streakQualifyThreshold: 0.5,
   streakFreezeTokensPerMonth: 2,
   streakBonus: DEFAULT_STREAK_BONUS,
+  streakDayMon: true,
+  streakDayTue: true,
+  streakDayWed: true,
+  streakDayThu: true,
+  streakDayFri: true,
+  streakDaySat: true,
+  streakDaySun: true,
+  streakSkipKey: '',
+  streakSkipValues: 'Wochenende, Feiertag, Frei',
 
   levels: DEFAULT_LEVELS,
   tierByLevel: DEFAULT_TIER_BY_LEVEL,

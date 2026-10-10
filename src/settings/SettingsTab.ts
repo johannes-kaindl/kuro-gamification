@@ -142,6 +142,15 @@ export class KuroSettingsTab extends PluginSettingTab {
         break;
       }
       case 'streakFreezeTokensPerMonth': s.streakFreezeTokensPerMonth = clampInt(String(value), 0, 31, DEFAULT_SETTINGS.streakFreezeTokensPerMonth); break;
+      case 'streakDayMon': s.streakDayMon = Boolean(value); break;
+      case 'streakDayTue': s.streakDayTue = Boolean(value); break;
+      case 'streakDayWed': s.streakDayWed = Boolean(value); break;
+      case 'streakDayThu': s.streakDayThu = Boolean(value); break;
+      case 'streakDayFri': s.streakDayFri = Boolean(value); break;
+      case 'streakDaySat': s.streakDaySat = Boolean(value); break;
+      case 'streakDaySun': s.streakDaySun = Boolean(value); break;
+      case 'streakSkipKey': s.streakSkipKey = String(value).trim(); break;
+      case 'streakSkipValues': s.streakSkipValues = String(value).trim(); break;
 
       case 'enableLore': s.enableLore = Boolean(value); break;
 
@@ -394,6 +403,15 @@ export class KuroSettingsTab extends PluginSettingTab {
           control: { type: 'number', key: 'streakQualifyThreshold', min: 0, max: 1, step: 'any' } },
         { name: t('set.freezeTokens.name', lang), desc: t('set.freezeTokens.desc', lang),
           control: { type: 'number', key: 'streakFreezeTokensPerMonth', min: 0, max: 31 } },
+        ...(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const).map((d) => ({
+          name: t(`set.streakDay.${d}.name`, lang),
+          desc: d === 'Mon' ? t('set.streakDay.desc', lang) : undefined,
+          control: { type: 'toggle' as const, key: `streakDay${d}` },
+        })),
+        { name: t('set.streakSkipKey.name', lang), desc: t('set.streakSkipKey.desc', lang),
+          control: { type: 'text', key: 'streakSkipKey' } },
+        { name: t('set.streakSkipValues.name', lang), desc: t('set.streakSkipValues.desc', lang),
+          control: { type: 'text', key: 'streakSkipValues' } },
       ],
     };
   }

@@ -214,6 +214,27 @@ function fieldHas(value: unknown, wanted: string): boolean {
   return false;
 }
 
+/**
+ * Tage, deren Tagesnotiz in `key` einen der kommagetrennten `valuesCsv`-Werte traegt
+ * (Liste oder Skalar, Zahlen/Booleans als Text). Leerer Schluessel = nichts markiert.
+ */
+export function markedDates(
+  dailies: ReadonlyArray<{ date: string; frontmatter: Record<string, unknown> }>,
+  key: string,
+  valuesCsv: string,
+): Set<string> {
+  const out = new Set<string>();
+  const k = key.trim();
+  if (k === '') return out;
+  const wanted = valuesCsv.split(',').map((v) => v.trim()).filter((v) => v !== '');
+  for (const d of dailies) {
+    const raw = d.frontmatter[k];
+    const value = typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : raw;
+    if (wanted.some((v) => fieldHas(value, v))) out.add(d.date);
+  }
+  return out;
+}
+
 /** Erledigt-Datum, wenn eines der ueblichen Felder eines traegt — sonst null. */
 function completedAtOf(fm: Record<string, unknown>): string | null {
   for (const key of ['completedDate', 'erledigt_am', 'completed']) {

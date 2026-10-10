@@ -24,7 +24,7 @@ import { registerCommands } from './commands/registerCommands';
 import { readCoreDailyNotesConfig } from './utils/coreDailyNotes';
 import {
   readTaskNotesConfig, readPomodoroSessions, readCompletedTasks, taskRuleFromSettings,
-  subscribeTaskNotes,
+  subscribeTaskNotes, markedDates,
 } from './utils/taskNotesBridge';
 import {
   pomodoroBonusSuppressed, shouldNotifyGain, type TaskNotesInput,
@@ -205,8 +205,10 @@ export default class KuroPlugin extends Plugin {
       }
       const streakRes = StreakEngine.compute({
         qualifyingDates: qualifying,
+        neutralDates: markedDates(
+          dailies, this.data.settings.streakSkipKey, this.data.settings.streakSkipValues,
+        ),
         today,
-        availableFreezeTokens: this.data.freezeTokens,
         settings: this.data.settings,
       });
 
@@ -252,7 +254,7 @@ export default class KuroPlugin extends Plugin {
         pctToNext: lvl.pctToNext,
         streak: streakRes.streak,
         streakBonus: streakRes.bonus,
-        freezeTokens: this.data.freezeTokens,
+        freezeTokens: streakRes.tokensLeft,
         todayXp: todayCalc.xp,
         todayDone: todayDaily?.stats.done ?? 0,
         todayTotal: todayDaily?.stats.total ?? 0,

@@ -60,11 +60,10 @@ describe('KuroPlugin.llm.resolve (Chat-Endpunkt)', () => {
     __setMockRequestUrl(async () => ({ status: 200, json: { data: models.map((id) => ({ id })) }, text: '' }));
   }
 
-  it('ohne Manager läuft die lokale Liste wie bisher (Modell: Zeile vor globalem Modell)', async () => {
+  it('ohne Manager läuft die lokale Liste wie bisher (Modell der Zeile)', async () => {
     reachable();
     const plugin = await makePlugin(null);
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1', model: 'zeile' }];
-    plugin.data.settings.chatModel = 'global';
     const r = await plugin.llm.resolve();
     expect(r).toMatchObject({ kind: 'local', config: { url: 'http://lokal:1' }, model: 'zeile', sentModel: 'zeile' });
   });
@@ -72,8 +71,7 @@ describe('KuroPlugin.llm.resolve (Chat-Endpunkt)', () => {
   it('ohne Manager erkennt der lokale Pfad die Modellfamilie aus dem Namen (Sampling-Profile)', async () => {
     reachable();
     const plugin = await makePlugin(null);
-    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
-    plugin.data.settings.chatModel = 'qwen/qwen3.6-35b-a3b';
+    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1', model: 'qwen/qwen3.6-35b-a3b' }];
     const r = await plugin.llm.resolve();
     expect(r).toMatchObject({ family: 'qwen3.6', familySource: 'name', sentModel: 'qwen/qwen3.6-35b-a3b' });
   });
@@ -81,8 +79,7 @@ describe('KuroPlugin.llm.resolve (Chat-Endpunkt)', () => {
   it('die gemerkte Manager-Wahl übersteuert ein lokales Modell nicht (choice gilt nur mit Manager)', async () => {
     reachable();
     const plugin = await makePlugin(null);
-    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1' }];
-    plugin.data.settings.chatModel = 'lokal-modell';
+    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1', model: 'lokal-modell' }];
     plugin.data.settings.chatChoice = { endpointId: 'alt', model: 'alte-wahl' };
     expect((await plugin.llm.resolve()).model).toBe('lokal-modell');
   });

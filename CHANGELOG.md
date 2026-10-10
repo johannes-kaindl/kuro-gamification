@@ -18,6 +18,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Changed
 
+- **The global "Model" setting is gone.** The model now lives only on each endpoint row (the kit's `code-kit` 0.17.0). On the first start after the update your old global model is copied onto every row that has no model of its own; rows that already name a model stay as they are. Consequences: a new row no longer inherits a model, a row's model picker has no empty "use the global model" entry any more, and an old global model without any endpoint row (a setup that only used the LLM Endpoint Manager) is dropped. Rows you clear on purpose stay empty.
 - **Total XP rises once** by the streak bonus of streaks that have already ended; streaks longer than 365 days now count in full.
 - **In rare cases the bonus can drop:** if a calendar month has more gaps than freeze tokens, the tokens now cover the oldest gaps first (they used to cover the newest), which can end an old streak earlier than before.
 

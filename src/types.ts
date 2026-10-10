@@ -191,8 +191,6 @@ export interface KuroSettings {
   /** Geordnete Fallback-Liste; der erste erreichbare Eintrag gewinnt (resolveActiveEndpointConfig).
    *  Jede Zeile trägt ihren eigenen API-Schlüssel und optional ein Modell-Override. */
   chatEndpoints: EndpointConfig[];
-  /** Globales Modell, das gilt, wenn der aktive Endpunkt keinen Override trägt. */
-  chatModel: string;
   /** Gemerkte Wahl gegenüber dem LLM Endpoint Manager (Endpunkt-ID + Modell). Leer = automatisch.
    *  Gilt nur, solange der Manager installiert ist; die lokale Liste kennt keine Wahl. */
   chatChoice: EndpointChoice;
@@ -333,7 +331,6 @@ export const DEFAULT_SETTINGS: KuroSettings = {
 
   enableChat: false,
   chatEndpoints: [],
-  chatModel: '',
   chatChoice: {},
   request: { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false },
   chatDailyContext: 'tasks',

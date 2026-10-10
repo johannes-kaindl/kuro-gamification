@@ -39,9 +39,6 @@ import { taskRuleFromSettings, readTaskNotesConfig } from '../utils/taskNotesBri
 import {
   diagnoseSources, sourceStateClass, sourceStateIcon, taskRuleSuggestion,
 } from '../engine/TaskNotesXp';
-import { findEndpointManager } from '../vendor/kit-obsidian/endpoint-source';
-import { renderModelPicker } from '../vendor/kit-obsidian/model-picker';
-import { resolveModelChoice } from '../vendor/kit/model-choice';
 
 /** Local alias for the one group shape this tab builds — every `_*Group()`
  *  returns it, and `_groups()` hands the array straight to Obsidian. */
@@ -650,8 +647,6 @@ export class KuroSettingsTab extends PluginSettingTab {
         { name: t('set.chatEndpoints.name', lang),
           aliases: ['endpoint', 'request', 'temperature', 'thinking', 'sampling'],
           render: (setting) => this.plugin.llm.renderSettings(this._hostFor(setting).createDiv(), { lang }) },
-        { name: t('set.chatModel.name', lang), desc: t('set.chatModel.desc', lang),
-          render: (setting) => this._renderGlobalModel(this._hostFor(setting), lang) },
         { name: t('set.chatDailyContext.name', lang), desc: t('set.chatDailyContext.desc', lang),
           control: { type: 'dropdown', key: 'chatDailyContext', options: {
             none: t('set.chatDailyContext.none', lang),
@@ -682,39 +677,6 @@ export class KuroSettingsTab extends PluginSettingTab {
     containerEl.createEl('pre', {
       cls: 'kuro-context-preview',
       text: text === '' ? t('set.chatDailyContext.previewEmpty', lang) : text,
-    });
-  }
-
-  /** Globales Modell: gilt, wenn der aktive Endpunkt keinen Override trägt. Nutzt
-   *  denselben Picker wie das Override je Endpunkt-Zeile (resolveModelChoice +
-   *  renderModelPicker) — ein Dropdown aus der Liste des AKTIVEN Endpunkts, sobald
-   *  bekannt, sonst Freitext. Ein Refresh baut den ganzen Tab neu (wie beim
-   *  Zeilen-Editor) statt sich selbst neu zu zeichnen — zwei Zeichenpfade für
-   *  dieselbe Zeile wären eine zweite Wahrheit. */
-  private _renderGlobalModel(containerEl: HTMLElement, lang: Lang): void {
-    const s = this.plugin.data.settings;
-    const setting = new Setting(containerEl)
-      .setName(t('set.chatModel.name', lang))
-      .setDesc(t('set.chatModel.desc', lang));
-    // Mit Manager wählt der Endpunkt-Abschnitt darüber das Modell; ein zweites Feld wäre eine
-    // zweite Wahrheit, die nichts mehr bewirkt.
-    if (findEndpointManager(this.app) !== null) { setting.setDesc(t('src.modelManaged', lang)); return; }
-
-    void this.plugin.llm.models().then(({ models, reachable }) => {
-      const choice = resolveModelChoice({ reachable, models, current: s.chatModel });
-      renderModelPicker({
-        setting,
-        choice,
-        ariaLabel: t('set.chatModel.name', lang),
-        placeholder: t('set.chatEndpoints.modelPlaceholder', lang),
-        hint: choice.hintKey ? t(`set.model.hint.${choice.hintKey}`, lang) : '',
-        hintAs: 'tooltip',
-        savedSuffix: t('set.model.saved', lang),
-        refreshTooltip: t('set.chatModel.refresh', lang),
-        // Die Auflösung der lokalen Liste merkt sich das Modell: nach einer Wahl neu auflösen.
-        onPick: (v) => { s.chatModel = v; this.plugin.llm.invalidate(); void this._persistOnly(); },
-        onRefresh: () => { this._refreshUi(); },
-      });
     });
   }
 

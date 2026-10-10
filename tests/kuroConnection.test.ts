@@ -59,8 +59,7 @@ async function ask(opts: {
   const { transport, sent } = recordingTransport([sse('ok')]);
   useTransport(plugin, transport, {}, opts.backend);
   const s = plugin.data.settings;
-  s.chatEndpoints = [{ url: 'http://lokal:1234' }];
-  s.chatModel = opts.model;
+  s.chatEndpoints = [{ url: 'http://lokal:1234', model: opts.model }];
   if (opts.thinking) s.request.thinking = { companion: opts.thinking };
   if (opts.overrides) s.request.overrides = { companion: { [opts.model.startsWith('qwen3.6') ? 'qwen3.6' : 'unknown']: opts.overrides } };
   const res = await plugin.llm.complete({ messages: [{ role: 'user', content: 'hallo' }] });
@@ -95,7 +94,6 @@ describe('Verbindung — was das Plugin dazutut', () => {
     const { transport, sent } = recordingTransport([sse('Hallo'), sse(' Welt')]);
     useTransport(plugin, transport);
     plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1234/', apiKey: 'geheim', model: 'zeile' }];
-    plugin.data.settings.chatModel = 'global';
     const tokens: string[] = [];
     const res = await plugin.llm.complete({ messages: [{ role: 'user', content: 'hallo' }] }, { onToken: (t: string) => tokens.push(t) });
     expect(res).toMatchObject({ ok: true, content: 'Hallo Welt', truncated: false });
@@ -103,11 +101,6 @@ describe('Verbindung — was das Plugin dazutut', () => {
     expect(sent[0].url).toBe('http://lokal:1234/v1/chat/completions');
     expect(sent[0].body).toMatchObject({ model: 'zeile', stream: true });
     expect(sent[0].headers.Authorization).toBe('Bearer geheim');
-  });
-
-  it('das globale Modell gilt, wenn die Zeile keines trägt', async () => {
-    const { sent } = await ask({ model: 'global-modell', backend: 'unknown' });
-    expect(sent[0].body.model).toBe('global-modell');
   });
 
   it('zeigt Reasoning nie: kein onReasoning, Denkblock fehlt im sichtbaren Text', async () => {
@@ -173,13 +166,12 @@ describe('Verbindung — was das Plugin dazutut', () => {
   it('persist() schreibt die Zuordnung synchron in die chat…-Felder', async () => {
     const plugin = await makePlugin();
     const saved: unknown[] = [];
-    plugin.persist = async () => { saved.push(JSON.stringify(plugin.data.settings.chatModel)); };
+    plugin.persist = async () => { saved.push(JSON.stringify(plugin.data.settings.chatEndpoints)); };
     const { kuroConnectionOptions } = await import('../src/llm/kuroConnection');
     const opts = kuroConnectionOptions({ app: plugin.app, pluginId: 'x', settings: () => plugin.data.settings, persist: () => plugin.persist() });
-    const p = opts.persist({ endpoints: [{ url: 'http://neu:1' }], choice: { endpointId: 'e' }, model: 'm' });
+    const p = opts.persist({ endpoints: [{ url: 'http://neu:1' }], choice: { endpointId: 'e' } });
     expect(plugin.data.settings.chatEndpoints).toEqual([{ url: 'http://neu:1' }]);
     expect(plugin.data.settings.chatChoice).toEqual({ endpointId: 'e' });
-    expect(plugin.data.settings.chatModel).toBe('m');
     await p;
     expect(saved).toHaveLength(1);
   });

@@ -320,17 +320,8 @@ export const de: Record<string, string> = {
   'set.enableChat.name': 'Chat aktiv',
   'set.enableChat.desc': 'Zeigt einen Chat-Tab in der Seitenleiste. Aus = keine Netzwerkverbindung.',
   /* Endpunkt-Quelle und Anfrage-Abschnitt zeichnet die Kit-Verbindung (renderSettings) mit ihren Default-Texten; hier nur Plugin-eigene Zeilen */
-  'src.modelManaged': 'Das Modell wird oben im Endpunkt-Abschnitt gewählt, solange der LLM Endpoint Manager aktiv ist.',
   'set.chatEndpoints.name': 'Endpunkte',
-  'set.chatEndpoints.modelPlaceholder': 'Modell-Override (leer = globales Modell)',
   /* Globales Modell — nutzt denselben Picker wie das Override je Endpunkt-Zeile */
-  'set.chatModel.name': 'Modell',
-  'set.chatModel.desc': 'Gilt, wenn der aktive Endpunkt kein Modell-Override trägt.',
-  'set.chatModel.refresh': 'Modelle laden',
-  'set.chatModel.loaded': '{n} Modelle gefunden.',
-  'set.model.saved': '(gespeichert)',
-  'set.model.hint.unreachable': 'Endpunkt nicht erreichbar',
-  'set.model.hint.no-list': 'Keine Modell-Liste vom Endpunkt — Namen von Hand eintragen',
 
   /* Request */
   'request.dropped': '{n} gespeicherte Anfrage-Einstellung(en) waren ungültig und wurden auf den Profilwert zurückgesetzt.',

@@ -308,17 +308,8 @@ export const en: Record<string, string> = {
   'set.enableChat.name': 'Enable chat',
   'set.enableChat.desc': 'Shows a chat tab in the sidebar. Off means no network connection at all.',
   /* Endpunkt-Quelle und Anfrage-Abschnitt zeichnet die Kit-Verbindung (renderSettings) mit ihren Default-Texten; hier nur Plugin-eigene Zeilen */
-  'src.modelManaged': 'The model is chosen in the endpoint section above while the LLM Endpoint Manager is active.',
   'set.chatEndpoints.name': 'Endpoints',
-  'set.chatEndpoints.modelPlaceholder': 'Model override (empty = global model)',
   /* Global model — shares the picker with each endpoint row's override */
-  'set.chatModel.name': 'Model',
-  'set.chatModel.desc': 'Used when the active endpoint carries no model override.',
-  'set.chatModel.refresh': 'Load models',
-  'set.chatModel.loaded': 'Found {n} models.',
-  'set.model.saved': '(saved)',
-  'set.model.hint.unreachable': 'Endpoint unreachable',
-  'set.model.hint.no-list': 'No model list from the endpoint — type the name manually',
 
   /* Request */
   'request.dropped': '{n} saved request setting(s) were invalid and were reset to the profile.',

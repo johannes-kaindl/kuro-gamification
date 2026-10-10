@@ -32,14 +32,13 @@ export function kuroConnectionOptions(host: KuroConnectionHost): LlmConnectionOp
     // Die Settings heißen hier `chat…`; die Verbindung kennt `endpoints`/`choice`/`model`/`request`.
     getSettings: () => {
       const s = host.settings();
-      return { endpoints: s.chatEndpoints, choice: s.chatChoice, model: s.chatModel, request: s.request };
+      return { endpoints: s.chatEndpoints, choice: s.chatChoice, request: s.request };
     },
     // Erst in die Settings schreiben, dann speichern: die Endpunkt-Liste liest ihre Zeilen danach zurück.
     persist: (patch: Partial<LlmConnectionSettings>) => {
       const s = host.settings();
       if (patch.endpoints !== undefined) s.chatEndpoints = patch.endpoints;
       if (patch.choice !== undefined) s.chatChoice = patch.choice;
-      if (patch.model !== undefined) s.chatModel = patch.model;
       if (patch.request !== undefined) s.request = patch.request;
       return host.persist();
     },

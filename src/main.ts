@@ -85,6 +85,8 @@ export default class KuroPlugin extends Plugin {
       console.warn('[kuro-gamification] ungültige request-Einstellungen verworfen:', this.dataStore.lastRequestDropped);
     }
 
+    if (this.dataStore.lastLegacyModelMigrated) await this.dataStore.save(this.data);
+
     this.llm = createLlmConnection(kuroConnectionOptions({
       app: this.app,
       pluginId: this.manifest.id,

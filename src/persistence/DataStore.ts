@@ -10,12 +10,15 @@ import {
 import { migrateToLibrary } from '../utils/packLibrary';
 import { GOTHIC_LORE, COZY_LORE } from '../data/default-lore';
 import { migrateChatEndpoints } from '../llm/migrateChatEndpoints';
+import { fillMissingRowModels } from '../vendor/kit/endpoint_config';
 import { loadRequestSettings } from '../llm/requestSettings';
 
 export class DataStore {
   /** Pfade des gespeicherten `request`-Blocks, die das letzte `merge` verworfen hat — der
    *  Aufrufer (main.onload) meldet sie (Notice + Log), statt sie still zu schlucken. */
   lastRequestDropped: string[] = [];
+  /** Das letzte `merge` hat ein altes globales `chatModel` auf die Zeilen verteilt — der Aufrufer speichert einmal. */
+  lastLegacyModelMigrated = false;
 
   constructor(private readonly plugin: Plugin) {}
 
@@ -49,7 +52,13 @@ export class DataStore {
     // nicht mehr durchgereicht (sonst schriebe saveData es als Leiche weiter).
     const { request, dropped } = loadRequestSettings(raw);
     this.lastRequestDropped = dropped;
-    const { chatSuppressThinking: _legacy, ...rest } = raw as Partial<KuroSettings> & { chatSuppressThinking?: unknown };
+    // `chatModel` (globales Modell, bis 1.9.0) wandert einmal auf jede Zeile ohne eigenes Modell und
+    // wird hier aus `rest` herausgenommen: `...rest` hätte es sonst in jedes Speichern mitgetragen,
+    // und die Migration füllte eine bewusst geleerte Zeile bei jedem Start wieder auf.
+    const { chatSuppressThinking: _legacy, chatModel: legacyModel, ...rest } = raw as Partial<KuroSettings> & {
+      chatSuppressThinking?: unknown; chatModel?: unknown;
+    };
+    this.lastLegacyModelMigrated = legacyModel !== undefined;
     return {
       ...DEFAULT_SETTINGS,
       ...rest,
@@ -58,7 +67,7 @@ export class DataStore {
       // längst weg, aber in gespeicherten data.json-Dateien noch vorhanden. Ohne diese Migration
       // verschwindet ein bestehender API-Schlüssel beim ersten Laden stillschweigend
       // (migrateEndpointList allein trägt nur die URL weiter).
-      chatEndpoints: migrateChatEndpoints(raw),
+      chatEndpoints: fillMissingRowModels(migrateChatEndpoints(raw), legacyModel),
       habits: Array.isArray(raw.habits) ? raw.habits : DEFAULT_SETTINGS.habits,
       streakBonus: Array.isArray(raw.streakBonus) && raw.streakBonus.length > 0
         ? raw.streakBonus

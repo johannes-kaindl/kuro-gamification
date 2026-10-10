@@ -803,8 +803,7 @@ async function sektionVerbindung(cdp: Cdp): Promise<void> {
     fake = await startFakeChat({ echo: true });
 
     // V1 · Schlüsselbund: ein Endpunkt MIT Schlüssel, aufgelöst; danach steht kein Klartext mehr auf der Platte.
-    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url, apiKey: GEHEIMNIS }]);
-    await setSetting(cdp, 'chatModel', MANAGER_DEFAULT_MODEL);
+    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url, apiKey: GEHEIMNIS, model: MANAGER_DEFAULT_MODEL }]);
     await setSetting(cdp, 'chatChoice', {});
     await cdp.evaluate(`await ${P}.llm.resolve({ force: true }); await new Promise((r) => setTimeout(r, 600)); return true;`);
     const platte = await cdp.evaluate<string>(`return await app.vault.adapter.read(app.vault.configDir + "/plugins/" + ${JSON.stringify(PLUGIN_ID)} + "/data.json");`);
@@ -922,8 +921,7 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
   try {
     await removeFakeManager(cdp);
     fake = await startFakeChat();
-    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url }]);
-    await setSetting(cdp, 'chatModel', ANFRAGE_MODELL);
+    await setSetting(cdp, 'chatEndpoints', [{ url: fake.url, model: ANFRAGE_MODELL }]);
     await setSetting(cdp, 'chatChoice', {});
     await setSetting(cdp, 'request', { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false });
     const frage = async (): Promise<void> => {
@@ -1017,8 +1015,7 @@ async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
     skipped('stream/echter-endpunkt', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht — nichts gemessen (ein Lauf löste sonst ein JIT-Laden aus)`);
     return;
   }
-  await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
-  await setSetting(cdp, 'chatModel', modell);
+  await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL, model: modell }]);
   await setSetting(cdp, 'request', { overrides: {}, thinking: { companion: 'off' }, lastOnLevel: {}, levelPickerInChat: false });
   await cdp.evaluate(`app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].llm.invalidate(); return true;`);
   await rebuildSidebar(cdp);

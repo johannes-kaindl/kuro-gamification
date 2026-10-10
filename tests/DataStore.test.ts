@@ -136,7 +136,7 @@ describe('DataStore.merge — chat & notes', () => {
     const s = ds.merge({}).settings;
     expect(s.enableChat).toBe(false);
     expect(s.chatEndpoints).toEqual([]);
-    expect(s.chatModel).toBe('');
+    expect('chatModel' in s).toBe(false);
     expect(s.chatDailyContext).toBe('tasks');
     expect(s.chatPersonaOverride).toBe('');
   });
@@ -157,3 +157,44 @@ describe('DataStore.merge — chat & notes', () => {
     expect(merged.settings.chatEndpoints).toEqual([{ url: 'http://localhost:1234', apiKey: 'sk-secret' }]);
   });
 });
+
+describe('DataStore.merge — globales chatModel wandert auf die Zeilen', () => {
+  const ds = new DataStore({ loadData: () => Promise.resolve(null), saveData: () => Promise.resolve() } as any);
+  const rawWith = (chatModel: unknown, rows: unknown[]) => ({
+    settings: { ...DEFAULT_SETTINGS, chatEndpoints: rows, chatModel },
+  }) as any;
+
+  it('trägt den Altwert auf jede Zeile ohne eigenes Modell ein, Zeilen mit Modell bleiben', () => {
+    const s = ds.merge(rawWith(' alt ', [{ url: 'http://a:1' }, { url: 'http://b:1', model: 'eigen' }])).settings;
+    expect(s.chatEndpoints.map((e) => e.model)).toEqual(['alt', 'eigen']);
+  });
+
+  it('entfernt den Altschlüssel aus dem gemergten Objekt (sonst läuft die Migration bei jedem Start)', () => {
+    const s = ds.merge(rawWith('alt', [{ url: 'http://a:1' }])).settings as unknown as Record<string, unknown>;
+    expect('chatModel' in s).toBe(false);
+    expect(JSON.stringify(s)).not.toContain('chatModel');
+  });
+
+  it('ZWEITER LAUF: eine bewusst geleerte Zeile bleibt leer', () => {
+    const first = ds.merge(rawWith('alt', [{ url: 'http://a:1' }]));
+    const stored = JSON.parse(JSON.stringify(first));            // so liegt es in data.json
+    stored.settings.chatEndpoints[0].model = '';                 // Nutzer leert die Zeile
+    const second = ds.merge(stored);
+    expect(second.settings.chatEndpoints[0].model ?? '').toBe('');
+  });
+
+  it('ein leerer oder nicht-String-Altwert ändert nichts', () => {
+    for (const legacy of ['', '   ', 42, null, undefined, {}]) {
+      const s = ds.merge(rawWith(legacy, [{ url: 'http://a:1' }])).settings;
+      expect(s.chatEndpoints[0].model).toBeUndefined();
+    }
+  });
+
+  it('meldet, dass migriert wurde, damit der Aufrufer einmal speichert', () => {
+    ds.merge(rawWith('alt', [{ url: 'http://a:1' }]));
+    expect(ds.lastLegacyModelMigrated).toBe(true);
+    ds.merge(rawWith(undefined, [{ url: 'http://a:1' }]));
+    expect(ds.lastLegacyModelMigrated).toBe(false);
+  });
+});
+

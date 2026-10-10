@@ -368,6 +368,8 @@ export const en: Record<string, string> = {
   'src.break': 'Breaks',
   'src.frontmatterPomodoro': 'Pomodoro bonus (daily note)',
   'src.reason.counting': 'counting · {rate} XP each, {count} so far',
+  'src.reason.counting-daily': 'counts · {rate} XP when "{key}" reaches {threshold} in a day',
+  'src.reason.in-daily-notes': 'TaskNotes keeps sessions in the daily note — the daily-note bonus counts them, a per-session rate does not apply',
   'src.reason.rate-zero': 'source is readable, but its XP rate is 0 — it currently gives nothing',
   'src.reason.no-tasks': 'no completed task found yet',
   'src.reason.no-sessions': 'no finished session found yet',

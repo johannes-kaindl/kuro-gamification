@@ -1216,7 +1216,7 @@ async function sektionHerkunft(cdp: Cdp): Promise<void> {
     );
     record(
       'herkunft/kein-roher-code',
-      !/src\.reason\./.test(mess.texte),
+      !/src\.reason\.|\{\w+\}/.test(mess.texte),
       mess.texte.slice(0, 110),
     );
   }

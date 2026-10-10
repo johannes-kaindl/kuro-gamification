@@ -54,10 +54,14 @@ export function diagnoseSources(inp: TaskNotesInput): SourceDiagnosis[] {
   const ruleComplete = inp.rule.matchField !== '' && inp.rule.matchValue !== ''
     && inp.rule.doneValues.length > 0;
 
+  // TaskNotes legt die Sessions in die Tagesnotiz: Kuro liest sie dort nicht pro Session,
+  // der Frontmatter-Bonus unten zaehlt sie. Bei Satz 0 ist das ein Hinweis, kein Fehler.
+  const sessionsInDailyNotes = inp.config?.pomodoroStorageLocation === 'daily-notes';
+
   return [
     rate('tasks', s.xpPerCompletedTask, ruleComplete, inp.tasks.length, 'no-rule', 'no-tasks'),
-    rate('work', s.xpPerWorkSession, sessionsReadable, work, 'no-history', 'no-sessions'),
-    rate('break', s.xpPerBreakSession, sessionsReadable, brk, 'no-history', 'no-sessions'),
+    rate('work', s.xpPerWorkSession, sessionsReadable, work, 'no-history', 'no-sessions', sessionsInDailyNotes),
+    rate('break', s.xpPerBreakSession, sessionsReadable, brk, 'no-history', 'no-sessions', sessionsInDailyNotes),
     frontmatterState(inp, sessionsReadable),
   ];
 }
@@ -65,8 +69,11 @@ export function diagnoseSources(inp: TaskNotesInput): SourceDiagnosis[] {
 /** Ein Zustand pro Quelle, in fester Reihenfolge: erreichbar? → Satz? → Daten? */
 function rate(
   id: SourceId, xpRate: number, available: boolean, count: number,
-  unavailableReason: string, emptyReason: string,
+  unavailableReason: string, emptyReason: string, notedElsewhere = false,
 ): SourceDiagnosis {
+  if (!available && notedElsewhere && xpRate <= 0) {
+    return { id, state: 'off', reason: 'in-daily-notes', facts: {} };
+  }
   if (!available) return { id, state: 'unavailable', reason: unavailableReason, facts: {} };
   if (xpRate <= 0) return { id, state: 'off', reason: 'rate-zero', facts: { count } };
   if (count === 0) return { id, state: 'empty', reason: emptyReason, facts: { rate: xpRate } };
@@ -87,7 +94,14 @@ function frontmatterState(inp: TaskNotesInput, sessionsReadable: boolean): Sourc
       facts: { storage: inp.config.pomodoroStorageLocation },
     };
   }
-  return { id, state: 'ok', reason: 'counting', facts: { key: inp.settings.pomodoroFrontmatterKey } };
+  return {
+    id, state: 'ok', reason: 'counting-daily',
+    facts: {
+      key: inp.settings.pomodoroFrontmatterKey,
+      threshold: inp.settings.pomodoroThreshold,
+      rate: inp.settings.pomodoroBonus,
+    },
+  };
 }
 
 /** Beschriftung der Aufschluesselungs-Zeilen. Deutsch wie die uebrigen Zeilen in

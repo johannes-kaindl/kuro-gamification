@@ -380,6 +380,8 @@ export const de: Record<string, string> = {
   'src.break': 'Pausen',
   'src.frontmatterPomodoro': 'Pomodoro-Bonus (Tagesnotiz)',
   'src.reason.counting': 'zählt · {rate} XP je Stück, {count} bisher',
+  'src.reason.counting-daily': 'zählt · {rate} XP, wenn „{key}“ an einem Tag {threshold} erreicht',
+  'src.reason.in-daily-notes': 'TaskNotes legt Sessions in die Tagesnotiz — der Tagesnotiz-Bonus zählt sie, ein Satz je Session greift nicht',
   'src.reason.rate-zero': 'Quelle ist lesbar, aber der XP-Satz steht auf 0 — sie gibt derzeit nichts',
   'src.reason.no-tasks': 'noch keine erledigte Aufgabe gefunden',
   'src.reason.no-sessions': 'noch keine abgeschlossene Session gefunden',

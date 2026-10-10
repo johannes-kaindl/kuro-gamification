@@ -23,7 +23,7 @@ describe('Abbildung Zustand → UI-STANDARD §8-Vokabel', () => {
 describe('i18n-Deckung der Diagnose-Codes', () => {
   it('hat fuer jeden reason-Code einen Text in beiden Sprachen', () => {
     for (const c of ['counting', 'rate-zero', 'no-tasks', 'no-sessions',
-      'no-rule', 'no-history', 'storage-plugin', 'superseded']) {
+      'no-rule', 'no-history', 'storage-plugin', 'superseded', 'counting-daily', 'in-daily-notes']) {
       expect(Object.keys(de)).toContain(`src.reason.${c}`);
       expect(Object.keys(en)).toContain(`src.reason.${c}`);
     }

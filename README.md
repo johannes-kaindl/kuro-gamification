@@ -93,9 +93,9 @@ Optionally install the CRT/phosphor aesthetic CSS snippet afterwards — see [Ae
 
 ## Configuration
 
-<a href="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/settings.png"><img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/thumbs/settings.png" width="380" alt="Kuro settings tab, all eleven sections"></a>
+<a href="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/settings.png"><img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/thumbs/settings.png" width="380" alt="Kuro settings tab, all fourteen sections"></a>
 
-<sub>Click the preview for the full settings tab (eleven sections).</sub>
+<sub>Click the preview for the full settings tab (fourteen sections).</sub>
 
 
 | Section | What it controls |

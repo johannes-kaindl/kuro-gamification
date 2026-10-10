@@ -415,7 +415,7 @@ async function settingsBild(cdp: Cdp, port: number, outDir: string): Promise<str
 
     // Erst messen, dann so hoch simulieren: eine feste Simulationshöhe schneidet einen
     // langen Tab ab und füllt den Rest schwarz.
-    const png = await withMetrics(fenster, 1200, Math.min(hoehe + 80, 6000), async () => {
+    const png = await withMetrics(fenster, 1200, Math.min(hoehe + 80, 7600), async () => {
       await new Promise((r) => setTimeout(r, 600));
       const box = await fenster.evaluate<Rect | null>(`
         const c = document.querySelector(".vertical-tab-content");

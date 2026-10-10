@@ -17,7 +17,7 @@ Datei, eine Datei ohne Eintrag und eine Einbettung ohne Vertragszeile sind je ei
 | `chat.png` | feature | README (EN+DE), § Companion chat | Dasselbe Fenster mit geöffnetem Chat-Tab: Tab-Leiste (Status · Chat), Kontext-Ausklapper („Kuro currently sees …"), ein Gespräch aus vier Nachrichten, die Eingabezeile **am unteren Rand**. |
 | `status-block.png` | feature | README (EN+DE), § Status code block | Der `kuro-status`-Codeblock, wie er in einer gewöhnlichen Notiz rendert — mit erklärendem Text darüber und dem Lore-Callout darunter. |
 | `loot-redeem.png` | feature | README (EN+DE), § Features | Der Einlös-Dialog: drei Signale mit Tier-Symbol und Kategorie, Abbrechen/Einlösen. |
-| `settings.png` | detail | README (EN+DE), § Configuration — als 380-px-Vorschau aus `thumbs/`, verlinkt auf die Vollauflösung | Der Einstellungs-Tab **ganz**, alle elf Abschnitte von „General" bis „About". Zu hoch für eine Inline-Einbettung (H/B 5.7) — deshalb Vorschau mit Bildunterschrift. |
+| `settings.png` | detail | README (EN+DE), § Configuration — als 380-px-Vorschau aus `thumbs/`, verlinkt auf die Vollauflösung | Der Einstellungs-Tab **ganz**, alle vierzehn Abschnitte von „General" bis „About". Zu hoch für eine Inline-Einbettung (H/B 7.0) — deshalb Vorschau mit Bildunterschrift. |
 
 ## Reproduzieren
 
@@ -56,6 +56,8 @@ verbietet ihn zu Recht).
 - **Ein laufendes Obsidian mit offenem Debug-Port**, im Aufnahme-Vault. Kein LM Studio: der
   Chat-Verlauf wird gesetzt, nicht generiert (s. u.).
 - **Sonst nichts.** Kein Modell, kein Server, keine Zugangsdaten.
+- **Obsidians Oberfläche auf Englisch, bevor `--setup` läuft** (`obsidian.json` `"language": "en"` und `localStorage["language"]`). Der erste Plugin-Start übernimmt die Obsidian-Sprache als Kuro-Sprache; in einer deutschen Instanz zeigt der Einstellungs-Tab trotz `language = "en"` im Rezept deutsche Texte (gemessen 2026-10-10).
+- **Höhe des Einstellungs-Bilds:** `settingsBild` simuliert höchstens 7600 px; mit 14 Abschnitten reichen die früheren 6000 nicht mehr und das Bild endet in Leere vor „Notes“.
 
 ## Zwei Festlegungen, die das Ergebnis bestimmen
 

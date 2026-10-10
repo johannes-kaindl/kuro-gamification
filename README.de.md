@@ -93,9 +93,9 @@ Optional danach das CRT-Phosphor-CSS-Snippet einrichten — siehe [Ästhetik-CSS
 
 ## Konfiguration
 
-<a href="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/settings.png"><img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/thumbs/settings.png" width="380" alt="Kuro-Einstellungen, alle elf Abschnitte"></a>
+<a href="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/settings.png"><img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/thumbs/settings.png" width="380" alt="Kuro-Einstellungen, alle vierzehn Abschnitte"></a>
 
-<sub>Für den vollständigen Einstellungs-Tab (elf Abschnitte) auf die Vorschau klicken.</sub>
+<sub>Für den vollständigen Einstellungs-Tab (vierzehn Abschnitte) auf die Vorschau klicken.</sub>
 
 
 | Sektion | Was sie steuert |

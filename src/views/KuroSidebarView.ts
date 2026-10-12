@@ -93,6 +93,7 @@ export class KuroSidebarView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    this.chatPanel?.destroy();
     this.containerEl.empty();
     this.statusBodyEl = null;
     this.chatBodyEl = null;

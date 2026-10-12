@@ -1,6 +1,9 @@
 import { DataStore } from '../src/persistence/DataStore';
 import { DEFAULT_SETTINGS } from '../src/types';
-import { MODE, loadRequestSettings } from '../src/llm/requestSettings';
+import { MODE, REQUEST_MIGRATIONS } from '../src/llm/requestSettings';
+import { loadRequestSettings as kitLoad } from '../src/vendor/kit/sampling-profiles';
+
+const loadRequestSettings = (raw: unknown) => kitLoad(raw, REQUEST_MIGRATIONS);
 
 describe('loadRequestSettings — Legacy-Migration chatSuppressThinking (Modus companion)', () => {
   it('Modus ist companion', () => { expect(MODE).toBe('companion'); });

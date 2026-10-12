@@ -2,6 +2,22 @@ import { KuroChatPanel, type ChatPanelCallbacks } from '../src/views/KuroChatPan
 import { ChatSession } from '../src/llm/ChatSession';
 import type { DailyExtract } from '../src/llm/kuroContext';
 
+// Die echten Schreiber, aber mit beobachtbarem destroy() (der dom-guard hängt am Schreiber, MIGRATION 0.52.0).
+const writers: Array<{ destroy: jest.Mock }> = [];
+jest.mock('../src/vendor/kit-obsidian/stable-writer', () => {
+  const actual = jest.requireActual('../src/vendor/kit-obsidian/stable-writer');
+  return {
+    ...actual,
+    createStableWriter: (o: unknown) => {
+      const w = actual.createStableWriter(o);
+      const destroy = jest.fn(w.destroy.bind(w));
+      const wrapped = Object.assign(w, { destroy });
+      writers.push(wrapped as unknown as { destroy: jest.Mock });
+      return wrapped;
+    },
+  };
+});
+
 /** Minimaler Fake-Host nach dem Muster des Obsidian-Mocks (tests/__mocks__/obsidian.ts),
  *  um `buildStreamArea` (obsidian-kit) aufnehmen zu können: addClass + appendChild dazu. */
 function makeHost(): any {
@@ -60,7 +76,7 @@ function makePanel(session: ChatSession, over: Partial<ChatPanelCallbacks> = {})
     openSettings: () => {},
     ...over,
   };
-  return { panel: new KuroChatPanel(host, 'de', session, cb), host, calls };
+  return { panel: new KuroChatPanel(host, 'de', session, cb, { domGuard: false }), host, calls };
 }
 
 describe('KuroChatPanel', () => {
@@ -105,6 +121,24 @@ describe('KuroChatPanel', () => {
     const { panel, host } = makePanel(s);
     panel.render();
     expect(findAll(host, 'kuro-chat-cursor')).toHaveLength(1);
+  });
+
+  it('trennt den Schreiber (dom-guard) beim Neuzeichnen, beim Setup-Hinweis und bei destroy()', () => {
+    writers.length = 0;
+    const s = new ChatSession();
+    s.streaming = 'halb';
+    const { panel } = makePanel(s);
+    panel.render();
+    expect(writers).toHaveLength(1);
+    panel.render(); // zweiter Schreiber, der erste muss abgebaut sein
+    expect(writers).toHaveLength(2);
+    expect(writers[0]!.destroy).toHaveBeenCalledTimes(1);
+    expect(writers[1]!.destroy).not.toHaveBeenCalled();
+    panel.showSetupHint();
+    expect(writers[1]!.destroy).toHaveBeenCalledTimes(1);
+    panel.render();
+    panel.destroy();
+    expect(writers[2]!.destroy).toHaveBeenCalledTimes(1);
   });
 
   it('shows no cursor when idle', () => {

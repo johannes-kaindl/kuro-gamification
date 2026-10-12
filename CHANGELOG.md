@@ -5,6 +5,25 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **The context length sits on the endpoint row.** Under an endpoint that is reachable and has a model, the settings show "Context: loaded N · max M tokens" (only "max M" when the model is not loaded; nothing when the server names no number). Each lookup gives up after 5 seconds.
+- **A model chosen on an endpoint row can be set back to "— (server picks)".** Picking it removes the row's model, and the server answers with whatever it has loaded. The global-model option is gone from the dropdown; a stored global value is no longer read by the connection (the one-time move of the old `chatModel` onto your rows stays as it was).
+- **Without the LLM Endpoint Manager the model choice counts for the active row only.**
+- **More precise endpoint hints.** A timeout and a server that does not speak an LLM API get a longer hint ("wrong network / VPN off?", "wrong path/service?"), and "Not reachable" no longer ends in a stray dash.
+- **Chat answers: a safety net against remote content.** Anything in Kuro's reply that would load by itself from the internet (images, frames, stylesheets) is removed from the chat view, in addition to the existing markdown filter. A ```mermaid block is shown as plain text instead of a diagram, because a diagram can pull in remote content; the source stays readable.
+- **Secrets in your questions are caught more widely.** The `Bearer <token>` rule matches from 8 characters and ignores case, so prose such as "Bearer authentication" is replaced too; the reply shows your original text.
+- A long reply with tens of thousands of open `<think>` tags no longer stalls the check for seconds; long streamed answers render faster.
+
+### Fixed
+
+- **Closing the sidebar releases the chat's watcher** (the new remote-content net is detached with the view).
+
+### Internal
+
+- Kit pins raised to obsidian-kit 0.56.0 / code-kit 0.23.0 (new vendored modules: `dom-guard`, `embedding-connection`, `endpoint-plumbing`, `endpoint-status-text`, `embeddings-client`, `model-context`, `timeout`, `remote-resources`); `styles.css` carries the endpoint list's context-line rule.
+- `loadRequestSettings` comes from the kit; the `chatSuppressThinking` migration is the exported `REQUEST_MIGRATIONS` with `foldLegacyThinking`. The chat panel takes an `{ domGuard }` option so tests with the fake DOM can switch the net off (production keeps it on).
+
 ## [1.10.0] — 2026-10-10
 
 ### Fixed

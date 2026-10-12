@@ -31,6 +31,12 @@ export interface ChatPanelCallbacks {
   renderMarkdown?: (el: HTMLElement, markdown: string) => Promise<void>;
 }
 
+/** Naht für Tests: das Fake-DOM trägt keinen MutationObserver. Produktiv bleibt der dom-guard
+ *  des Kit-Schreibers an (Default seit obsidian-kit 0.52.0). */
+export interface ChatPanelOptions {
+  domGuard?: boolean;
+}
+
 export class KuroChatPanel {
   /** Streaming-Antwortbereich aus dem Kit (UI-STANDARD §8, `buildStreamArea`, Bauart 2:
    *  append-only Rohtext). Kuro hat keinen Gedankenstrom — der Reasoning-Slot des Bausteins
@@ -48,12 +54,20 @@ export class KuroChatPanel {
     private readonly lang: Lang,
     private readonly session: ChatSession,
     private readonly cb: ChatPanelCallbacks,
+    private readonly opts: ChatPanelOptions = {},
   ) {}
+
+  /** Trennt den dom-guard des laufenden Schreibers; die View ruft es beim Schließen. */
+  destroy(): void {
+    this.writer?.destroy();
+    this.writer = null;
+  }
 
   /** Hinweis statt Chat, solange kein Endpunkt eingerichtet ist. */
   showSetupHint(): void {
     this.host.empty();
     this.area = null;
+    this.writer?.destroy();
     this.writer = null;
     this.ctxSummaryEl = null;
     this.ctxBodyEl = null;
@@ -88,6 +102,7 @@ export class KuroChatPanel {
 
     for (const e of this.session.entries) this.renderEntry(area.bodyEl, e);
 
+    this.writer?.destroy();
     this.writer = null;
     if (this.session.streaming !== null) {
       const line = area.bodyEl.createDiv({ cls: 'kuro-chat-line kuro-chat-assistant kuro-chat-streaming' });
@@ -105,6 +120,7 @@ export class KuroChatPanel {
         area: { ...area, bodyEl: content },
         render: (el, md) => this.renderMd(el, md),
         blockCls: 'okit-stream-block markdown-rendered',
+        ...(this.opts.domGuard === undefined ? {} : { domGuard: this.opts.domGuard }),
       });
       this.writer.push(this.session.streaming);
       line.createSpan({ cls: 'kuro-chat-cursor', text: '▮' });

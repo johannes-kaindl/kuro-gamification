@@ -11,7 +11,8 @@ import { migrateToLibrary } from '../utils/packLibrary';
 import { GOTHIC_LORE, COZY_LORE } from '../data/default-lore';
 import { migrateChatEndpoints } from '../llm/migrateChatEndpoints';
 import { fillMissingRowModels } from '../vendor/kit/endpoint_config';
-import { loadRequestSettings } from '../llm/requestSettings';
+import { REQUEST_MIGRATIONS } from '../llm/requestSettings';
+import { loadRequestSettings } from '../vendor/kit/sampling-profiles';
 
 export class DataStore {
   /** Pfade des gespeicherten `request`-Blocks, die das letzte `merge` verworfen hat — der
@@ -50,7 +51,7 @@ export class DataStore {
     // Sampling-Profile: `request` säubern und das alte `chatSuppressThinking` einmalig nach
     // `request.thinking.companion` migrieren — aus dem ROHEN Bestand; das Altfeld wird danach
     // nicht mehr durchgereicht (sonst schriebe saveData es als Leiche weiter).
-    const { request, dropped } = loadRequestSettings(raw);
+    const { request, dropped } = loadRequestSettings(raw, REQUEST_MIGRATIONS);
     this.lastRequestDropped = dropped;
     // `chatModel` (globales Modell, bis 1.9.0) wandert einmal auf jede Zeile ohne eigenes Modell und
     // wird hier aus `rest` herausgenommen: `...rest` hätte es sonst in jedes Speichern mitgetragen,

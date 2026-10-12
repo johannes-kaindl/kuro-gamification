@@ -50,12 +50,11 @@
  * Kommentare: biome liest `.json` strikt und bricht an ihnen ab.
  */
 
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-import { Cdp, attachTo, bereiteInstanzVor, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { Cdp, attachTo, bereiteInstanzVor, entferneFakeManager, installFakeManager as installZentralFakeManager, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { echoText, startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
 import { de } from '../src/i18n/de';
@@ -115,6 +114,8 @@ const PUNKTE = [
   'verbindung/schwaerzung-platzhalter-hin-original-zurueck',
   'verbindung/antwort-mit-bild-url-erzeugt-kein-img',
   'verbindung/dataviewjs-block-rendert-als-text',
+  'stream/folge-regel-respektiert-hochscrollen',
+  'stream/folgt-ohne-stoerung',
   'streak/laufender-tag-ist-keine-luecke',
   'streak/arbeitstag-schalter-speichert',
   'ton/stimmt-der-ton',
@@ -468,100 +469,47 @@ async function sektionKontext(cdp: Cdp): Promise<void> {
 const MANAGER_PLUGIN_ID = 'llm-endpoint-manager';
 const MANAGER_DEFAULT_MODEL = 'smoke-manager-modell';
 
-/** Fake-Chat-Endpunkt: streamt eine Antwort mit Markdown und merkt sich Anfragen und Modell.
- *  CORS ist Pflicht — der Renderer läuft unter app://obsidian.md, ohne die Header sieht der
- *  Server die Anfrage nie (gemessen 2026-09-15 in lingotuner, dort dieselbe Bauart). */
+/** Fake-Chat-Endpunkt: dünne Hülle über den zentralen LLM-Stub (`tools/obsidian-cdp/llm-stub.ts`). Streamt eine
+ *  Antwort mit Markdown und merkt sich Anfragen und Modell. CORS ist im Stub Default (der Renderer läuft unter
+ *  app://obsidian.md, ohne die Header sieht der Server die Anfrage nie — gemessen 2026-09-15 in lingotuner). */
 interface FakeChat { url: string; close: () => Promise<void>; calls: () => number; lastModel: () => string | null; lastBody: () => Record<string, unknown> | null; lastAuth: () => string | null }
 /** `echo`: die Antwort wiederholt den letzten Nutzertext, wie der Server ihn empfangen hat (der Platzhalter, wenn das
  *  Plugin geschwärzt hat) — so zeigt sich, was nach der Wiederherstellung im Chat landet. */
 async function startFakeChat(opts: { echo?: boolean } = {}): Promise<FakeChat> {
-  let calls = 0;
-  let lastAuth: string | null = null;
-  let lastModel: string | null = null;
-  let lastBody: Record<string, unknown> | null = null;
-  const server: Server = createServer((req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-    if (req.url?.includes('/v1/models') === true) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ data: [{ id: MANAGER_DEFAULT_MODEL, object: 'model' }] }));
-      return;
-    }
-    if (req.method === 'POST' && req.url?.includes('/v1/chat/completions') === true) {
-      let body = '';
-      req.on('data', (chunk: Buffer) => { body += chunk.toString('utf8'); });
-      lastAuth = (req.headers.authorization as string | undefined) ?? null;
-      req.on('end', () => {
-        calls += 1;
-        try { lastBody = JSON.parse(body) as Record<string, unknown>; lastModel = (lastBody.model as string | undefined) ?? null; } catch { lastBody = null; lastModel = null; }
-        res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-        const letzter = (lastBody?.messages as { role: string; content: unknown }[] | undefined)?.filter((m) => m.role === 'user').pop();
-        const stuecke = opts.echo === true ? [`echo: ${String(letzter?.content ?? '')}`] : ['Antwort mit **Fettung**', '\n\n', '- eins\n- zwei'];
-        for (const stueck of stuecke) {
-          res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: stueck }, finish_reason: null }] })}\n\n`);
-        }
-        res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`);
-        res.write('data: [DONE]\n\n');
-        res.end();
-      });
-      return;
-    }
-    res.writeHead(404); res.end();
+  const stub = await startLlmStub({
+    models: [MANAGER_DEFAULT_MODEL],
+    // Der Prüfpunkt wartet auf das Präfix „echo:“ — der Stub-Standard „echo“ liefert den Nutzertext ohne es.
+    antwort: opts.echo === true ? (anfrage) => ({ text: `echo: ${echoText(anfrage.json)}` }) : undefined,
+    standard: { stuecke: ['Antwort mit **Fettung**', '\n\n', '- eins\n- zwei'] },
   });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const port = (server.address() as AddressInfo).port;
+  const letzte = () => stub.letzte('chat');
   return {
-    url: `http://127.0.0.1:${port}`,
-    close: () => new Promise<void>((resolve) => { server.close(() => { resolve(); }); }),
-    calls: () => calls,
-    lastModel: () => lastModel,
-    lastBody: () => lastBody,
-    lastAuth: () => lastAuth,
+    url: stub.url,
+    close: () => stub.stop(),
+    calls: () => stub.zaehler().chat,
+    lastModel: () => (letzte()?.json as { model?: string } | null)?.model ?? null,
+    lastBody: () => (letzte()?.json as Record<string, unknown> | null) ?? null,
+    lastAuth: () => {
+      const h = letzte()?.header.authorization;
+      return typeof h === 'string' ? h : null;
+    },
   };
 }
 
-/** Fake `llm-endpoint-manager`-API. `findEndpointManager` prüft nur die FORM (version 1 +
- *  alle Methoden), keine Herkunft. `config.model` trägt bewusst NICHT das Standardmodell:
- *  der echte Manager setzt es zusätzlich zu `defaultModel`, und wer `config.model` statt
- *  `result.model` sendet, überschreibt eine getroffene Modellwahl (lingotuner-Befund C1). Ein
- *  abweichender Wert macht diesen Fehler sichtbar. */
+/** Fake `llm-endpoint-manager` (zentral, `installFakeManager` aus der Brücke). `config.model` trägt bewusst NICHT das
+ *  Standardmodell (`configModel: 'falle'`): der echte Manager setzt es zusätzlich zu `defaultModel`, und wer
+ *  `config.model` statt `result.model` sendet, überschreibt eine getroffene Modellwahl (lingotuner-Befund C1). */
 async function installFakeManager(cdp: Cdp, url: string): Promise<void> {
-  await cdp.evaluate(`
-    if (!("__smokeVorherManager" in window)) {
-      window.__smokeVorherManager = app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}] ?? null;
-    }
-    const ep = { id: "fake-ep", label: "Fake Endpoint", url: ${JSON.stringify(url)}, provider: "openai", capabilities: ["chat"], defaultModel: ${JSON.stringify(MANAGER_DEFAULT_MODEL)}, enabled: true, hasSecret: false };
-    const res = { id: ep.id, label: ep.label, config: { url: ${JSON.stringify(url)}, model: "config-model-darf-nicht-gesendet-werden" }, defaultModel: ${JSON.stringify(MANAGER_DEFAULT_MODEL)} };
-    app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}] = { api: {
-      version: 1,
-      list: () => [ep],
-      get: (id) => (id === ep.id ? ep : null),
-      resolve: async () => res,
-      materialize: async (id) => (id === ep.id ? res : { error: "not-found" }),
-      models: async () => [${JSON.stringify(MANAGER_DEFAULT_MODEL)}],
-      importEndpoints: async () => ({ added: [], merged: [], skipped: [] }),
-      on: () => (() => {}),
-    } };
-    return true;
-  `);
+  await installZentralFakeManager(cdp, {
+    endpunkte: [{ id: 'fake-ep', label: 'Fake Endpoint', url, models: [MANAGER_DEFAULT_MODEL], defaultModel: MANAGER_DEFAULT_MODEL, capabilities: ['chat'], configModel: 'falle' }],
+    pluginId: MANAGER_PLUGIN_ID,
+    invalidiere: [PLUGIN_ID],
+  });
 }
 
-/** Stellt den vorgefundenen Registry-Eintrag wieder her, statt ihn zu löschen (im Renderer
- *  geparkt, weil ein Plugin-Objekt keine CDP-Rundreise überlebt). Idempotent. */
+/** Stellt den vorgefundenen Registry-Eintrag wieder her. Idempotent, gehört an jedes Ende. */
 async function removeFakeManager(cdp: Cdp): Promise<void> {
-  await cdp.evaluate(`
-    if ("__smokeVorherManager" in window) {
-      const vorher = window.__smokeVorherManager;
-      if (vorher === null) delete app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}];
-      else app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}] = vorher;
-      delete window.__smokeVorherManager;
-    } else {
-      delete app.plugins.plugins[${JSON.stringify(MANAGER_PLUGIN_ID)}];
-    }
-    return true;
-  `);
+  await entferneFakeManager(cdp, { pluginId: MANAGER_PLUGIN_ID, invalidiere: [PLUGIN_ID] });
 }
 
 async function sektionMarkdown(cdp: Cdp): Promise<void> {
@@ -1033,6 +981,88 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
   } finally {
     if (ui) await schliesseEinstellungen(cdp, ui);
     if (fake) await fake.close().catch(() => undefined);
+  }
+}
+
+/* ------------------------------------- 16 · Folge-Regel (Stream-Bereich, zentraler Stub) */
+
+/** Token-ähnlich: kleine Stücke in kurzem Takt (ein Absatz je Stück wäre kein Strom, sondern ein Sprung über die Folge-Schwelle). */
+const FOLGE_TAKT = 30;
+const FOLGE_LAENGE = 10;
+const FOLGE_ABSAETZE = 30;
+/** Mindest-Überlauf (Pixel) zur Störungszeit: die Folge-Schwelle des Kits ist 40 px (`followThreshold`,
+ *  kein Konsument überschreibt sie), dazu 40 px Spielraum — darunter ist „folgt nicht“ keine Messung (CORE-TEST-22). */
+const FOLGE_MIN_UEBERLAUF = 80;
+
+interface FolgeMessung { gueltig: boolean; grund: string; ueberlauf: number; scrollTop: number; abstand: number; neueBloecke: number; verlauf: number[] }
+
+/** Streamt eine lange Antwort in den Chat und misst im Renderer. Mit `stoeren` wird mitten im Strom hochgescrollt
+ *  (`scrollTop = 0`); gemessen wird nur, solange der Strom noch läuft (Messungen nach dem Schluss-Draw zählen nicht)
+ *  und erst, nachdem mindestens zwei Stücke nach der Störung angekommen sind. */
+async function messeFolge(cdp: Cdp, stoeren: boolean): Promise<FolgeMessung> {
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  await cdp.evaluate(`
+    ${P}.chatSession.reset();
+    window.__smokeFolge = { fertig: false };
+    ${P}.askKuro("Erzähl lang.").finally(() => { window.__smokeFolge.fertig = true; });
+    return true;
+  `);
+  const m = await cdp.evaluate<FolgeMessung>(`
+    const log = ${VIEW_EL}?.querySelector(".kuro-chat-log");
+    const st = window.__smokeFolge;
+    const bloecke = () => (log ? log.querySelectorAll(".okit-stream-block").length : 0);
+    const warte = async (bed, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (bed()) return true; await new Promise((r) => setTimeout(r, 40)); } return false; };
+    const aus = (gueltig, grund, extra = {}) => ({ gueltig, grund, ueberlauf: 0, scrollTop: 0, abstand: 0, neueBloecke: 0, verlauf: [], ...extra });
+    const abstandJetzt = () => Math.round(log.scrollHeight - log.scrollTop - log.clientHeight);
+    if (!log) return aus(false, "kein Log im Chat");
+    const ueberlauf = () => log.scrollHeight - log.clientHeight;
+    if (!(await warte(() => ueberlauf() >= ${FOLGE_MIN_UEBERLAUF + 40} || st.fertig, 12000)) || st.fertig) return aus(false, "der Überlauf wurde vor dem Ende des Stroms nicht erreicht");
+    const ueber = ueberlauf();
+    const b0 = bloecke();
+    if (${stoeren}) log.scrollTop = 0;
+    const t0 = log.scrollTop;
+    const verlauf = [];
+    let letzter = b0;
+    if (!(await warte(() => { if (bloecke() !== letzter) { letzter = bloecke(); verlauf.push(abstandJetzt()); } return letzter >= b0 + 2 || st.fertig; }, 8000)) || st.fertig) return aus(false, "nach der Störung kamen keine zwei Stücke mehr vor dem Ende des Stroms", { ueberlauf: ueber });
+    return { gueltig: ueber >= ${FOLGE_MIN_UEBERLAUF}, grund: "", ueberlauf: ueber, scrollTop: log.scrollTop - t0, abstand: log.scrollHeight - log.scrollTop - log.clientHeight, neueBloecke: bloecke() - b0, verlauf };
+  `);
+  // Den Strom zu Ende laufen lassen, bevor der nächste Lauf den Verlauf leert.
+  await pollUntil<boolean>(cdp, `return window.__smokeFolge?.fertig === true ? true : null;`, 15000).catch(() => false);
+  return m;
+}
+
+async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  const NAMEN = ['stream/folge-regel-respektiert-hochscrollen', 'stream/folgt-ohne-stoerung'] as const;
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  try {
+    await removeFakeManager(cdp);
+    const absaetze = Array.from({ length: FOLGE_ABSAETZE }, (_, i) => `Absatz ${i + 1}: Dies ist ein längerer Satz, der über mehrere Zeilen läuft und den Verlauf wachsen lässt. Noch ein Satz dazu.\n\n`);
+    // Der Stub hält den Strom nach dem letzten Stück noch länger als drei Takte offen: eine Messung am Ende zählt nicht.
+    stub = await startLlmStub({ models: [MANAGER_DEFAULT_MODEL], takt: FOLGE_TAKT, laenge: FOLGE_LAENGE, nachlaufMs: 750, standard: { text: absaetze.join('') } });
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await cdp.evaluate(`${P}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+
+    const gestoert = await messeFolge(cdp, true);
+    if (!gestoert.gueltig) unmeasured(NAMEN[0], `${gestoert.grund || `Überlauf zur Störungszeit nur ${gestoert.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
+    else {
+      record(NAMEN[0], gestoert.scrollTop <= 2,
+        `Überlauf ${gestoert.ueberlauf} px bei der Störung, ${gestoert.neueBloecke} Stücke danach: scrollTop ${gestoert.scrollTop >= 0 ? '+' : ''}${gestoert.scrollTop} px gegenüber der Störungszeit (Abstand zum Ende ${gestoert.abstand} px)`);
+    }
+    const frei = await messeFolge(cdp, false);
+    if (!frei.gueltig) unmeasured(NAMEN[1], `${frei.grund || `Überlauf nur ${frei.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
+    else {
+      record(NAMEN[1], frei.abstand < 40, `Überlauf ${frei.ueberlauf} px, ${frei.neueBloecke} Stücke später: Abstand zum Ende ${frei.abstand} px (Schwelle 40); Abstand je neues Stück: ${frei.verlauf.join(', ')}`);
+    }
+  } catch (e) {
+    for (const n of NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    await setSetting(cdp, 'chatEndpoints', []);
+    await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+    if (stub) await stub.stop().catch(() => undefined);
   }
 }
 
@@ -1606,6 +1636,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 15 · Streak (laufender Tag, Arbeitstage)');
     await sektionStreak(cdp);
+    console.log('');
+    console.log('── 16 · Folge-Regel (Stream-Bereich)');
+    await sektionFolgeRegel(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

@@ -1,8 +1,8 @@
 {
   "source": "obsidian-kit",
   "tag": "0.43.0",
-  "version": "0.56.0",
-  "sha": "8c1be18",
+  "version": "0.59.0",
+  "sha": "c64440c",
   "date": "2026-09-26",
   "vendored": "backend-probe.ts, chat-client.ts, chat-transport.ts, clipboard.ts, clock.ts, collapsible.ts, confirm.ts, dom-guard.ts, embedding-connection.ts, endpoint-list.ts, endpoint-plumbing.ts, endpoint-secrets.ts, endpoint-status-text.ts, endpoint-source.ts, help-setting.ts, hub.ts, llm-connection.ts, llm-connection-strings.ts, model-picker.ts, request-section.ts, request-session.ts, secrets.ts, shortcuts-bridge.ts, stable-writer.ts, stream-area.ts",
   "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). Pins in tools/kit-sync.json, re-vendor via tools/sync-kit.sh (zentrales kit-sync im Dach). Never hand-edit."

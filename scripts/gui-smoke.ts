@@ -116,6 +116,7 @@ const PUNKTE = [
   'verbindung/dataviewjs-block-rendert-als-text',
   'stream/folge-regel-respektiert-hochscrollen',
   'stream/folgt-ohne-stoerung',
+  'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
   'streak/laufender-tag-ist-keine-luecke',
   'streak/arbeitstag-schalter-speichert',
   'ton/stimmt-der-ton',
@@ -1033,7 +1034,7 @@ async function messeFolge(cdp: Cdp, stoeren: boolean): Promise<FolgeMessung> {
 
 async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
   const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
-  const NAMEN = ['stream/folge-regel-respektiert-hochscrollen', 'stream/folgt-ohne-stoerung'] as const;
+  const NAMEN = ['stream/folge-regel-respektiert-hochscrollen', 'stream/folgt-ohne-stoerung', 'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken'] as const;
   let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
   try {
     await removeFakeManager(cdp);
@@ -1056,6 +1057,15 @@ async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
     if (!frei.gueltig) unmeasured(NAMEN[1], `${frei.grund || `Überlauf nur ${frei.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
     else {
       record(NAMEN[1], frei.abstand < 40, `Überlauf ${frei.ueberlauf} px, ${frei.neueBloecke} Stücke später: Abstand zum Ende ${frei.abstand} px (Schwelle 40); Abstand je neues Stück: ${frei.verlauf.join(', ')}`);
+    }
+
+    // Grobe Stücke: ein Stück = ein ganzer Absatz (mehrere Zeilen). Wächst der Inhalt in EINEM Schritt über die
+    // Folge-Schwelle, darf das Folgen nicht aufhören (Kit-Fehler vor 0.59.0: `atBottom` wurde erst nach dem Wachsen gemessen).
+    stub.konfiguriere({ takt: 250, standard: { stuecke: absaetze } });
+    const grob = await messeFolge(cdp, false);
+    if (!grob.gueltig) unmeasured(NAMEN[2], `${grob.grund || `Überlauf nur ${grob.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
+    else {
+      record(NAMEN[2], grob.abstand < 40, `Überlauf ${grob.ueberlauf} px, ${grob.neueBloecke} Absätze später: Abstand zum Ende ${grob.abstand} px (Schwelle 40); Abstand je neuem Absatz: ${grob.verlauf.join(', ')}`);
     }
   } catch (e) {
     for (const n of NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);

@@ -7,6 +7,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Changed
 
+- **The endpoint list keeps "move up" and "remove endpoint" together.** In a narrow settings window the two buttons stay in one row instead of the trash can standing alone on a second line; the key and model fields are a little narrower, the address stays fully visible (obsidian-kit 0.59.0).
+- **The chat answer follows large blocks to the end.** While Kuro's answer streams in, a whole paragraph, table or code block arriving in one piece no longer stops the follow-along: the view stays at the end as long as you are at the end. If you scroll up yourself, it does not pull you back (obsidian-kit 0.59.0).
+- **Settings, section "Request": an unknown model family reads as pending.** For a freshly added endpoint the header says "Family: not detected yet · Backend: not detected yet" with a hint that this is normal and that the LLM Endpoint Manager records family and backend per model; the field lines read "Not sent yet — waits for the model family" (obsidian-kit 0.59.0).
+- Kit pins raised to obsidian-kit 0.59.0 and code-kit 0.24.0 (from 0.56.0 / 0.23.0). The releases in between (0.56.1 `fetchEndpointContext`, 0.56.2 embedding rows without "server picks", 0.57.0 build and mock helpers, 0.58.0 linearity fuzz probe, code-kit 0.24.0 `busy-guard`/`sanitizeBase`) change nothing you can see in Kuro.
 - **The Status/Chat tab bar is the shared hub tab bar.** The tabs now carry an icon and a label, mark the active tab with an underline, wrap onto a second row in a narrow sidebar instead of being squeezed, and can be reached with the arrow keys (Left/Right/Home/End). Without the chat enabled there is still no tab bar. Toggling the chat in the settings now also tears down the old chat panel before building the new one.
 
 ## [1.11.0] — 2026-10-12

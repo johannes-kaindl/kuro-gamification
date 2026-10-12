@@ -108,6 +108,8 @@ function makeFakeEl(): any {
     classes: new Set<string>(),
     style: {},
     text: '',
+    attrs: {} as Record<string, string>,
+    listeners: {} as Record<string, Array<(e: any) => void>>,
   };
   el.firstChild = null;
   el.firstElementChild = null;
@@ -120,9 +122,12 @@ function makeFakeEl(): any {
   el.toggleClass = (c: string, on: boolean) => {
     if (on) el.classes.add(c); else el.classes.delete(c);
   };
-  el.setAttr = (_k: string, _v: string) => {};
+  el.setAttr = (k: string, v: string) => { el.attrs[k] = v; };
+  el.setAttribute = (k: string, v: string) => { el.attrs[k] = v; };
+  el.getAttribute = (k: string) => (k in el.attrs ? el.attrs[k] : null);
   el.createEl = (_tag: string, opts?: any) => {
     const child = makeFakeEl();
+    if (opts?.attr) Object.assign(child.attrs, opts.attr);
     if (opts?.text) child.setText(opts.text);
     // `cls` darf mehrere Klassen tragen ("a b") — wie im echten DOM einzeln ablegen.
     if (opts?.cls) child.classes = new Set(String(opts.cls).split(/\s+/).filter(Boolean));
@@ -133,7 +138,10 @@ function makeFakeEl(): any {
   el.createSpan = (opts?: any) => el.createEl('span', opts);
   el.appendChild = (c: any) => { el.children.push(c); };
   el.removeChild = (_c: any) => { el.children.shift(); };
-  el.addEventListener = (_e: string, _fn: any) => {};
+  el.addEventListener = (e: string, fn: (ev: any) => void) => { const l = el.listeners[e] ?? []; l.push(fn); el.listeners[e] = l; };
+  el.dispatchEvent = (ev: { type: string }) => { for (const fn of el.listeners[ev.type] ?? []) fn(ev); };
+  el.click = () => el.dispatchEvent({ type: 'click' });
+  el.focus = () => {};
   return el;
 }
 

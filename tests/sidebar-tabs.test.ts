@@ -36,34 +36,43 @@ const openView = async (enableChat: boolean, over: Record<string, unknown> = {})
   return view;
 };
 
-describe('KuroSidebarView tabs', () => {
-  it('renders no tab bar when the chat is off', async () => {
+/** Panel-Div eines Tabs im Hub (root.children = [Tab-Leiste, Content]). */
+const panelDiv = (view: KuroSidebarView, idx: number): any => (view.hubEl as any).children[1].children[idx];
+const tabBtn = (view: KuroSidebarView, idx: number): any => (view.hubEl as any).children[0].children[idx];
+
+describe('KuroSidebarView tabs (Kit-Hub)', () => {
+  it('renders no hub when the chat is off', async () => {
     const view = await openView(false);
-    expect(view.tabBarEl).toBeNull();
+    expect(view.hubEl).toBeNull();
     expect(view.chatBodyEl).toBeNull();
     expect(view.statusBodyEl).not.toBeNull();
   });
 
-  it('renders both bodies and the tab bar when the chat is on', async () => {
+  it('renders hub with both bodies when the chat is on', async () => {
     const view = await openView(true);
-    expect(view.tabBarEl).not.toBeNull();
+    expect(view.hubEl).not.toBeNull();
+    expect(view.hubEl?.hasClass('okit-hub-root')).toBe(true);
     expect(view.statusBodyEl).not.toBeNull();
     expect(view.chatBodyEl).not.toBeNull();
+    expect(view.chatBodyEl?.hasClass('kuro-chat-body')).toBe(true);
   });
 
   it('starts on the status tab', async () => {
     const view = await openView(true);
     expect(view.activeTab).toBe('status');
-    expect(view.statusBodyEl?.hasClass('kuro-hidden')).toBe(false);
-    expect(view.chatBodyEl?.hasClass('kuro-hidden')).toBe(true);
+    expect(panelDiv(view, 0).hasClass('is-hidden')).toBe(false);
+    expect(panelDiv(view, 1).hasClass('is-hidden')).toBe(true);
   });
 
-  it('switches visibility on showTab', async () => {
+  it('switches visibility on showTab and on a tab click', async () => {
     const view = await openView(true);
     view.showTab('chat');
     expect(view.activeTab).toBe('chat');
-    expect(view.statusBodyEl?.hasClass('kuro-hidden')).toBe(true);
-    expect(view.chatBodyEl?.hasClass('kuro-hidden')).toBe(false);
+    expect(panelDiv(view, 0).hasClass('is-hidden')).toBe(true);
+    expect(panelDiv(view, 1).hasClass('is-hidden')).toBe(false);
+    tabBtn(view, 0).click();
+    expect(view.activeTab).toBe('status');
+    expect(tabBtn(view, 0).hasClass('is-active')).toBe(true);
   });
 
   it('keeps the very same chat body across a status refresh', async () => {
@@ -82,11 +91,33 @@ describe('KuroSidebarView tabs', () => {
     expect(view.chatBodyEl?.children.length).toBe(childrenBefore);
   });
 
-  it('clears both bodies on close', async () => {
+  it('builds a fresh hub once the chat is switched on, without a leftover chat panel', async () => {
+    const plugin = makePlugin(false);
+    const view = new KuroSidebarView({} as never, plugin as never);
+    await view.onOpen();
+    expect(view.hubEl).toBeNull();
+    plugin.data.settings.enableChat = true;
+    await view.onOpen();
+    expect(view.hubEl).not.toBeNull();
+    expect(view.chatBodyEl).not.toBeNull();
+  });
+
+  it('tears down the old chat panel when onOpen runs twice (syncChatUI)', async () => {
     const view = await openView(true);
+    const first = (view as any).chatPanel;
+    const destroy = jest.spyOn(first, 'destroy');
+    await view.onOpen();
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect((view as any).chatPanel).not.toBe(first);
+  });
+
+  it('clears everything on close and destroys the chat panel once', async () => {
+    const view = await openView(true);
+    const destroy = jest.spyOn((view as any).chatPanel, 'destroy');
     await view.onClose();
+    expect(destroy).toHaveBeenCalledTimes(1);
     expect(view.statusBodyEl).toBeNull();
     expect(view.chatBodyEl).toBeNull();
-    expect(view.tabBarEl).toBeNull();
+    expect(view.hubEl).toBeNull();
   });
 });

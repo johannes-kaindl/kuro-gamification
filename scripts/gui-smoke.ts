@@ -191,7 +191,7 @@ async function sektionAus(cdp: Cdp): Promise<void> {
   const befund = await cdp.evaluate<{ tabbar: number; chatbody: number; toolbar: number }>(`
     const view = ${VIEW_EL};
     return {
-      tabbar: view.querySelectorAll(".kuro-tabbar").length,
+      tabbar: view.querySelectorAll(".okit-hub-root").length,
       chatbody: view.querySelectorAll(".kuro-chat-body").length,
       toolbar: view.querySelectorAll(".kuro-toolbar").length,
     };
@@ -272,7 +272,7 @@ async function sektionEinschalten(cdp: Cdp): Promise<void> {
   `);
   const tabs = await cdp.evaluate<string[]>(`
     const view = ${VIEW_EL};
-    return view ? [...view.querySelectorAll(".kuro-tab")].map((b) => b.textContent.trim()) : [];
+    return view ? [...view.querySelectorAll(".okit-hub-tab")].map((b) => b.textContent.trim()) : [];
   `);
   record(
     'ein/tab-leiste-ohne-neuaufbau',
@@ -312,7 +312,7 @@ async function sektionSetupHinweis(cdp: Cdp): Promise<void> {
 async function oeffneChatTab(cdp: Cdp): Promise<void> {
   await cdp.evaluate(`
     const view = ${VIEW_EL};
-    const tabs = view ? [...view.querySelectorAll(".kuro-tab")] : [];
+    const tabs = view ? [...view.querySelectorAll(".okit-hub-tab")] : [];
     if (tabs[1]) tabs[1].click();
     await new Promise((r) => setTimeout(r, 400));
     return true;

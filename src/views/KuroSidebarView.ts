@@ -2,8 +2,9 @@
    KuroSidebarView — right-leaf ItemView mit Toolbar, Loot-Knopf
    und Status-Snapshot; optional mit Chat-Tab.
 
-   Tab-Aufbau (load-bearing): Status- und Chat-Body existieren
-   DAUERHAFT im DOM, der inaktive ist nur versteckt.
+   Tab-Aufbau (load-bearing): Die Tab-Leiste ist der Kit-Hub
+   (buildHubInto, „mount-once“): Status- und Chat-Body existieren
+   DAUERHAFT im DOM, der Hub blendet den inaktiven nur aus.
    renderSnapshot() leert deshalb ausschliesslich den Status-Body.
    Läge der Chat im selben Container, risse ihn der 800-ms-Refresh
    (vault.modify → refreshStatus) bei jedem Tastendruck in einer
@@ -14,7 +15,9 @@ import type KuroPlugin from '../main';
 import { KuroStatusRenderer } from './KuroStatusRenderer';
 import { KuroChatPanel } from './KuroChatPanel';
 import { buildDailyExtract } from '../llm/kuroContext';
+import { buildHubInto, type HubController, type HubPanel } from '../vendor/kit-obsidian/hub';
 import { t } from '../i18n';
+import type { Lang } from '../types';
 
 export const VIEW_TYPE_KURO = 'kuro-status-view';
 
@@ -23,10 +26,10 @@ export type KuroTab = 'status' | 'chat';
 export class KuroSidebarView extends ItemView {
   statusBodyEl: HTMLElement | null = null;
   chatBodyEl: HTMLElement | null = null;
-  tabBarEl: HTMLElement | null = null;
-  activeTab: KuroTab = 'status';
+  /** Wurzel des Hubs (Tab-Leiste + Panels); nur bei aktivem Chat vorhanden. */
+  hubEl: HTMLElement | null = null;
 
-  private tabButtons: Record<KuroTab, HTMLElement> | null = null;
+  private hub: HubController<KuroTab> | null = null;
   private chatPanel: KuroChatPanel | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: KuroPlugin) {
@@ -37,7 +40,12 @@ export class KuroSidebarView extends ItemView {
   getDisplayText(): string { return t('sidebar.title', this.plugin.data.settings.language); }
   getIcon(): string { return 'terminal'; }
 
+  get activeTab(): KuroTab { return this.hub?.currentTab() ?? 'status'; }
+
   async onOpen(): Promise<void> {
+    // syncChatUI ruft onOpen() auf einer schon offenen View erneut: das alte Chat-Panel
+    // (Timer, Stream) muss vorher weg, sonst bleibt es verwaist.
+    this.teardown();
     this.containerEl.empty();
     const lang = this.plugin.data.settings.language;
     const chatOn = this.plugin.data.settings.enableChat;
@@ -55,50 +63,62 @@ export class KuroSidebarView extends ItemView {
     redeemBtn.appendText(` ${t('sidebar.redeem', lang)}`);
     redeemBtn.addEventListener('click', () => this.plugin.openRedeemModal());
 
-    /* Tab-Leiste — nur bei aktivem Chat; sonst sieht die View aus wie bisher. */
     if (chatOn) {
-      const bar = root.createDiv({ cls: 'kuro-tabbar' });
-      this.tabBarEl = bar;
-      const mkTab = (id: KuroTab, label: string): HTMLElement => {
-        const btn = bar.createEl('button', { cls: 'kuro-tab', text: label });
-        btn.addEventListener('click', () => this.showTab(id));
-        return btn;
-      };
-      this.tabButtons = {
-        status: mkTab('status', t('chat.tab.status', lang)),
-        chat: mkTab('chat', t('chat.tab.chat', lang)),
-      };
+      /* Tab-Leiste = Kit-Hub, nur bei aktivem Chat; sonst sieht die View aus wie bisher.
+         Der Hub bekommt ein eigenes Div, damit die Werkzeugleiste darüber stehen bleibt. */
+      this.hubEl = root.createDiv({ cls: 'kuro-hub' });
+      this.hub = buildHubInto<KuroTab>(this.hubEl, this.makePanels(lang), 'status');
+    } else {
+      this.statusBodyEl = root.createDiv({ cls: 'kuro-view-body' });
     }
 
-    /* Bodies — beide bleiben für die Lebensdauer der View bestehen. */
-    this.statusBodyEl = root.createDiv({ cls: 'kuro-view-body' });
-    this.chatBodyEl = chatOn ? root.createDiv({ cls: 'kuro-view-body kuro-chat-body' }) : null;
-
-    if (this.chatBodyEl) {
-      this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, this.plugin.chatSession, {
-        onAsk: (q) => { void this.plugin.askKuro(q); },
-        onAbort: () => this.plugin.abortChat(),
-        onClear: () => this.plugin.clearChat(),
-        contextInfo: () => buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
-        openSettings: () => this.plugin.openOwnSettings(),
-        // Die View ist die Component, an der die gerenderten Blöcke hängen: schließt sie, räumt
-        // Obsidian deren Listener und eingebettete Kinder mit ab.
-        renderMarkdown: (el, md) => MarkdownRenderer.render(this.app, md, el, '', this),
-      });
-    }
-
-    this.showTab('status');
     this.renderSnapshot();
     this.renderChat();
   }
 
   async onClose(): Promise<void> {
-    this.chatPanel?.destroy();
+    this.teardown();
     this.containerEl.empty();
+  }
+
+  /** Beide Panels bleiben für die Lebensdauer der View gemountet (Kit-Vertrag „mount-once“). */
+  private makePanels(lang: Lang): HubPanel<KuroTab>[] {
+    const status: HubPanel<KuroTab> = {
+      id: 'status',
+      get label() { return t('chat.tab.status', lang); },
+      icon: 'activity',
+      mount: (el) => { this.statusBodyEl = el.createDiv({ cls: 'kuro-view-body' }); },
+      destroy: () => {},
+    };
+    const chat: HubPanel<KuroTab> = {
+      id: 'chat',
+      get label() { return t('chat.tab.chat', lang); },
+      icon: 'message-square',
+      mount: (el) => {
+        this.chatBodyEl = el.createDiv({ cls: 'kuro-view-body kuro-chat-body' });
+        this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, this.plugin.chatSession, {
+          onAsk: (q) => { void this.plugin.askKuro(q); },
+          onAbort: () => this.plugin.abortChat(),
+          onClear: () => this.plugin.clearChat(),
+          contextInfo: () => buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
+          openSettings: () => this.plugin.openOwnSettings(),
+          // Die View ist die Component, an der die gerenderten Blöcke hängen: schließt sie, räumt
+          // Obsidian deren Listener und eingebettete Kinder mit ab.
+          renderMarkdown: (el2, md) => MarkdownRenderer.render(this.app, md, el2, '', this),
+        });
+      },
+      destroy: () => { this.chatPanel?.destroy(); },
+    };
+    return [status, chat];
+  }
+
+  private teardown(): void {
+    this.hub?.destroy();
+    if (!this.hub) this.chatPanel?.destroy();
+    this.hub = null;
+    this.hubEl = null;
     this.statusBodyEl = null;
     this.chatBodyEl = null;
-    this.tabBarEl = null;
-    this.tabButtons = null;
     this.chatPanel = null;
   }
 
@@ -123,11 +143,7 @@ export class KuroSidebarView extends ItemView {
   }
 
   showTab(id: KuroTab): void {
-    this.activeTab = id;
-    this.statusBodyEl?.toggleClass('kuro-hidden', id !== 'status');
-    this.chatBodyEl?.toggleClass('kuro-hidden', id !== 'chat');
-    this.tabButtons?.status.toggleClass('kuro-tab-active', id === 'status');
-    this.tabButtons?.chat.toggleClass('kuro-tab-active', id === 'chat');
+    this.hub?.setTab(id);
   }
 
   /** Zeichnet den STATUS-Body neu. Fasst den Chat-Body nie an — s. Dateikopf. */

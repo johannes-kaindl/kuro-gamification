@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **The Status/Chat tab bar is the shared hub tab bar.** The tabs now carry an icon and a label, mark the active tab with an underline, wrap onto a second row in a narrow sidebar instead of being squeezed, and can be reached with the arrow keys (Left/Right/Home/End). Without the chat enabled there is still no tab bar. Toggling the chat in the settings now also tears down the old chat panel before building the new one.
+
 ## [1.11.0] — 2026-10-12
 
 ### Changed

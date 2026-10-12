@@ -128,7 +128,12 @@ async function spracheEnglisch(cdp: Cdp): Promise<void> {
     const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
     p.data.settings.language = "en";
     p.data.settings.habits = ${JSON.stringify(DEFAULT_HABITS_EN)};
+    // Ein frischer Aufnahme-Vault (\`--setup\` ersetzt die Plugin-Daten) öffnet beim Start das
+    // Willkommens-Fenster und verdeckt jedes Bild — als gesehen markieren und schließen.
+    p.data.onboardingShown = true;
     await p.persist();
+    for (const b of document.querySelectorAll(".modal-container .modal-close-button")) b.click();
+    await new Promise((r) => setTimeout(r, 300));
     return true;
   `);
 }
@@ -205,6 +210,16 @@ const SHOTS: Shot[] = [
     name: 'hero.png',
     klasse: 'feature',
     async run(cdp) {
+      // Chat ist off-by-default: das Hero zeigt die Seitenleiste ohne Tab-Leiste, und das Rezept
+      // setzt das ausdrücklich, statt am Zustand des Vorlaufs zu hängen.
+      await cdp.evaluate(`
+        const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+        p.data.settings.enableChat = false;
+        await p.persist();
+        p.syncChatUI();
+        await new Promise((r) => setTimeout(r, 500));
+        return true;
+      `);
       await setAppConfig(cdp, 'livePreview', true);
       if (!(await openExisting(cdp, 'Projects/Acme site relaunch.md', 'preview'))) return null;
       await closeExtraLeaves(cdp);
@@ -239,7 +254,7 @@ const SHOTS: Shot[] = [
         for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.view.renderChat?.();
         await new Promise((r) => setTimeout(r, 300));
         const view = ${VIEW_EL};
-        const tabs = view ? [...view.querySelectorAll(".kuro-tab")] : [];
+        const tabs = view ? [...view.querySelectorAll(".okit-hub-tab")] : [];
         if (tabs[1]) tabs[1].click();
         await new Promise((r) => setTimeout(r, 500));
         return true;

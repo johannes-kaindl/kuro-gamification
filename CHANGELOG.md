@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.12.0] — 2026-10-12
+
 ### Changed
 
 - **The endpoint list keeps "move up" and "remove endpoint" together.** In a narrow settings window the two buttons stay in one row instead of the trash can standing alone on a second line; the key and model fields are a little narrower, the address stays fully visible (obsidian-kit 0.59.0).

@@ -50,7 +50,6 @@
  * Kommentare: biome liest `.json` strikt und bricht an ihnen ab.
  */
 
-import { execFileSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
@@ -104,7 +103,7 @@ const PUNKTE = [
   'manager/modell-kommt-aus-defaultModel-nicht-aus-config',
   'manager/antwort-ist-gerendertes-markdown',
   'manager/ohne-manager-laeuft-die-lokale-liste',
-  'stream/echter-endpunkt',
+  'stream/echter-endpunkt-liefert-tokens-einzeln',
   'anfrage/body-traegt-die-modus-defaults',
   'anfrage/abschnitt-klappt-auf-und-zeigt-die-felder',
   'anfrage/letzte-anfrage-steht-beim-oeffnen-da',
@@ -1057,7 +1056,7 @@ async function geladenesModell(): Promise<string | null> {
 async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
   const modell = await geladenesModell();
   if (modell === null) {
-    unmeasured('stream/echter-endpunkt', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht (ein Lauf löste sonst ein JIT-Laden aus)`);
+    unmeasured('stream/echter-endpunkt-liefert-tokens-einzeln', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht (ein Lauf löste sonst ein JIT-Laden aus)`);
     return;
   }
   await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL, model: modell }]);
@@ -1418,14 +1417,7 @@ async function main(): Promise<void> {
   process.on('SIGTERM', onAbortSignal);
 
   try {
-    if (process.platform === 'darwin') {
-      try {
-        execFileSync('osascript', ['-e', 'tell application "Obsidian" to activate']);
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      } catch {
-        console.log('  (Hinweis: `osascript activate` schlug fehl — Fenster ggf. von Hand nach vorn holen)');
-      }
-    }
+    // Sichtbar machen übernimmt requireVisible (nicht osascript activate: das trifft die reguläre Instanz statt der Zweitinstanz).
     await requireVisible(cdp);
 
     // Ein frischer Staging-Vault startet im Restricted Mode, ein frisches Profil fragt „Dem Ersteller vertrauen“:

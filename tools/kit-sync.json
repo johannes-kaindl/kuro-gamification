@@ -1,20 +1,21 @@
 {
   "sources": {
-    "obsidian-kit": { "ref": "0.51.3" },
-    "code-kit": { "ref": "0.17.0" }
+    "obsidian-kit": { "ref": "0.56.0" },
+    "code-kit": { "ref": "0.23.0" }
   },
   "targets": [
     {
       "dir": "src/vendor/kit",
       "source": "code-kit",
       "from": "src/ts/pure",
-      "modules": ["backend-probe", "capabilities", "endpoint", "endpoint_config", "endpoint_diagnostics", "error_body", "model-choice", "model-list-cache", "num", "reasoning", "redact", "safe-markdown", "sampling-profiles", "secrets", "sse", "stream-blocks", "think-splitter"]
+      "modules": ["backend-probe", "capabilities", "embeddings-client", "endpoint", "endpoint_config", "endpoint_diagnostics", "error_body", "model-choice", "model-context", "model-list-cache", "num", "reasoning", "redact", "safe-markdown", "sampling-profiles", "secrets", "sse", "stream-blocks", "think-splitter", "timeout"]
     },
     {
       "dir": "src/vendor/kit",
       "source": "code-kit",
       "from": "src/ts/web",
-      "modules": ["clipboard"]
+      "modules": ["clipboard", "remote-resources"],
+      "rewrite": [["../pure/", "./"]]
     },
     {
       "dir": "src/vendor/kit",
@@ -27,7 +28,7 @@
       "dir": "src/vendor/kit-obsidian",
       "source": "obsidian-kit",
       "from": "src/obsidian",
-      "modules": ["backend-probe", "chat-client", "chat-transport", "clipboard", "clock", "collapsible", "confirm", "endpoint-list", "endpoint-secrets", "endpoint-source", "help-setting", "llm-connection", "llm-connection-strings", "model-picker", "request-section", "request-session", "secrets", "shortcuts-bridge", "stable-writer", "stream-area"],
+      "modules": ["backend-probe", "chat-client", "chat-transport", "clipboard", "clock", "collapsible", "confirm", "dom-guard", "embedding-connection", "endpoint-list", "endpoint-plumbing", "endpoint-secrets", "endpoint-status-text", "endpoint-source", "help-setting", "llm-connection", "llm-connection-strings", "model-picker", "request-section", "request-session", "secrets", "shortcuts-bridge", "stable-writer", "stream-area"],
       "rewrite": [["../vendor/code-kit/pure/", "../kit/"], ["../vendor/code-kit/web/", "../kit/"], ["../pure/", "../kit/"]]
     },
     {

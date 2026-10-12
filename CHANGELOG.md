@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.11.0] — 2026-10-12
+
 ### Changed
 
 - **The context length sits on the endpoint row.** Under an endpoint that is reachable and has a model, the settings show "Context: loaded N · max M tokens" (only "max M" when the model is not loaded; nothing when the server names no number). Each lookup gives up after 5 seconds.

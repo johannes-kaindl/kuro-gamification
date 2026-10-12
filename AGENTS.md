@@ -46,9 +46,9 @@ Arbeitsverzeichnis: **Repo-Root**.
 - typecheck: `npm run typecheck` (tsc auf `tsconfig.build.json`)
 - typecheck:scripts: `npm run typecheck:scripts` (tsc auf `tsconfig.scripts.json` — die beiden
   CDP-Treiber unter `scripts/`; überspringt sich selbst, wenn das Dach fehlt)
-- smoke:gui: `npm run smoke:gui -- --vault <name>` (GUI-Smoke gegen ein **laufendes** Obsidian,
-  s. `docs/SMOKE.md`; setzt `--remote-debugging-port=9222` voraus)
-- shots: `STAGING_VAULTS_DIR=<dir> npm run shots` (README-Bilder aufnehmen; `-- --setup` baut den
+- smoke:gui: `npm run smoke:gui -- --port <Port>` (GUI-Smoke gegen eine **Zweitinstanz** mit eigenem Profil und Port, Port ist Pflicht;
+  Rezept in `docs/SMOKE.md` und im Treiberkopf; die reguläre Instanz wird nie angefasst)
+- shots: `STAGING_VAULTS_DIR=<dir> npm run shots -- --port <Port>` (README-Bilder aufnehmen; `-- --setup` baut den
   Aufnahme-Vault aus `docs/images/fixture/`, s. `docs/images/README.md`) ·
   `npm run shots:check` prüft Vertrag ↔ Dateien ↔ README
 - gate: `npm run gate` (lint → lint:obsidian → typecheck → typecheck:scripts → test → build; **die** Gate-Definition —

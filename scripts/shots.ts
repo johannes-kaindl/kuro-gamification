@@ -6,31 +6,25 @@
  * `../tools/obsidian-cdp/`; im Repo liegt nur das Rezept — welches Bild was zeigt — und
  * das Fixture unter `docs/images/fixture/`.
  *
- * ## Ablauf
+ * ## Ablauf (Zweitinstanz, eigenes Profil, eigener Port — die reguläre Instanz wird nie angefasst)
  *
- * ⚠️ **Vor dem Quit koordinieren — Obsidian ist geteilte Infrastruktur.** Dieses Rezept
- * braucht den frischen Start (ein Bild pro Start, jeder Lauf hinterlässt Zustand); Mitnutzen ist
- * hier keine Alternative. Aber Obsidian ist Single-Instance: der Quit trifft die Instanz, an der
- * möglicherweise eine andere Session arbeitet, und zerstört deren Zustand. Der eigene Lauf ist
- * danach sauber grün; der Schaden fällt nicht auf.
+ * Der Port ist PFLICHT (`--port <n>` oder `SHOTS_PORT`, Wert dieses Rezepts: 9401); es gibt keinen
+ * Standardport, damit ein vergessener Port nicht die reguläre Instanz (9222) trifft.
  *
  * ```bash
- * lsof -nP -iTCP:9222 -sTCP:LISTEN >/dev/null && echo "belegt — erst fragen, wem"
- * ```
- *
- * Hört der Port, hängt jemand dran: **erst fragen, dann quitten.** ⚠️ Und die Prüfung ersetzt die
- * Frage nicht — sie zeigt aktive CDP-Treiber, aber nicht, wer ein Fenster offen hält oder auf den
- * Port wartet; am 2026-08-30 hätte sie einen zwei Stunden alten Reindex nicht gezeigt, denn der
- * hing an Ollama, nicht am Port.
- *
- * ```bash
+ * echo "$STAGING_VAULTS_DIR"                          # muss gesetzt sein (~/.zshenv)
  * npm run build
- * npm run shots -- --setup          # baut den Aufnahme-Vault aus dem Fixture
- * osascript -e 'quit app "Obsidian"'
- * open -a Obsidian --args --remote-debugging-port=9222
- * #   … den Aufnahme-Vault öffnen, beim ersten Mal dem Vault-Autor vertrauen
- * npm run shots                     # alle Bilder
- * npm run shots -- --only chat.png  # eines
+ * npm run shots -- --setup                            # baut den Aufnahme-Vault aus dem Fixture
+ * UD=/tmp/obs-test-kuro-gamification; mkdir -p "$UD"
+ * lsof -nP -iTCP:9401 -sTCP:LISTEN && echo "Port belegt — anderen nehmen"
+ * pgrep -f "user-data-dir=$UD" && echo "Profil belegt — $UD-w19 nehmen"
+ * cp ~/Library/Application\ Support/obsidian/obsidian-<version>.asar "$UD"/
+ * node -e 'const p=process.env.STAGING_VAULTS_DIR+"/kuro-gamification";require("fs").writeFileSync(process.argv[1]+"/obsidian.json",JSON.stringify({vaults:{kuro15abc:{path:p,ts:Date.now(),open:true}},language:"en"}))' "$UD"
+ * /Applications/Obsidian.app/Contents/MacOS/Obsidian --user-data-dir="$UD" --remote-debugging-port=9401 &
+ * #   … beim ersten Mal dem Vault-Autor vertrauen; PID merken (beendet wird nur sie), Lock je Port:
+ * python3 ~/.claude/hooks/obsidian-cdp-lock.py acquire --label kuro-gamification --intent "Bilder" --exclusive focus --port 9401 --ttl 600
+ * npm run shots -- --port 9401                        # alle Bilder
+ * npm run shots -- --port 9401 --only chat.png        # eines
  * ```
  *
  * ## Zwei Festlegungen, die im Vertrag begründet stehen
@@ -468,23 +462,21 @@ async function main(): Promise<void> {
       console.log(`  ${zeile}`);
     }
     console.log(
-      '\n⚠️  Lief Obsidian während dieses Setups, muss es JETZT neu starten. --setup hat\n' +
-      '   Notizen, Layout und Plugin-Einstellungen ersetzt; ein laufendes Obsidian hält den\n' +
-      '   alten Stand im Speicher und schreibt ihn zurück.\n' +
-      '\n⚠️  Erst prüfen, ob schon ein Obsidian läuft — ein Quit zerstört den Zustand\n' +
-      '    einer fremden Session, und der eigene Lauf ist danach trotzdem grün:\n' +
-      '      lsof -nP -iTCP:9222 -sTCP:LISTEN\n' +
-      '    Hört der Port, hängt jemand dran: erst fragen, dann quitten.\n' +
-      '\nObsidian mit offenem Debug-Port starten und diesen Vault öffnen:\n' +
-      "  osascript -e 'quit app \"Obsidian\"'\n" +
-      '  open -a Obsidian --args --remote-debugging-port=9222\n' +
+      '\nJetzt die Zweitinstanz mit diesem Vault starten (Rezept im Dateikopf: eigenes Profil mit dem Vault in\n' +
+      'obsidian.json, eigener Port, z. B. 9401; die reguläre Instanz wird nicht beendet). --setup hat Notizen,\n' +
+      'Layout und Plugin-Einstellungen ersetzt; eine laufende Instanz auf diesem Vault hält den alten Stand im\n' +
+      'Speicher und schreibt ihn zurück, sie startet deshalb neu.\n' +
       'Beim ersten Mal fragt Obsidian, ob es dem Vault-Autor vertraut — bestätigen, sonst\n' +
       'läuft das Plugin nicht und jedes Bild zeigt einen leeren Kasten.',
     );
     return;
   }
 
-  const port = Number(flag('--port') ?? env.SHOTS_PORT ?? 9222);
+  const portRoh = flag('--port') ?? env.SHOTS_PORT;
+  const port = Number(portRoh);
+  if (portRoh === undefined || !Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new Error(`--port <Zahl> (oder SHOTS_PORT) fehlt oder ist ungültig (${JSON.stringify(portRoh)}). Den Port der eigenen Zweitinstanz angeben (Rezept im Dateikopf, z. B. 9401).`);
+  }
   const nur = flag('--only');
 
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
@@ -493,7 +485,7 @@ async function main(): Promise<void> {
   if (!cdp) {
     throw new Error(
       `Kein Obsidian-Fenster mit dem Vault "${REPO_NAME}" auf Port ${port}.\n` +
-      'Erst `npm run shots -- --setup`, dann Obsidian mit dem Aufnahme-Vault starten.',
+      'Erst `npm run shots -- --setup`, dann die Zweitinstanz mit dem Aufnahme-Vault starten (Rezept im Dateikopf).',
     );
   }
   console.log(`Verbunden auf Port ${port}.`);

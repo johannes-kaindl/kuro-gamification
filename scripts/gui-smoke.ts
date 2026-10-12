@@ -13,38 +13,35 @@
  * richtig anfühlen, ist keine mechanisch entscheidbare Frage — dafür bleibt die Hand-Runde.
  * Der Lauf sagt das ausdrücklich, statt die Lücke wie Abdeckung aussehen zu lassen.
  *
- * ## Voraussetzung
+ * ## Zweitinstanz (der richtige Ort für diesen Lauf — eigenes Profil, eigener Port)
  *
- * ⚠️ **Zuerst prüfen, wer sonst an Obsidian hängt.** Obsidian ist Single-Instance — ein
- * `quit` trifft die Instanz, an der möglicherweise eine andere Session arbeitet, und zerstört
- * deren Zustand. Der eigene Lauf ist danach sauber grün; der Schaden entsteht woanders und
- * fällt nicht auf.
- *
- * ```bash
- * lsof -nP -iTCP:9222 -sTCP:LISTEN >/dev/null && echo "läuft bereits — NICHT beenden"
- * ```
- *
- * Hört der Port schon, dann **mitnutzen statt neu starten**: ein eigenes Fenster per
- * `vault-open` über IPC öffnen, dann `attachTo("workspace", port, vault)` — der Vault-Name
- * wählt, nicht die Reihenfolge. ⚠️ Die Port-Prüfung ersetzt die Frage nicht: sie zeigt aktive
- * CDP-Treiber, aber nicht, wer ein Fenster offen hält oder auf den Port wartet.
- *
- * Erst wenn nichts läuft — oder nach Absprache mit dem, der es benutzt — gilt das Rezept unten.
- *
- * Obsidian muss mit offenem Debug-Port laufen (der einzige Handgriff, der Handarbeit
- * bleibt — die App muss dafür neu gestartet werden):
+ * Der Port ist PFLICHT (`--port <n>`, Wert dieses Rezepts: 9401); der Treiber hat keinen Default, damit ein
+ * vergessener Port nie die reguläre Instanz (9222) trifft. Die reguläre Instanz wird weder genutzt noch
+ * beendet. Reihenfolge laut obsidian-plugins/AGENTS.md § Staging-Vaults (a)–(c):
  *
  * ```bash
- * osascript -e 'quit app "Obsidian"'
- * open -a Obsidian --args --remote-debugging-port=9222
+ * echo "$STAGING_VAULTS_DIR"                                    # muss gesetzt sein (~/.zshenv)
+ * UD=/tmp/obs-test-kuro-gamification; mkdir -p "$UD"
+ * lsof -nP -iTCP:9401 -sTCP:LISTEN && echo "Port belegt — anderen nehmen"
+ * pgrep -f "user-data-dir=$UD" && echo "Profil belegt — $UD-w19 nehmen"
+ * npm run build && OBSIDIAN_PLUGIN_DIR="$STAGING_VAULTS_DIR/kuro-gamification/.obsidian/plugins/kuro-gamification" npm run deploy
+ * cp ~/Library/Application\ Support/obsidian/obsidian-<version>.asar "$UD"/        # (a) aktuelle statt gebündelter Version
+ * node -e 'const p=process.env.STAGING_VAULTS_DIR+"/kuro-gamification";require("fs").writeFileSync(process.argv[1]+"/obsidian.json",JSON.stringify({vaults:{kuro15abc:{path:p,ts:Date.now(),open:true}},language:"en"}))' "$UD"
+ * /Applications/Obsidian.app/Contents/MacOS/Obsidian --user-data-dir="$UD" --remote-debugging-port=9401 &
+ * # PID merken: beendet wird NUR sie, nie pkill/killall. Je Messlauf ein frischer Prozess.
+ * python3 ~/.claude/hooks/obsidian-cdp-lock.py acquire --label kuro-gamification --intent "GUI-Smoke Zweitinstanz :9401" --exclusive focus --port 9401 --ttl 300
+ * npm run smoke:gui -- --port 9401      # (b) Restricted Mode, (c) Vertrauensdialog: macht `bereiteInstanzVor`
+ * python3 ~/.claude/hooks/obsidian-cdp-lock.py release
  * ```
  *
- * Dann, mit deployter Plugin-Version (`npm run deploy`):
+ * Der erste Lauf nach dem Anlegen eines Profils ist ein Aufwärmlauf und zählt nicht. `--vault` ist
+ * optional (Default `kuro-gamification`, der Staging-Vault).
  *
- * ```bash
- * npm run smoke:gui
- * npm run smoke:gui -- --port 9222 --vault 10_Pallas
- * ```
+ * ## Bilanz in vier Zuständen (CORE-TEST-19)
+ *
+ * grün · rot · übersprungen · nichts gemessen; `PUNKTE` ist der Nenner. Übersprungen heißt „nicht
+ * anwendbar/nicht messbar“ (`ton/stimmt-der-ton`); „Gegenstand nicht erreicht“ (Oberfläche nicht gefunden,
+ * kein Modell geladen, Messung abgebrochen) ist „nichts gemessen“ und setzt Exit 1. Abbruch: Exit 2.
  *
  * Typen: `tsconfig.scripts.json` (im `gate` über `npm run typecheck:scripts`). Es setzt
  * `lib: ["ES2022", "DOM"]` und `types: ["node"]` — der Treiber redet mit einem fremden
@@ -59,7 +56,8 @@ import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-import { Cdp, attachTo, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { Cdp, attachTo, bereiteInstanzVor, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
 import { de } from '../src/i18n/de';
 import { en } from '../src/i18n/en';
@@ -72,28 +70,75 @@ const SMOKE_ENDPOINT_URL = 'http://127.0.0.1:1234';
 
 /* ---------------------------------------------------------------- Protokoll */
 
-interface Check {
-  name: string;
-  passed: boolean;
-  detail: string;
-}
+/** Soll-Liste aller Prüfpunkte (der Nenner der Bilanz). Ein Name, der hier fehlt, lässt `createBilanz`
+ *  werfen; ein Punkt, der nie aufgezeichnet wird, zählt als „nichts gemessen“. */
+const PUNKTE = [
+  'vor/kein-liegen-gebliebener-endpunkt',
+  'aus/ansicht-vorhanden',
+  'aus/keine-tab-leiste',
+  'aus/status-unveraendert',
+  'ein/schalter-speichert',
+  'ein/schalter-ueberlebt-neustart',
+  'ein/tab-leiste-ohne-neuaufbau',
+  'setup/hinweis-erscheint',
+  'setup/hinweis-nennt-ort-und-beispiel',
+  'layout/eingabezeile-sichtbar',
+  'layout/log-scrollt-intern',
+  'kontext/ausklapper-vorhanden',
+  'kontext/vorschau-gleich-ausklapper',
+  'sprache/platzhalter-englisch',
+  'sprache/keine-deutschen-reste',
+  'einstellungen/hilfe-zeile-steht-zuerst',
+  'destruktiv/knoepfe-vorhanden',
+  'destruktiv/farblich-abgesetzt',
+  'herkunft/panel-vorhanden',
+  'herkunft/genau-eine-zustandsklasse',
+  'herkunft/aria-label',
+  'herkunft/kein-roher-code',
+  'markdown/fertige-antwort-gerendert',
+  'markdown/eigene-frage-bleibt-rohtext',
+  'markdown/stream-abgeschlossener-absatz-gerendert',
+  'kontext/zeile-folgt-der-notiz',
+  'manager/einstellungen-zeigen-den-manager-abschnitt',
+  'manager/lauf-nutzt-den-manager-endpunkt',
+  'manager/modell-kommt-aus-defaultModel-nicht-aus-config',
+  'manager/antwort-ist-gerendertes-markdown',
+  'manager/ohne-manager-laeuft-die-lokale-liste',
+  'stream/echter-endpunkt',
+  'anfrage/body-traegt-die-modus-defaults',
+  'anfrage/abschnitt-klappt-auf-und-zeigt-die-felder',
+  'anfrage/letzte-anfrage-steht-beim-oeffnen-da',
+  'anfrage/zwei-bearbeitungen-hintereinander-lassen-ihn-offen',
+  'anfrage/body-folgt-den-einstellungen',
+  'anfrage/zuruecksetzen-entfernt-die-ueberschreibung',
+  'verbindung/kein-apikey-in-data-json',
+  'verbindung/bearer-header-aus-dem-schluesselbund',
+  'verbindung/schwaerzung-platzhalter-hin-original-zurueck',
+  'verbindung/antwort-mit-bild-url-erzeugt-kein-img',
+  'verbindung/dataviewjs-block-rendert-als-text',
+  'streak/laufender-tag-ist-keine-luecke',
+  'streak/arbeitstag-schalter-speichert',
+  'ton/stimmt-der-ton',
+] as const;
 
-const results: Check[] = [];
+const bilanz = createBilanz({ punkte: PUNKTE });
 
 function record(name: string, passed: boolean, detail: string): void {
-  results.push({ name, passed, detail });
-  console.log(`${passed ? '  ✓' : '  ✗'} ${name}${detail ? ` — ${detail}` : ''}`);
+  bilanz.record(name as (typeof PUNKTE)[number], passed, detail);
 }
 
-/** Was der Lauf bewusst NICHT misst. Steht im Protokoll, damit eine Lücke nicht wie
- *  Abdeckung aussieht — ein stillschweigend ausgelassener Punkt liest sich hinterher
- *  wie ein grüner. */
-const uebersprungen: string[] = [];
-
+/** Nicht anwendbar oder nicht messbar (der Ton) — kein Gegenstand, der erreichbar wäre. */
 function skipped(name: string, reason: string): void {
-  uebersprungen.push(name);
-  console.log(`  – ${name} — übersprungen: ${reason}`);
+  bilanz.skipped(name as (typeof PUNKTE)[number], reason);
 }
+
+/** Der Gegenstand des Punkts wurde nicht erreicht (Vorbedingung fehlt, Messung abgebrochen) —
+ *  „nichts gemessen“, nie grün, Exit 1. */
+function unmeasured(name: string, reason: string): void {
+  bilanz.unmeasured(name as (typeof PUNKTE)[number], reason);
+}
+
+const aufgezeichnet = (name: string): boolean => bilanz.eintraege().some((e) => e.name === name);
 
 /* ------------------------------------------------------------------ Helfer */
 
@@ -186,7 +231,7 @@ async function sektionEinschalten(cdp: Cdp): Promise<void> {
   `);
 
   if (!ueberBruecke.ok) {
-    skipped('ein/schalter-speichert', ueberBruecke.grund ?? 'unbekannt');
+    unmeasured('ein/schalter-speichert', ueberBruecke.grund ?? 'unbekannt');
     await setSetting(cdp, 'enableChat', true);
   } else {
     record(
@@ -303,7 +348,7 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
     return true;
   `);
   if (!gefuellt) {
-    record('layout/verlauf-gefuellt', false, 'Chat-Verlauf ließ sich nicht befüllen');
+    for (const n of ['layout/eingabezeile-sichtbar', 'layout/log-scrollt-intern'] as const) unmeasured(n, 'Chat-Verlauf ließ sich nicht befüllen');
     return;
   }
 
@@ -336,7 +381,7 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
     };
   `);
   if (!mass.ok) {
-    record('layout/eingabezeile-sichtbar', false, mass.grund ?? 'Messung nicht möglich');
+    for (const n of ['layout/eingabezeile-sichtbar', 'layout/log-scrollt-intern'] as const) unmeasured(n, mass.grund ?? 'Messung nicht möglich');
     return;
   }
 
@@ -368,7 +413,7 @@ async function sektionKontext(cdp: Cdp): Promise<void> {
     8000,
   );
   if (ausklapper === null) {
-    skipped('kontext/vorschau-gleich-ausklapper', 'kein Kontext-Ausklapper im Chat-Tab');
+    unmeasured('kontext/vorschau-gleich-ausklapper', 'kein Kontext-Ausklapper im Chat-Tab');
     return;
   }
   record('kontext/ausklapper-vorhanden', true, `${ausklapper.trim().length} Zeichen`);
@@ -405,7 +450,7 @@ async function sektionKontext(cdp: Cdp): Promise<void> {
   await cdp.evaluate(`app.setting.close?.(); return true;`);
 
   if (vorschau === null) {
-    skipped(
+    unmeasured(
       'kontext/vorschau-gleich-ausklapper',
       'Vorschau-Box in den Einstellungen nicht gefunden (weder Modal noch eigenes Fenster)',
     );
@@ -616,7 +661,7 @@ async function sektionKontextSync(cdp: Cdp): Promise<void> {
     }
   `);
   if ('fehler' in lauf) {
-    record('kontext/zeile-folgt-der-notiz', false, lauf.fehler);
+    unmeasured('kontext/zeile-folgt-der-notiz', lauf.fehler);
     return;
   }
   const zahl = (text: string): number | null => {
@@ -661,7 +706,7 @@ async function sektionStreak(cdp: Cdp): Promise<void> {
     }
   `);
   if ('fehler' in lauf) {
-    record('streak/laufender-tag-ist-keine-luecke', false, lauf.fehler);
+    unmeasured('streak/laufender-tag-ist-keine-luecke', lauf.fehler);
   } else {
     record(
       'streak/laufender-tag-ist-keine-luecke',
@@ -691,7 +736,7 @@ async function sektionStreak(cdp: Cdp): Promise<void> {
     }
   `);
   if (!bruecke.ok) {
-    skipped('streak/arbeitstag-schalter-speichert', 'Settings-Tab bietet kein setControlValue');
+    unmeasured('streak/arbeitstag-schalter-speichert', 'Settings-Tab bietet kein setControlValue');
   } else {
     const w = bruecke.wert as unknown[];
     record(
@@ -936,7 +981,7 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
 
     // Aufklappen.
     ui = await oeffneEinstellungen(cdp);
-    if (!ui) { for (const n of NAMEN.filter((_, i) => i !== 2)) skipped(n, 'Einstellungs-Oberfläche nicht gefunden'); return; }
+    if (!ui) { for (const n of NAMEN.filter((_, i) => i !== 2)) unmeasured(n, 'Einstellungs-Oberfläche nicht gefunden'); return; }
     const w = ui.wurzel;
     const vorKlick = await ui.cdp.evaluate<string | null>(`return (${w}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded") ?? null;`);
     await ui.cdp.evaluate(`(${w}).querySelector(".okit-collapsible-header")?.click(); return true;`);
@@ -975,7 +1020,7 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
 
     // Zurücksetzen der Temperatur über den Knopf der Zeile.
     ui = await oeffneEinstellungen(cdp);
-    if (!ui) { skipped(NAMEN[4]!, 'Einstellungs-Oberfläche nicht gefunden'); return; }
+    if (!ui) { unmeasured(NAMEN[4]!, 'Einstellungs-Oberfläche nicht gefunden'); return; }
     const w2 = ui.wurzel;
     await ui.cdp.evaluate(`
       const zeile = (${w2}).querySelector('input[data-field="temperature"]')?.closest(".setting-item");
@@ -985,7 +1030,7 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
     const offen3 = await pollUntil<string>(ui.cdp, `const a = (${w2}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded"); return a === "true" ? a : null;`, 2000, 200);
     record(NAMEN[4]!, weg === true && offen3 === 'true', `Überschreibung ${weg ? 'entfernt' : 'noch da'}, Abschnitt ${offen3 === 'true' ? 'offen' : 'zugeklappt'}`);
   } catch (e) {
-    for (const n of NAMEN) if (!results.some((c) => c.name === n)) skipped(n, `Messung abgebrochen: ${(e as Error).message}`);
+    for (const n of NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
   } finally {
     if (ui) await schliesseEinstellungen(cdp, ui);
     if (fake) await fake.close().catch(() => undefined);
@@ -1012,7 +1057,7 @@ async function geladenesModell(): Promise<string | null> {
 async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
   const modell = await geladenesModell();
   if (modell === null) {
-    skipped('stream/echter-endpunkt', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht — nichts gemessen (ein Lauf löste sonst ein JIT-Laden aus)`);
+    unmeasured('stream/echter-endpunkt', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht (ein Lauf löste sonst ein JIT-Laden aus)`);
     return;
   }
   await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL, model: modell }]);
@@ -1071,7 +1116,7 @@ async function sektionSprache(cdp: Cdp): Promise<void> {
     8000,
   );
   if (!sichtbar) {
-    record('sprache/chat-ui-englisch', false, 'Chat-Panel nicht messbar');
+    for (const n of ['sprache/platzhalter-englisch', 'sprache/keine-deutschen-reste'] as const) unmeasured(n, 'Chat-Panel nicht messbar');
     return;
   }
 
@@ -1121,7 +1166,7 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
     fenster.close();
     return text;
   })();
-  if (ersteZeile === null) skipped('einstellungen/hilfe-zeile-steht-zuerst', 'Settings-Fenster nicht lesbar');
+  if (ersteZeile === null) unmeasured('einstellungen/hilfe-zeile-steht-zuerst', 'Settings-Fenster nicht lesbar');
   else {
     const passt = (l: Record<string, string>): boolean =>
       ersteZeile.includes(l['help.name'] ?? '\0') && ersteZeile.includes(l['help.openDocs'] ?? '\0');
@@ -1181,7 +1226,7 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
   }
 
   if (!mess) {
-    skipped('destruktiv/knoepfe-abgesetzt', 'Einstellungen-DOM nicht erreichbar');
+    for (const n of ['destruktiv/knoepfe-vorhanden', 'destruktiv/farblich-abgesetzt'] as const) unmeasured(n, 'Einstellungen-DOM nicht erreichbar');
   } else {
     // Erst den Gegenstand belegen: ein Farbvergleich gegen null Knöpfe wäre grün.
     record(
@@ -1199,7 +1244,7 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
         `destruktiv: ${mess.auffaellig[0]?.farbe} · normal ("${mess.normal.text}"): ${mess.normal.farbe}`,
       );
     } else {
-      skipped('destruktiv/farblich-abgesetzt', 'kein Vergleichsknopf ohne Sonderklasse gefunden');
+      unmeasured('destruktiv/farblich-abgesetzt', 'kein Vergleichsknopf ohne Sonderklasse gefunden');
     }
   }
 
@@ -1265,7 +1310,7 @@ async function sektionHerkunft(cdp: Cdp): Promise<void> {
   }
 
   if (!mess) {
-    skipped('herkunft/panel-vorhanden', 'Einstellungen-DOM nicht erreichbar');
+    for (const n of ['herkunft/panel-vorhanden', 'herkunft/genau-eine-zustandsklasse', 'herkunft/aria-label', 'herkunft/kein-roher-code'] as const) unmeasured(n, 'Einstellungen-DOM nicht erreichbar');
   } else {
     // Erst den Gegenstand belegen: alle folgenden Punkte wären über null Zeilen grün.
     record(
@@ -1296,16 +1341,18 @@ async function sektionHerkunft(cdp: Cdp): Promise<void> {
 
 /* -------------------------------------------------------------------- main */
 
-let PORT = 9222;
+let PORT = 0;
+/** Meldung von `bereiteInstanzVor`, für die Abbruchmeldung, falls das Plugin nicht lädt. */
+let instanzHinweis = '';
 
 async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
-  const flag = (name: string): string | undefined => {
-    const index = argv.indexOf(`--${name}`);
-    return index === -1 ? undefined : argv[index + 1];
-  };
-  PORT = Number(flag('port') ?? 9222);
-  const vault = flag('vault');
+  const args = parseArgs(process.argv.slice(2));
+  const portRoh = args.value('port');
+  PORT = Number(portRoh);
+  if (portRoh === undefined || !Number.isInteger(PORT) || PORT < 1024 || PORT > 65535) {
+    throw new Error(`--port <Zahl> fehlt oder ist ungültig (${JSON.stringify(portRoh)}). Den Port der eigenen Zweitinstanz angeben (Rezept im Dateikopf, z. B. 9401).`);
+  }
+  const vault = args.value('vault') ?? PLUGIN_ID;
 
   console.log(`GUI-Smoke — Obsidian auf Port ${PORT}`);
   const cdp = await attachTo('workspace', PORT, vault);
@@ -1381,6 +1428,12 @@ async function main(): Promise<void> {
     }
     await requireVisible(cdp);
 
+    // Ein frischer Staging-Vault startet im Restricted Mode, ein frisches Profil fragt „Dem Ersteller vertrauen“:
+    // `bereiteInstanzVor` bestätigt den Dialog und lädt das Plugin — nur im eigenen Staging-Vault (`nurVault`).
+    const vorbereitet = await bereiteInstanzVor(cdp, { pluginIds: [PLUGIN_ID], nurVault: PLUGIN_ID, sprache: 'en' });
+    instanzHinweis = vorbereitet.hinweis;
+    console.log(`Instanz vorbereitet: ${vorbereitet.hinweis}`);
+
     const vaultInfo = await cdp.evaluate<{ name: string; basePath: string; configDir: string }>(`
       return {
         name: app.vault.getName(),
@@ -1446,10 +1499,7 @@ async function main(): Promise<void> {
         await app.plugins.disablePlugin(id);
         await new Promise((r) => setTimeout(r, 500));
       }
-      // uebernommen aus obsidian-letterhead/scripts/gui-smoke.ts, 2026-09-26
-      // Ein frisches Profil startet im Restricted Mode: Community-Plugins sind aus, und
-      // enablePlugin liefert dann still nichts. Nur im eigenen Staging-Vault aufheben.
-      if (app.vault.getName() === id && app.plugins.setEnable) await app.plugins.setEnable(true);
+      // Restricted Mode und Vertrauensdialog hat bereiteInstanzVor oben erledigt.
       await app.plugins.enablePlugin(id);
       await new Promise((r) => setTimeout(r, 1200));
       const p = app.plugins.plugins[id];
@@ -1466,7 +1516,7 @@ async function main(): Promise<void> {
       throw new Error(
         `Plugin ${PLUGIN_ID} ist nicht aktiv. Erst \`npm run deploy\`. Bleibt es danach aus, `
         + 'laeuft die Instanz im Restricted Mode (frisches Profil) oder der Vault ist ein fremder: '
-        + `der Treiber hebt den Modus nur im Vault ${PLUGIN_ID} auf (\`app.plugins.setEnable(true)\`).`,
+        + `der Treiber hebt den Modus nur im Vault ${PLUGIN_ID} auf (\`bereiteInstanzVor\`: ${instanzHinweis || 'keine Meldung'}).`,
       );
     }
 
@@ -1580,24 +1630,15 @@ async function main(): Promise<void> {
     cdp.close();
   }
 
-  // Die Abschlusszeile trägt mit, worüber der Lauf lief UND was er nicht deckt: wer nur
-  // den Exit-Code liest, schlägt keine Dokumentation daneben auf (CORE-TEST-03).
-  const failed = results.filter((check) => !check.passed);
-  const lueckeed = uebersprungen.length
-    ? ` · ${uebersprungen.length} übersprungen (${uebersprungen.join(', ')}) — NICHT geprüft`
-    : '';
-  console.log(`\n${results.length - failed.length}/${results.length} grün${lueckeed}`);
+  // Die Abschlusszeile trägt alle vier Zustände: ein übersprungener oder nie gemessener Punkt gehört IN sie
+  // (CORE-TEST-03). `abschluss()` setzt Exit 1 bei Rot ODER nichts gemessen.
+  bilanz.abschluss();
+  for (const p of bilanz.eintraege()) {
+    if (p.zustand === 'rot' || p.zustand === 'nichts-gemessen') console.log(`  - ${p.name}: ${p.detail}`);
+  }
   if (herkunftsWarnung !== null) {
     console.log('⚠️  Herkunft des gemessenen Builds ungeprüft — s. Warnung oben.');
   }
-  if (failed.length > 0) {
-    console.log('Rot:');
-    for (const check of failed) console.log(`  - ${check.name}: ${check.detail}`);
-    process.exitCode = 1;
-  }
 }
 
-main().catch((error: unknown) => {
-  console.error(`\nAbbruch: ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
-});
+runDriver(main);

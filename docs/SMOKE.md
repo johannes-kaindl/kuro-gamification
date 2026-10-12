@@ -11,30 +11,19 @@ nicht vendored.
 
 ## Vorbereitung
 
-⚠️ **Zuerst prüfen, wer sonst an Obsidian hängt.** Obsidian ist Single-Instance — ein
-`quit` trifft die Instanz, an der möglicherweise eine andere Session arbeitet, und zerstört
-deren Zustand. Der eigene Lauf ist danach sauber grün; der Schaden entsteht woanders und
-fällt nicht auf.
+Der Lauf gehört in eine **Zweitinstanz** mit eigenem Profil und eigenem Port; die reguläre Instanz (9222) wird weder genutzt noch beendet, ein Quit träfe die Sitzungen anderer. Der Port ist Pflicht (`--port`), der Treiber hat keinen Default und bricht ohne ihn mit Exit 2 ab. Das vollständige Rezept steht im Kopf von `scripts/gui-smoke.ts` (Profil, `.asar` der regulären Instanz, `obsidian.json` mit dem Staging-Vault und `"language":"en"`, Lock je Port). Vertrauensdialog und Restricted Mode eines frischen Profils erledigt der Treiber selbst (`bereiteInstanzVor`, nur im Staging-Vault `kuro-gamification`).
 
 ```bash
-lsof -nP -iTCP:9222 -sTCP:LISTEN >/dev/null && echo "läuft bereits — NICHT beenden"
+UD=/tmp/obs-test-kuro-gamification; mkdir -p "$UD"
+lsof -nP -iTCP:9401 -sTCP:LISTEN && echo "Port belegt — anderen nehmen"
+OBSIDIAN_PLUGIN_DIR="$STAGING_VAULTS_DIR/kuro-gamification/.obsidian/plugins/kuro-gamification" npm run deploy
+/Applications/Obsidian.app/Contents/MacOS/Obsidian --user-data-dir="$UD" --remote-debugging-port=9401 &
+python3 ~/.claude/hooks/obsidian-cdp-lock.py acquire --label kuro-gamification --intent "GUI-Smoke :9401" --exclusive focus --port 9401 --ttl 300
+npm run smoke:gui -- --port 9401
+python3 ~/.claude/hooks/obsidian-cdp-lock.py release
 ```
 
-Hört der Port schon, dann **mitnutzen statt neu starten**: ein eigenes Fenster per
-`vault-open` über IPC öffnen, dann `attachTo("workspace", port, vault)` — der Vault-Name
-wählt, nicht die Reihenfolge. ⚠️ Die Port-Prüfung ersetzt die Frage nicht: sie zeigt aktive
-CDP-Treiber, aber nicht, wer ein Fenster offen hält oder auf den Port wartet.
-
-Erst wenn nichts läuft — oder nach Absprache mit dem, der es benutzt — gilt das Rezept unten.
-
-Obsidian muss mit offenem Debug-Port laufen — der einzige Handgriff, der Handarbeit bleibt:
-
-```bash
-osascript -e 'quit app "Obsidian"'
-open -a Obsidian --args --remote-debugging-port=9222
-OBSIDIAN_PLUGIN_DIR="<vault>/.obsidian/plugins/kuro-gamification" npm run deploy
-npm run smoke:gui -- --vault <vault-name>
-```
+Die letzte Zeile zählt in vier Zuständen (grün · rot · übersprungen · nichts gemessen) gegen die Soll-Liste `PUNKTE`. **Übersprungen** ist nur, was nicht messbar ist (der Ton). **Nichts gemessen** ist, wo der Gegenstand nicht erreicht wurde (kein Modell geladen für `stream/echter-endpunkt`, Oberfläche nicht gefunden, Messung abgebrochen) und setzt wie Rot Exit 1. Abbruch vor der Messung ist Exit 2.
 
 Der Treiber lädt das Plugin selbst neu (`disablePlugin`/`enablePlugin`) — ohne das misst er
 den zuletzt geladenen Stand und meldet ihn als Ergebnis für den gerade gebauten.
@@ -51,7 +40,7 @@ den zuletzt geladenen Stand und meldet ihn als Ergebnis für den gerade gebauten
 | 6 · Sprache | Platzhalter englisch · kein Text aus der deutschen Tabelle im Chat-Panel | 12 |
 | 7 · Destruktive Knöpfe | destruktiv markierte Knöpfe vorhanden · farblich abgesetzt (computed style, nicht Klasse) | 13 |
 
-**Bewusst nicht automatisiert** — steht im Protokoll als `übersprungen`, damit die Lücke
+**Bewusst nicht automatisiert** — steht im Protokoll als `übersprungen` (der Ton) bzw. `nichts gemessen` (ohne geladenes Modell), damit die Lücke
 nicht wie Abdeckung aussieht:
 
 - **Schritt 11, der Ton.** Ob sich Kuros Antworten richtig anfühlen, ist keine mechanisch

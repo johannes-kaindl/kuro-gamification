@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.12.1] — 2026-10-14
+
 ### Changed
 
 - **The model ID in the endpoint list stays visible.** At normal window width the model ID in an endpoint row is no longer cut off (a cut-off value reads like a different model); a very long ID gets its own line. In a narrow window, the block of model field and buttons moves to a second row as a whole (obsidian-kit 0.59.1).

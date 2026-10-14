@@ -52,6 +52,7 @@ import {
   openExisting,
   pollUntil,
   reopenNote,
+  schliesseDialog,
   setAppConfig,
 } from '../../tools/obsidian-cdp/cdp.js';
 import { type Rect, boxOf, capture, setWindowSize, withMetrics, writeShot } from '../../tools/obsidian-cdp/shot.js';
@@ -132,10 +133,11 @@ async function spracheEnglisch(cdp: Cdp): Promise<void> {
     // Willkommens-Fenster und verdeckt jedes Bild — als gesehen markieren und schließen.
     p.data.onboardingShown = true;
     await p.persist();
-    for (const b of document.querySelectorAll(".modal-container .modal-close-button")) b.click();
-    await new Promise((r) => setTimeout(r, 300));
     return true;
   `);
+  // Der Schließen-Knopf heißt je nach Obsidian-Version `.modal-close-button` (1.12) oder `.modal-header-button` (1.14):
+  // `schliesseDialog` kennt beide und meldet, was es gefunden hat.
+  await schliesseDialog(cdp);
 }
 
 /** Die Kuro-Seitenleiste öffnen und auf einen frisch gerechneten Stand bringen. */

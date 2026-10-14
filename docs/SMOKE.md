@@ -23,6 +23,8 @@ npm run smoke:gui -- --port 9401
 python3 ~/.claude/hooks/obsidian-cdp-lock.py release
 ```
 
+Zwei Schalter: `--echtes-modell` fährt den Punkt `stream/echter-endpunkt-liefert-tokens-einzeln` gegen ein geladenes Modell (ohne ihn ist er übersprungen, LM-Regel Welle 21: kein Lauf lässt ein Modell rechnen). `--folge-gegenprobe` hängt einen Beobachter an den Chat-Log, der nach jeder Änderung ans Ende scrollt; dann muss genau `stream/folge-regel-respektiert-hochscrollen` rot werden (gemessen 2026-10-14: scrollTop 0 → 140/160/160). Ctrl-C räumt über das Abbruch-Modul der Brücke auf (Einstellungen zurück, Bilanz, Exit 130).
+
 Die letzte Zeile zählt in vier Zuständen (grün · rot · übersprungen · nichts gemessen) gegen die Soll-Liste `PUNKTE`. **Übersprungen** ist nur, was nicht messbar ist (der Ton). **Nichts gemessen** ist, wo der Gegenstand nicht erreicht wurde (kein Modell geladen für `stream/echter-endpunkt`, Oberfläche nicht gefunden, Messung abgebrochen) und setzt wie Rot Exit 1. Abbruch vor der Messung ist Exit 2.
 
 Der Treiber lädt das Plugin selbst neu (`disablePlugin`/`enablePlugin`) — ohne das misst er

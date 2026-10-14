@@ -53,7 +53,8 @@
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-import { Cdp, attachTo, bereiteInstanzVor, entferneFakeManager, installFakeManager as installZentralFakeManager, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { Cdp, attachTo, beimAbbruch, bereiteInstanzVor, entferneFakeManager, installFakeManager as installZentralFakeManager, istAbgebrochen, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { messeFolge, zeichneFolge } from '../../tools/obsidian-cdp/folge.js';
 import { echoText, startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
@@ -116,6 +117,7 @@ const PUNKTE = [
   'verbindung/dataviewjs-block-rendert-als-text',
   'stream/folge-regel-respektiert-hochscrollen',
   'stream/folgt-ohne-stoerung',
+  'stream/folgt-wieder-nach-dem-zurueckscrollen',
   'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
   'streak/laufender-tag-ist-keine-luecke',
   'streak/arbeitstag-schalter-speichert',
@@ -987,91 +989,94 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
 
 /* ------------------------------------- 16 · Folge-Regel (Stream-Bereich, zentraler Stub) */
 
-/** Token-ähnlich: kleine Stücke in kurzem Takt (ein Absatz je Stück wäre kein Strom, sondern ein Sprung über die Folge-Schwelle). */
+/** Token-ähnlich: kleine Stücke in kurzem Takt (ein Absatz je Stück wäre kein Strom, sondern ein Sprung über die Folge-Schwelle).
+ *  Der Strom ist lang genug für drei Phasen (Kontrolle, Störung, Wiederaufnahme): `messeFolge` aus der Brücke braucht je Phase mindestens drei Stände. */
 const FOLGE_TAKT = 30;
 const FOLGE_LAENGE = 10;
-const FOLGE_ABSAETZE = 30;
-/** Mindest-Überlauf (Pixel) zur Störungszeit: die Folge-Schwelle des Kits ist 40 px (`followThreshold`,
- *  kein Konsument überschreibt sie), dazu 40 px Spielraum — darunter ist „folgt nicht“ keine Messung (CORE-TEST-22). */
-const FOLGE_MIN_UEBERLAUF = 80;
+const FOLGE_ABSAETZE = 50;
+/** Der Log-Körper der laufenden Antwort entsteht mit dem Strom: vorher liefert der Ausdruck nichts, damit die Messung nicht einen Vorgänger festhält und den Wechsel als Neuaufbau wertet. */
+const FOLGE_LOG = `(() => { const l = ${VIEW_EL}?.querySelector(".kuro-chat-log"); return l && l.querySelector(".okit-stream-block") ? l : null; })()`;
 
-interface FolgeMessung { gueltig: boolean; grund: string; ueberlauf: number; scrollTop: number; abstand: number; neueBloecke: number; verlauf: number[] }
-
-/** Streamt eine lange Antwort in den Chat und misst im Renderer. Mit `stoeren` wird mitten im Strom hochgescrollt
- *  (`scrollTop = 0`); gemessen wird nur, solange der Strom noch läuft (Messungen nach dem Schluss-Draw zählen nicht)
- *  und erst, nachdem mindestens zwei Stücke nach der Störung angekommen sind. */
-async function messeFolge(cdp: Cdp, stoeren: boolean): Promise<FolgeMessung> {
+/** Startet eine Antwort im Chat (der Strom läuft im Renderer weiter) und wartet nicht. `window.__smokeFolge.fertig` zeigt das Ende. */
+async function starteFolgeStrom(cdp: Cdp): Promise<void> {
+  const gegenprobe = parseArgs(process.argv.slice(2)).has('folge-gegenprobe');
   const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
   await cdp.evaluate(`
-    ${P}.chatSession.reset();
     window.__smokeFolge = { fertig: false };
+    ${gegenprobe ? `// Gegenprobe (--folge-gegenprobe): ein Plugin, das ein Hochscrollen überschreibt. Genau der Folge-Punkt muss rot werden.
+    new MutationObserver(() => { const l = ${VIEW_EL}?.querySelector(".kuro-chat-log"); if (l) l.scrollTop = l.scrollHeight; }).observe(document.body, { childList: true, subtree: true, characterData: true });` : ''}
     ${P}.askKuro("Erzähl lang.").finally(() => { window.__smokeFolge.fertig = true; });
     return true;
   `);
-  const m = await cdp.evaluate<FolgeMessung>(`
-    const log = ${VIEW_EL}?.querySelector(".kuro-chat-log");
-    const st = window.__smokeFolge;
-    const bloecke = () => (log ? log.querySelectorAll(".okit-stream-block").length : 0);
-    const warte = async (bed, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (bed()) return true; await new Promise((r) => setTimeout(r, 40)); } return false; };
-    const aus = (gueltig, grund, extra = {}) => ({ gueltig, grund, ueberlauf: 0, scrollTop: 0, abstand: 0, neueBloecke: 0, verlauf: [], ...extra });
-    const abstandJetzt = () => Math.round(log.scrollHeight - log.scrollTop - log.clientHeight);
-    if (!log) return aus(false, "kein Log im Chat");
-    const ueberlauf = () => log.scrollHeight - log.clientHeight;
-    if (!(await warte(() => ueberlauf() >= ${FOLGE_MIN_UEBERLAUF + 40} || st.fertig, 12000)) || st.fertig) return aus(false, "der Überlauf wurde vor dem Ende des Stroms nicht erreicht");
-    const ueber = ueberlauf();
-    const b0 = bloecke();
-    if (${stoeren}) log.scrollTop = 0;
-    const t0 = log.scrollTop;
-    const verlauf = [];
-    let letzter = b0;
-    if (!(await warte(() => { if (bloecke() !== letzter) { letzter = bloecke(); verlauf.push(abstandJetzt()); } return letzter >= b0 + 2 || st.fertig; }, 8000)) || st.fertig) return aus(false, "nach der Störung kamen keine zwei Stücke mehr vor dem Ende des Stroms", { ueberlauf: ueber });
-    return { gueltig: ueber >= ${FOLGE_MIN_UEBERLAUF}, grund: "", ueberlauf: ueber, scrollTop: log.scrollTop - t0, abstand: log.scrollHeight - log.scrollTop - log.clientHeight, neueBloecke: bloecke() - b0, verlauf };
-  `);
-  // Den Strom zu Ende laufen lassen, bevor der nächste Lauf den Verlauf leert.
+}
+
+/** Verlauf leeren, BEVOR der Beobachter der Messung hängt: der Reset baut den Log-Körper neu, und `messeFolge` wertet einen
+ *  ausgetauschten Scroll-Container als Neuaufbau („nichts gemessen“). */
+async function leereVerlauf(cdp: Cdp): Promise<void> {
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  await cdp.evaluate(`${P}.chatSession.reset(); await new Promise((r) => setTimeout(r, 300)); return true;`);
+}
+
+/** Den Strom zu Ende laufen lassen, bevor der nächste Lauf den Verlauf leert (nach einem Abbruch wartet es nicht). */
+async function warteFolgeStromEnde(cdp: Cdp): Promise<void> {
+  if (istAbgebrochen()) return;
   await pollUntil<boolean>(cdp, `return window.__smokeFolge?.fertig === true ? true : null;`, 15000).catch(() => false);
-  return m;
 }
 
 async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
   const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
-  const NAMEN = ['stream/folge-regel-respektiert-hochscrollen', 'stream/folgt-ohne-stoerung', 'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken'] as const;
+  const NAMEN = {
+    folge: 'stream/folge-regel-respektiert-hochscrollen',
+    kontrolle: 'stream/folgt-ohne-stoerung',
+    wiederaufnahme: 'stream/folgt-wieder-nach-dem-zurueckscrollen',
+    absatz: 'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
+  } as const;
+  const alle = Object.values(NAMEN);
   let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
   try {
     await removeFakeManager(cdp);
     const absaetze = Array.from({ length: FOLGE_ABSAETZE }, (_, i) => `Absatz ${i + 1}: Dies ist ein längerer Satz, der über mehrere Zeilen läuft und den Verlauf wachsen lässt. Noch ein Satz dazu.\n\n`);
     // Der Stub hält den Strom nach dem letzten Stück noch länger als drei Takte offen: eine Messung am Ende zählt nicht.
     stub = await startLlmStub({ models: [MANAGER_DEFAULT_MODEL], takt: FOLGE_TAKT, laenge: FOLGE_LAENGE, nachlaufMs: 750, standard: { text: absaetze.join('') } });
-    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
+    const s = stub;
+    await setSetting(cdp, 'chatEndpoints', [{ url: s.url, model: MANAGER_DEFAULT_MODEL }]);
     await setSetting(cdp, 'chatChoice', {});
     await cdp.evaluate(`${P}.llm.invalidate(); return true;`);
     await rebuildSidebar(cdp);
     await oeffneChatTab(cdp);
 
-    const gestoert = await messeFolge(cdp, true);
-    if (!gestoert.gueltig) unmeasured(NAMEN[0], `${gestoert.grund || `Überlauf zur Störungszeit nur ${gestoert.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
-    else {
-      record(NAMEN[0], gestoert.scrollTop <= 2,
-        `Überlauf ${gestoert.ueberlauf} px bei der Störung, ${gestoert.neueBloecke} Stücke danach: scrollTop ${gestoert.scrollTop >= 0 ? '+' : ''}${gestoert.scrollTop} px gegenüber der Störungszeit (Abstand zum Ende ${gestoert.abstand} px)`);
-    }
-    const frei = await messeFolge(cdp, false);
-    if (!frei.gueltig) unmeasured(NAMEN[1], `${frei.grund || `Überlauf nur ${frei.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
-    else {
-      record(NAMEN[1], frei.abstand < 40, `Überlauf ${frei.ueberlauf} px, ${frei.neueBloecke} Stücke später: Abstand zum Ende ${frei.abstand} px (Schwelle 40); Abstand je neues Stück: ${frei.verlauf.join(', ')}`);
-    }
+    // Token-kleine Stücke: Kontrolle, Störung und Wiederaufnahme in EINEM Strom. Die zentrale Messung (README der Brücke § Folge-Messung)
+    // trägt die festgelegten Werte (Überlauf ≥ 80 px, ≥ 3 Stände, Abstand ≤ 24 px, Toleranz 4 px); der Treiber legt keinen eigenen fest.
+    await leereVerlauf(cdp);
+    const token = await messeFolge(cdp, {
+      ausdruck: FOLGE_LOG,
+      laeuft: () => s.zaehler().unterwegs > 0,
+      starte: () => starteFolgeStrom(cdp),
+      wiederaufnahme: true,
+    });
+    zeichneFolge({ record, unmeasured }, { kontrolle: NAMEN.kontrolle, folge: NAMEN.folge, wiederaufnahme: NAMEN.wiederaufnahme }, token);
+    await warteFolgeStromEnde(cdp);
 
     // Grobe Stücke: ein Stück = ein ganzer Absatz (mehrere Zeilen). Wächst der Inhalt in EINEM Schritt über die
     // Folge-Schwelle, darf das Folgen nicht aufhören (Kit-Fehler vor 0.59.0: `atBottom` wurde erst nach dem Wachsen gemessen).
-    stub.konfiguriere({ takt: 250, standard: { stuecke: absaetze } });
-    const grob = await messeFolge(cdp, false);
-    if (!grob.gueltig) unmeasured(NAMEN[2], `${grob.grund || `Überlauf nur ${grob.ueberlauf} px (< ${FOLGE_MIN_UEBERLAUF})`}`);
-    else {
-      record(NAMEN[2], grob.abstand < 40, `Überlauf ${grob.ueberlauf} px, ${grob.neueBloecke} Absätze später: Abstand zum Ende ${grob.abstand} px (Schwelle 40); Abstand je neuem Absatz: ${grob.verlauf.join(', ')}`);
-    }
+    s.konfiguriere({ takt: 250, standard: { stuecke: absaetze } });
+    await leereVerlauf(cdp);
+    const grob = await messeFolge(cdp, {
+      ausdruck: FOLGE_LOG,
+      laeuft: () => s.zaehler().unterwegs > 0,
+      starte: () => starteFolgeStrom(cdp),
+      stoerung: false,
+    });
+    zeichneFolge({ record, unmeasured }, { kontrolle: NAMEN.absatz }, grob);
+    await warteFolgeStromEnde(cdp);
   } catch (e) {
-    for (const n of NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
+    if (istAbgebrochen()) throw e;
+    for (const n of alle) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
   } finally {
-    await setSetting(cdp, 'chatEndpoints', []);
-    await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+    if (!istAbgebrochen()) {
+      await setSetting(cdp, 'chatEndpoints', []);
+      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+    }
     if (stub) await stub.stop().catch(() => undefined);
   }
 }
@@ -1094,6 +1099,11 @@ async function geladenesModell(): Promise<string | null> {
 }
 
 async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
+  // LM-Regel (Welle 21): ein Lauf schickt keine Anfrage, die ein Modell rechnen lässt. Dieser Punkt tut genau das, also nur mit `--echtes-modell`.
+  if (!parseArgs(process.argv.slice(2)).has('echtes-modell')) {
+    skipped('stream/echter-endpunkt-liefert-tokens-einzeln', 'LM-Regel, Welle 21: Anfrage an ein geladenes Modell nur mit --echtes-modell');
+    return;
+  }
   const modell = await geladenesModell();
   if (modell === null) {
     unmeasured('stream/echter-endpunkt-liefert-tokens-einzeln', `auf ${SMOKE_ENDPOINT_URL} ist kein Modell geladen oder der Server antwortet nicht (ein Lauf löste sonst ein JIT-Laden aus)`);
@@ -1427,7 +1437,7 @@ async function main(): Promise<void> {
           p.chatSession.reset();
           await p.persist();
           for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.detach();
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, ${istAbgebrochen() ? 0 : 300}));
           await p.activateSidebar();
           const pfad = app.vault.configDir + "/plugins/${PLUGIN_ID}/data.json";
           const roh = await app.vault.adapter.read(pfad);
@@ -1442,19 +1452,9 @@ async function main(): Promise<void> {
     }
   };
 
-  let signalCleanupRunning = false;
-  const onAbortSignal = (signal: NodeJS.Signals) => {
-    if (signalCleanupRunning) return;
-    signalCleanupRunning = true;
-    void (async () => {
-      console.log(`\n\nAbbruch durch ${signal} — raeume Smoke-Zustand auf...`);
-      await cleanupState();
-      cdp.close();
-      process.exit(130);
-    })();
-  };
-  process.on('SIGINT', onAbortSignal);
-  process.on('SIGTERM', onAbortSignal);
+  // Ctrl-C/SIGTERM: das Abbruch-Modul der Brücke sperrt den Hauptzweig, ruft diesen Schritt (er darf noch senden), druckt die Bilanz,
+  // Exit 130. Angemeldet VOR der ersten Mutation; der Schritt ist idempotent (`vorwert === null` heißt: noch nichts verändert).
+  const zustand = beimAbbruch(cleanupState, 'Smoke-Zustand zurücksetzen');
 
   try {
     // Sichtbar machen übernimmt requireVisible (nicht osascript activate: das trifft die reguläre Instanz statt der Zweitinstanz).
@@ -1656,12 +1656,10 @@ async function main(): Promise<void> {
     console.log('');
   } finally {
     // Aufräumen darf nie am Ergebnis hängen: auch ein abgebrochener Lauf gibt den Vault
-    // so zurück, wie er ihn vorgefunden hat. Der Chat-Verlauf wird bewusst nicht
-    // persistiert, muss also nur im Speicher geleert werden. Dieselbe Funktion wie der
-    // SIGINT/SIGTERM-Handler oben — kein Doppelcode.
-    process.off('SIGINT', onAbortSignal);
-    process.off('SIGTERM', onAbortSignal);
-    await cleanupState();
+    // so zurück, wie er ihn vorgefunden hat (derselbe Schritt wie beim Abbruch, `beimAbbruch` oben).
+    await zustand.schliesse();
+    // Nach einem Abbruch beendet das Modul den Prozess selbst (Bilanz, Exit 130).
+    if (istAbgebrochen()) return;
     cdp.close();
   }
 

@@ -3,22 +3,15 @@
    No external moment dependency: all operations on native Date.
    ========================================================== */
 
+import { localDate, localYearMonth } from '../vendor/kit/local-stamp';
+
 export function todayIso(now: Date = new Date()): string {
   return formatIso(now);
 }
 
-export function formatIso(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-export function formatYearMonth(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-}
+/** Lokaler Tag `YYYY-MM-DD` / Monat `YYYY-MM` — das Kit (`local-stamp`), nicht `toISOString`, das um Mitternacht den UTC-Vortag nennt. */
+export const formatIso = localDate;
+export const formatYearMonth = localYearMonth;
 
 /** True if `s` matches YYYY-MM-DD shape. */
 export function isIsoDate(s: string): boolean {

@@ -22,6 +22,7 @@ import { WelcomeModal } from './modals/WelcomeModal';
 import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
 import { readCoreDailyNotesConfig } from './utils/coreDailyNotes';
+import { noEndpointText } from './utils/chatErrors';
 import {
   readTaskNotesConfig, readPomodoroSessions, readCompletedTasks, taskRuleFromSettings,
   subscribeTaskNotes, markedDates,
@@ -418,7 +419,7 @@ export default class KuroPlugin extends Plugin {
       // Gültig, aber am Token-Limit abgeschnitten: sagen, statt es wie eine fertige Antwort stehen zu lassen.
       if (result.truncated) this.chatSession.append({ role: 'error', text: t('chat.warn.truncated', lang) });
     } else if (result.kind === 'no-endpoint') {
-      this.chatSession.append({ role: 'error', text: t('chat.err.noEndpoint', lang), detail: result.detail });
+      this.chatSession.append({ role: 'error', text: noEndpointText(result.detail, lang, result.source.kind), detail: result.detail });
       this.logger.error('chat endpoint: none', result.detail);
     } else {
       // Teiltext bleibt stehen, statt beim Fehler zu verschwinden.

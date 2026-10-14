@@ -5,6 +5,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- **XP sources panel:** a source whose XP rate is 0 and that cannot be read anyway (work sessions and breaks without TaskNotes, tasks with an incomplete detection rule) is now a grey note ("XP rate is 0, so this source gives nothing — …") instead of a red error row. With a rate above 0 the red row stays, because then the source really cannot count.
+- **Settings, day qualification:** the description no longer shows a decimal number ("0.5") next to a field that shows your system's decimal mark ("0,5"); it speaks of a ratio between 0 and 1 and says the field follows your system.
+- **Docs:** `troubleshooting` and `getting-started` no longer promise that the **Date format** fields change which notes are read. Today only notes named `YYYY-MM-DD` (daily) and `YYYY-Www` (weekly) are read; the fields have no effect yet.
+
+### Changed
+
+- **Companion chat, no endpoint:** when the LLM Endpoint Manager is the source, the error line now says what is missing and where to fix it (no usable endpoint, endpoint removed, endpoint switched off, API key not stored yet, manager not answering) instead of the general "no endpoint from the list is reachable". A local endpoint list keeps the old sentence.
+- Behaviour of the shared kit pins taken with the update: obsidian-kit 0.60.1 and code-kit 0.27.1 (from 0.59.1 and 0.24.0). The other changes in 0.60.0, 0.60.1, 0.25.0, 0.26.0, 0.27.0 and 0.27.1 (tool-provider contract, share export, plugin-id check, data URLs, sizes, slugs, secret value, byte tokens, Lua-port exports) do not change what this plugin shows; the list of dropped request settings (`sanitizeRequestSettings`) is now sorted, which only changes the order of that hint. Local dates (`YYYY-MM-DD`, `YYYY-MM`) come from the kit now with the same result; an invalid date throws instead of printing `NaN`.
+
 ## [1.12.1] — 2026-10-14
 
 ### Changed

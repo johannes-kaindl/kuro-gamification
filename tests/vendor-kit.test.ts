@@ -1,4 +1,4 @@
-import { Notice } from 'obsidian';
+import { Notice } from './__mocks__/obsidian';
 import { parseSSE } from '../src/vendor/kit/sse';
 import { ThinkSplitter } from '../src/vendor/kit/think-splitter';
 import { normalizeEndpoint } from '../src/vendor/kit/endpoint';

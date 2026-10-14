@@ -140,7 +140,7 @@ export const en: Record<string, string> = {
 
   'set.streakEnabled.name': 'Streak tracking enabled',
   'set.streakThreshold.name': 'Day qualification (✓ ratio)',
-  'set.streakThreshold.desc': '0..1 — e.g. 0.5 = at least 50% of the day\'s checkboxes ticked.',
+  'set.streakThreshold.desc': 'A ratio from 0 to 1 — half of it is 50%, i.e. at least half of the day\'s checkboxes ticked. The field shows the decimal mark of your system.',
   'set.freezeTokens.name': 'Freeze tokens per month',
   'set.freezeTokens.desc': 'Skip-days the streak can absorb without breaking.',
   'set.streakDay.desc': 'Days you work. A day off without a qualifying note is neutral: it neither counts, nor breaks the streak, nor costs a freeze token.',
@@ -365,6 +365,8 @@ export const en: Record<string, string> = {
   'src.reason.no-tasks': 'no completed task found yet',
   'src.reason.no-sessions': 'no finished session found yet',
   'src.reason.no-rule': 'task detection is incomplete — field, value or completed status is missing',
+  'src.reason.no-rule-rate-zero': 'XP rate is 0, so this source gives nothing — and task detection is incomplete, so it could not count yet either',
+  'src.reason.no-history-rate-zero': 'XP rate is 0, so this source gives nothing — TaskNotes keeps no readable session history, so it could not count yet either',
   'src.reason.no-history': 'TaskNotes keeps no readable session history',
   'src.reason.storage-plugin': 'TaskNotes stores sessions under "{storage}" instead of the daily note — this bonus can never fire',
   'src.reason.superseded': 'superseded: sessions now come straight from TaskNotes',

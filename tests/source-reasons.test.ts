@@ -70,8 +70,8 @@ describe('Sessions in der Tagesnotiz (pomodoroStorageLocation: daily-notes)', ()
     expect(row(diagnoseSources(base(10)), 'work')).toMatchObject({ state: 'unavailable', reason: 'no-history' });
   });
 
-  it('ohne lesbare TaskNotes-Konfiguration bleibt es unavailable', () => {
-    const inp = { ...base(0), config: null };
+  it('ohne lesbare TaskNotes-Konfiguration bleibt es unavailable, sobald ein Satz gesetzt ist', () => {
+    const inp = { ...base(10), config: null };
     expect(row(diagnoseSources(inp), 'work')).toMatchObject({ state: 'unavailable', reason: 'no-history' });
   });
 
@@ -83,5 +83,33 @@ describe('Sessions in der Tagesnotiz (pomodoroStorageLocation: daily-notes)', ()
       threshold: DEFAULT_SETTINGS.pomodoroThreshold,
       rate: DEFAULT_SETTINGS.pomodoroBonus,
     });
+  });
+});
+
+describe('Quelle nicht lesbar, aber Satz 0 — ein Hinweis, keine Fehlerzeile', () => {
+  const inp = (over: Partial<TaskNotesInput>): TaskNotesInput => ({
+    config: null, rule: RULES.incomplete, sessions: null, tasks: [],
+    settings: { ...DEFAULT_SETTINGS, xpPerCompletedTask: 0, xpPerWorkSession: 0, xpPerBreakSession: 0 },
+    ...over,
+  });
+  const byId = (i: TaskNotesInput, id: string) => diagnoseSources(i).find((d) => d.id === id)!;
+
+  it('Arbeitssessions und Pausen ohne TaskNotes: off statt unavailable', () => {
+    for (const id of ['work', 'break']) {
+      const d = byId(inp({}), id);
+      expect(d.state).toBe('off');
+      expect(d.reason).toBe('no-history-rate-zero');
+    }
+  });
+  it('Aufgaben mit unvollständiger Regel und Satz 0: off statt unavailable', () => {
+    const d = byId(inp({}), 'tasks');
+    expect(d.state).toBe('off');
+    expect(d.reason).toBe('no-rule-rate-zero');
+  });
+  it('Gegenprobe: mit Satz > 0 bleibt dieselbe Lage ein Fehler', () => {
+    const s = { ...DEFAULT_SETTINGS, xpPerWorkSession: 10, xpPerBreakSession: 10, xpPerCompletedTask: 10 };
+    for (const id of ['work', 'break', 'tasks']) {
+      expect(byId(inp({ settings: s }), id).state).toBe('unavailable');
+    }
   });
 });

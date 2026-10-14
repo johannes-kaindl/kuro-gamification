@@ -74,6 +74,8 @@ function rate(
   if (!available && notedElsewhere && xpRate <= 0) {
     return { id, state: 'off', reason: 'in-daily-notes', facts: {} };
   }
+  // Satz 0: die Quelle zaehlt ohnehin nicht, ihre Unlesbarkeit ist ein Hinweis, keine Fehlerzeile.
+  if (!available && xpRate <= 0) return { id, state: 'off', reason: `${unavailableReason}-rate-zero`, facts: {} };
   if (!available) return { id, state: 'unavailable', reason: unavailableReason, facts: {} };
   if (xpRate <= 0) return { id, state: 'off', reason: 'rate-zero', facts: { count } };
   if (count === 0) return { id, state: 'empty', reason: emptyReason, facts: { rate: xpRate } };

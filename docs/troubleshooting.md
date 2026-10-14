@@ -14,7 +14,7 @@ Each entry starts with what you see — the wording is the plugin's own English 
 
 **Fix:**
 
-1. **Settings → Kuro Gamification → 📁 Paths**: set **Daily notes folder** to where your notes live, and check **Date format** matches your file names (default `YYYY-MM-DD`).
+1. **Settings → Kuro Gamification → 📁 Paths**: set **Daily notes folder** to where your notes live, and make sure your daily notes are named `YYYY-MM-DD` and your weekly notes `YYYY-Www`. Currently only these ISO file names are read; the **Date format** fields do not change that yet.
 2. **⚡ XP sources**: make sure at least one source is on (checkboxes are on by default).
 3. Tick a checkbox in today's daily note, then press **Recompute** in the sidebar (or run the command **Recompute status**).
 
@@ -22,7 +22,7 @@ Each entry starts with what you see — the wording is the plugin's own English 
 
 **Cause:** the plugin watches saves of your daily and weekly notes (about one second after the change). The checkbox has to be a task in the note that matches today's date, inside the daily notes folder.
 
-**Fix:** save the note, wait a second, or run **Recompute status**. If it still stays at 0, re-check the folder and date format above — a note named with a different date pattern is not recognised as today's.
+**Fix:** save the note, wait a second, or run **Recompute status**. If it still stays at 0, re-check the folder and date format above — a note not named `YYYY-MM-DD` is not recognised as today's.
 
 ## The Redeem loot button is missing
 

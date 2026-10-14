@@ -1,6 +1,6 @@
 /* ==========================================================
    LoreRevealModal — shows a single lore fragment.
-   Triggered manually (command) or auto on level-up.
+   Opened by the "show lore" command only; nothing opens it on level-up.
    ========================================================== */
 import { Modal, type App } from 'obsidian';
 import type KuroPlugin from '../main';

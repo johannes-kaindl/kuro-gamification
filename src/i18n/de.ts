@@ -150,7 +150,7 @@ export const de: Record<string, string> = {
 
   'set.streakEnabled.name': 'Streak-Tracking aktiv',
   'set.streakThreshold.name': 'Tag-Qualifikation (Anteil ✓)',
-  'set.streakThreshold.desc': '0..1 — z. B. 0.5 = mindestens 50 % der Tagescheckboxen abgehakt.',
+  'set.streakThreshold.desc': 'Anteil von 0 bis 1 — die Hälfte davon sind 50 %, also mindestens die Hälfte der Tagescheckboxen abgehakt. Das Feld zeigt das Dezimalzeichen deines Systems.',
   'set.freezeTokens.name': 'Freeze-Tokens pro Monat',
   'set.freezeTokens.desc': 'Lücken-Tage, die der Streak ohne Bruch überbrücken kann.',
   'set.streakDay.desc': 'Tage, an denen du arbeitest. Ein freier Tag ohne qualifizierende Notiz ist neutral: er zählt nicht, unterbricht den Streak nicht und kostet kein Freeze-Token.',
@@ -377,6 +377,8 @@ export const de: Record<string, string> = {
   'src.reason.no-tasks': 'noch keine erledigte Aufgabe gefunden',
   'src.reason.no-sessions': 'noch keine abgeschlossene Session gefunden',
   'src.reason.no-rule': 'Aufgaben-Erkennung ist unvollständig — Feld, Wert oder Erledigt-Status fehlt',
+  'src.reason.no-rule-rate-zero': 'XP-Satz steht auf 0, die Quelle gibt nichts — und die Aufgaben-Erkennung ist unvollständig, sie könnte also noch nicht zählen',
+  'src.reason.no-history-rate-zero': 'XP-Satz steht auf 0, die Quelle gibt nichts — TaskNotes führt keine lesbare Session-Historie, sie könnte also noch nicht zählen',
   'src.reason.no-history': 'TaskNotes führt keine lesbare Session-Historie',
   'src.reason.storage-plugin': 'TaskNotes speichert Sessions unter „{storage}" statt in der Tagesnotiz — dieser Bonus kann nie feuern',
   'src.reason.superseded': 'abgelöst: die Sessions kommen jetzt direkt aus TaskNotes',

@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.12.2] — 2026-10-14
+
 ### Fixed
 
 - **XP sources panel:** a source whose XP rate is 0 and that cannot be read anyway (work sessions and breaks without TaskNotes, tasks with an incomplete detection rule) is now a grey note ("XP rate is 0, so this source gives nothing — …") instead of a red error row. With a rate above 0 the red row stays, because then the source really cannot count.

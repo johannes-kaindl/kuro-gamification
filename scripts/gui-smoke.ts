@@ -50,6 +50,7 @@
  * Kommentare: biome liest `.json` strikt und bricht an ihnen ab.
  */
 
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
@@ -58,6 +59,7 @@ import { messeFolge, zeichneFolge } from '../../tools/obsidian-cdp/folge.js';
 import { echoText, startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
+import { boxOf, capture } from '../../tools/obsidian-cdp/shot.js';
 import { de } from '../src/i18n/de';
 import { en } from '../src/i18n/en';
 
@@ -94,6 +96,7 @@ const PUNKTE = [
   'herkunft/genau-eine-zustandsklasse',
   'herkunft/aria-label',
   'herkunft/kein-roher-code',
+  'herkunft/satz-0-ist-hinweis',
   'markdown/fertige-antwort-gerendert',
   'markdown/eigene-frage-bleibt-rohtext',
   'markdown/stream-abgeschlossener-absatz-gerendert',
@@ -1299,6 +1302,59 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
 
   fenster?.close();
   await cdp.evaluate(`app.setting.close?.(); return true;`);
+
+  // Satz 0 und Quelle nicht lesbar (Sessions/Pausen ohne TaskNotes): ein Hinweis (is-warning), keine Fehlerzeile (is-error).
+  // Gegenprobe im selben Punkt: mit Satz > 0 ist dieselbe Lage ein Fehler (die obigen Punkte laufen mit dem Default-Satz).
+  const satz0 = async (satz: number): Promise<{ klassen: string[]; texte: string[] } | null> => {
+    await setSetting(cdp, 'xpPerWorkSession', satz);
+    await setSetting(cdp, 'xpPerBreakSession', satz);
+    await cdp.evaluate(`
+      app.setting.open();
+      app.setting.openTabById(${JSON.stringify(PLUGIN_ID)});
+      await new Promise((r) => setTimeout(r, 900));
+      return true;
+    `);
+    const messenSatz = (wurzel: string) => `
+      const root = ${wurzel};
+      const rows = root ? Array.from(root.querySelectorAll('.kuro-src-row')) : [];
+      if (rows.length < 3) return null;
+      const arbeit = rows.slice(1, 3);
+      return {
+        klassen: arbeit.map((r) => ['is-ok', 'is-warning', 'is-error'].find((k) => r.querySelector('.kuro-src-status')?.classList.contains(k)) ?? '?'),
+        texte: arbeit.map((r) => r.querySelector('.kuro-src-detail')?.textContent ?? ''),
+      };
+    `;
+    let m = await pollUntil<{ klassen: string[]; texte: string[] }>(cdp, messenSatz('document.querySelector(".modal.mod-settings")'), 3000);
+    let f: Cdp | null = null;
+    if (!m) {
+      f = await attachTo('settings', PORT);
+      if (f) m = await pollUntil<{ klassen: string[]; texte: string[] }>(f, messenSatz('document.body'), 6000);
+    }
+    if (m && satz === 0) {
+      // Regel 12: die sichtbare Zeile am Bild ansehen (Ablage /tmp/w22-shots/kuro-gamification/).
+      const ziel = f ?? cdp;
+      await ziel.evaluate(`document.querySelector('.kuro-src-panel')?.scrollIntoView({ block: 'center' }); await new Promise((r) => setTimeout(r, 400)); return true;`);
+      const box = await boxOf(ziel, '.kuro-src-panel', 8);
+      if (box) {
+        mkdirSync('/tmp/w22-shots/kuro-gamification', { recursive: true });
+        writeFileSync('/tmp/w22-shots/kuro-gamification/herkunft-satz0.png', await capture(ziel, box, 1));
+      }
+    }
+    f?.close();
+    await cdp.evaluate(`app.setting.close?.(); return true;`);
+    return m;
+  };
+  const ohneSatz = await satz0(0);
+  const mitSatz = await satz0(10);
+  if (!ohneSatz || !mitSatz) {
+    unmeasured('herkunft/satz-0-ist-hinweis', 'Einstellungen-DOM nicht erreichbar');
+  } else {
+    record(
+      'herkunft/satz-0-ist-hinweis',
+      ohneSatz.klassen.every((k) => k === 'is-warning') && mitSatz.klassen.every((k) => k === 'is-error') && ohneSatz.texte.every((t) => t.startsWith('XP rate is 0')),
+      `Satz 0: ${ohneSatz.klassen.join('/')} · "${(ohneSatz.texte[0] ?? '').slice(0, 60)}" · Satz 10: ${mitSatz.klassen.join('/')}`,
+    );
+  }
 }
 
 
@@ -1359,7 +1415,7 @@ async function sektionHerkunft(cdp: Cdp): Promise<void> {
   }
 
   if (!mess) {
-    for (const n of ['herkunft/panel-vorhanden', 'herkunft/genau-eine-zustandsklasse', 'herkunft/aria-label', 'herkunft/kein-roher-code'] as const) unmeasured(n, 'Einstellungen-DOM nicht erreichbar');
+    for (const n of ['herkunft/panel-vorhanden', 'herkunft/genau-eine-zustandsklasse', 'herkunft/aria-label', 'herkunft/kein-roher-code', 'herkunft/satz-0-ist-hinweis'] as const) unmeasured(n, 'Einstellungen-DOM nicht erreichbar');
   } else {
     // Erst den Gegenstand belegen: alle folgenden Punkte wären über null Zeilen grün.
     record(

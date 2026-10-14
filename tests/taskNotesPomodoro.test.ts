@@ -9,17 +9,21 @@
    API (app.plugins.plugins['tasknotes'].settings) defensively —
    same pattern as readCoreDailyNotesConfig for the core API.
    ========================================================== */
+import type { App } from 'obsidian';
 import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../src/utils/taskNotesPomodoro';
 
+/** Teil-Fake als App: der Test stellt nur die Felder bereit, die der Leser anfasst. */
+const asApp = (fake: unknown): App => fake as App;
+
 /** Fake app exposing TaskNotes as an active community plugin. */
-function appWithTaskNotes(settings: any) {
-  return {
+function appWithTaskNotes(settings: any): App {
+  return asApp({
     plugins: {
       plugins: {
         tasknotes: { settings },
       },
     },
-  };
+  });
 }
 
 describe('readTaskNotesPomodoroInfo', () => {
@@ -35,7 +39,7 @@ describe('readTaskNotesPomodoroInfo', () => {
   });
 
   it('returns null when TaskNotes is not installed/enabled', () => {
-    expect(readTaskNotesPomodoroInfo({ plugins: { plugins: {} } })).toBeNull();
+    expect(readTaskNotesPomodoroInfo(asApp({ plugins: { plugins: {} } }))).toBeNull();
   });
 
   it('returns null when storageLocation is missing', () => {
@@ -49,7 +53,7 @@ describe('readTaskNotesPomodoroInfo', () => {
   });
 
   it('returns null when the internal API is absent entirely (never throws)', () => {
-    expect(readTaskNotesPomodoroInfo({})).toBeNull();
+    expect(readTaskNotesPomodoroInfo(asApp({}))).toBeNull();
     expect(readTaskNotesPomodoroInfo(null)).toBeNull();
     expect(readTaskNotesPomodoroInfo(undefined)).toBeNull();
   });

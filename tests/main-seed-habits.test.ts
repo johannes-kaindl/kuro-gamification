@@ -1,6 +1,6 @@
 import KuroPlugin from '../src/main';
 import { DEFAULT_HABITS_DE } from '../src/data/default-habits';
-import { __setMockLanguage } from 'obsidian';
+import { __setMockLanguage } from './__mocks__/obsidian';
 
 function makeFakeApp() {
   return {

@@ -7,16 +7,20 @@
    is optional-chained and wrapped, returning null on anything
    unexpected so a missing/renamed API can never crash onload.
    ========================================================== */
+import type { App } from 'obsidian';
 import { readCoreDailyNotesConfig } from '../src/utils/coreDailyNotes';
 
+/** Teil-Fake als App: der Test stellt nur die Felder bereit, die der Leser anfasst. */
+const asApp = (fake: unknown): App => fake as App;
+
 /** Fake app exposing the core daily-notes plugin via getPluginById. */
-function appWithDailyNotes(options: any) {
-  return {
+function appWithDailyNotes(options: any): App {
+  return asApp({
     internalPlugins: {
       getPluginById: (id: string) =>
         id === 'daily-notes' ? { instance: { options } } : null,
     },
-  };
+  });
 }
 
 describe('readCoreDailyNotesConfig', () => {
@@ -36,12 +40,12 @@ describe('readCoreDailyNotesConfig', () => {
   });
 
   it('returns null when the core plugin is not present', () => {
-    const app = { internalPlugins: { getPluginById: () => null } };
+    const app = asApp({ internalPlugins: { getPluginById: () => null } });
     expect(readCoreDailyNotesConfig(app)).toBeNull();
   });
 
   it('returns null when the internal API is absent entirely (never throws)', () => {
-    expect(readCoreDailyNotesConfig({})).toBeNull();
+    expect(readCoreDailyNotesConfig(asApp({}))).toBeNull();
     expect(readCoreDailyNotesConfig(null)).toBeNull();
     expect(readCoreDailyNotesConfig(undefined)).toBeNull();
   });

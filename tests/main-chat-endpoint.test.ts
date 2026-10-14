@@ -2,7 +2,7 @@
    Chat-Endpunkt: Manager-Vorrang, lokale Liste als Rückfall
    (Kit endpoint-source, capability "chat").
    ========================================================== */
-import { __setMockRequestUrl } from 'obsidian';
+import { __setMockRequestUrl } from './__mocks__/obsidian';
 import { makePlugin } from './helpers/connection';
 
 type Fake = { resolved: unknown; materialized: unknown };

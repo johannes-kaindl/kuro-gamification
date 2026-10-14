@@ -4,7 +4,7 @@
    stored language.
    ========================================================== */
 import KuroPlugin from '../src/main';
-import { __setMockLanguage } from 'obsidian';
+import { __setMockLanguage } from './__mocks__/obsidian';
 
 function makeFakeApp() {
   return {

@@ -3,7 +3,7 @@
    to a supported Kuro language, English as fallback.
    ========================================================== */
 import { detectLang } from '../src/i18n';
-import { __setMockLanguage } from 'obsidian';
+import { __setMockLanguage } from './__mocks__/obsidian';
 
 describe('detectLang', () => {
   afterEach(() => __setMockLanguage('en'));

@@ -111,7 +111,7 @@ export class KuroChatPanel {
       area.tailEl.addClass('kuro-chat-text');
       // `tailEl` liegt nach buildStreamArea() als erstes (einziges) Kind des Bodys — hinter
       // die fertigen Einträge verschieben, statt es dort neu einzufügen (Muster aus
-      // lingotuner/src/obsidian/view-render.ts, dort für denselben Zweck).
+      // obsidian-transmute/src/obsidian/view-render.ts, dort für denselben Zweck; die Umlenkung des Schreibers auf eine eigene Spalte unten gibt es nur hier).
       content.appendChild(area.tailEl);
       // Der Schreiber legt fertige Blöcke in `area.bodyEl` ab — hier soll das die Inhalts-
       // spalte der laufenden Zeile sein, nicht der ganze Log. Die Handles des Bereichs

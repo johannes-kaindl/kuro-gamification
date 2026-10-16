@@ -136,6 +136,7 @@ Profile dieses Repos: **ts-node · obsidian-plugin**.
   Commits (`efcd456`). Bei obsidian-kit fiel das nie auf, weil dessen Tags leichtgewichtig sind —
   Zufall, kein Schutz. Gegenproben zu jedem Re-Vendor: Idempotenz, Fehlerpfad (unbekannte Ref →
   0 Dateien angefasst), Verbatim-Vergleich gegen die Ref.
+- **`moment` aus `obsidian` nie direkt aufrufen.** Obsidian typt es als Namespace (`import * as Moment`); lokal lässt die tsconfig den Aufruf durch, der Store-Review nicht, und dort wird jeder Wert daraus `error`-getypt (1.13.0: vier `no-unsafe-*`-Befunde, „Satisfactory“). Einen typisierten Cast nehmen wie `parseStrict` in `src/persistence/VaultReader.ts` (Muster obsidian-kit `daily-notes.ts`). Nachbilden lässt sich der Befund nur mit `esModuleInterop: true`.
 - **Pure-Logik in `src/engine/`** (Node-testbar); UI ist dünner Glue über der Obsidian-API.
 - **Vault-reactive:** `vault.modify` ist 800 ms debounced.
 - **`onload`-Reihenfolge (load-bearing):** Debounced Fns (`debouncedSave`/`debouncedRefresh`)

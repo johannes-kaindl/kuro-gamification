@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- The date-format code from 1.13.0 is typed so that the community store review passes again (1.13.0 was rated "Satisfactory" for four unsafe-typing warnings in the note-name parser). Nothing changes in how daily and weekly notes are read.
+
 ## [1.13.0] — 2026-10-16
 
 ### Changed

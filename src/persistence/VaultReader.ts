@@ -22,17 +22,26 @@ export interface VaultReadOptions {
   weeklyFormat?: string;
 }
 
+/** Obsidians `moment` ist als Namespace getypt (`import * as Moment`) und damit nicht aufrufbar, zur Laufzeit
+ *  aber die Funktion (Muster obsidian-kit `daily-notes.ts`, health-vitals `daily-note.ts`). Ohne den Cast ist
+ *  der Aufruf im Store-Review ein `error`-Typ: 1.13.0 bekam dafuer vier `no-unsafe-*`-Befunde und „Satisfactory“. */
+const parseStrict = moment as unknown as (
+  input: string,
+  format: string,
+  strict: boolean,
+) => { isValid(): boolean; format(f: string): string };
+
 /** Name (ohne `.md`) → interner Schluessel, oder `null`, wenn er nicht zum Format passt. Streng:
  *  `13-14-2026` ist kein Datum. Wochen werden ueber das ISO-Wochenjahr (`GGGG`) benannt, damit der
  *  Jahreswechsel nicht in die falsche Woche rutscht. */
 function keyFromName(name: string, format: string, internal: string): string | null {
-  const m = moment(name, format, true);
+  const m = parseStrict(name, format, true);
   return m.isValid() ? m.format(internal) : null;
 }
 
 /** Interner Schluessel → Dateiname (ohne `.md`) im Format des Vaults. */
 function nameFromKey(key: string, format: string, internal: string): string {
-  return moment(key, internal, true).format(format);
+  return parseStrict(key, internal, true).format(format);
 }
 
 export class VaultReader {

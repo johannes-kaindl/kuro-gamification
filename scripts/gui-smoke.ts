@@ -122,6 +122,7 @@ const PUNKTE = [
   'stream/folgt-ohne-stoerung',
   'stream/folgt-wieder-nach-dem-zurueckscrollen',
   'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
+  'stream/gemma-denken-nicht-in-der-antwort',
   'streak/laufender-tag-ist-keine-luecke',
   'streak/arbeitstag-schalter-speichert',
   'streak/datumsformat-der-einstellung-gilt',
@@ -1132,6 +1133,56 @@ async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
   }
 }
 
+/** Gemma 4 auf LM Studio schreibt sein Denken OHNE Öffner in den Inhalt und beendet es mit `<channel|>`; die Antwort folgt. Der Stub streamt
+ *  genau das (Modellname wie Gemma: der Kit-Client erkennt das Kanalformat am Namen). Gemessen wird die laufende Antwortzeile MITTEN im
+ *  Strom (am Ende setzt das Ergebnis den Text neu) und die fertige Antwort. Kuro zeigt kein Denken an (kein `onReasoning`): der Denktext
+ *  darf nirgends in der Antwort stehen. */
+async function sektionGemma(cdp: Cdp): Promise<void> {
+  const NAME = 'stream/gemma-denken-nicht-in-der-antwort';
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  const GEDANKE = 'Ich wäge erst die Quellen ab und prüfe dann den Kontext.';
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  try {
+    await removeFakeManager(cdp);
+    stub = await startLlmStub({ models: ['google/gemma-4-e4b'], takt: 700, standard: { stuecke: [GEDANKE.slice(0, 20), `${GEDANKE.slice(20)}<channel|>`, 'Die fertige ', 'Antwort.'] } });
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: 'google/gemma-4-e4b' }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await cdp.evaluate(`${P}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await leereVerlauf(cdp);
+    await cdp.evaluate(`window.__smokeGemma = { fertig: false }; ${P}.askKuro("Gemma-Frage").finally(() => { window.__smokeGemma.fertig = true; }); return true;`);
+    const mid = await pollUntil<string>(
+      cdp,
+      `const t = ${VIEW_EL}?.querySelector(".kuro-chat-stream-content")?.textContent ?? ""; return t.includes("Die fertige") && !t.includes("Antwort.") ? t : null;`,
+      20_000,
+      50,
+    );
+    const shotDir = process.env.SMOKE_SHOT_DIR;
+    if (shotDir && mid !== null) {
+      const { boxOf, capture } = await import('../../tools/obsidian-cdp/shot.js');
+      const box = await boxOf(cdp, `.kuro-chat-log`, 12);
+      if (box) { mkdirSync(shotDir, { recursive: true }); writeFileSync(join(shotDir, 'gemma-antwort.png'), await capture(cdp, box, 2)); }
+    }
+    await pollUntil<boolean>(cdp, `return window.__smokeGemma?.fertig === true ? true : null;`, 20_000).catch(() => false);
+    const ende = await cdp.evaluate<string>(`return (${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md")?.textContent ?? "").trim();`);
+    record(
+      NAME,
+      mid !== null && !mid.includes('wäge') && !mid.includes('channel') && ende === 'Die fertige Antwort.',
+      `mitten im Strom „${(mid ?? '').slice(0, 50)}“ · fertige Antwort „${ende.slice(0, 60)}“ (Stub, Modellname google/gemma-4-e4b)`,
+    );
+  } catch (e) {
+    if (istAbgebrochen()) throw e;
+    if (!aufgezeichnet(NAME)) unmeasured(NAME, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    if (!istAbgebrochen()) {
+      await setSetting(cdp, 'chatEndpoints', []);
+      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+    }
+    if (stub) await stub.stop().catch(() => undefined);
+  }
+}
+
 /* ------------------------------------- 12 · Echter Endpunkt (Kit-Chat-Client) */
 
 /** Ein bereits GELADENES Chat-Modell auf dem lokalen LM-Studio-Endpunkt, sonst `null`.
@@ -1753,6 +1804,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 16 · Folge-Regel (Stream-Bereich)');
     await sektionFolgeRegel(cdp);
+    console.log('');
+    console.log('── 17 · Gemma 4 ohne Öffner');
+    await sektionGemma(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

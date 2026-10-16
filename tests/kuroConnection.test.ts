@@ -29,7 +29,7 @@ const EXPECTED: Row[] = [
   ['qwen3.6', 'openwebui', 'medium', {'temperature':0.7,'top_p':0.95,'top_k':20,'reasoning_effort':'medium','max_tokens':2048}],
   ['qwen3.6', 'unknown', 'off', {'temperature':0.7,'top_p':0.95,'reasoning_effort':'none','max_tokens':1024}],
   ['qwen3.6', 'unknown', 'medium', {'temperature':0.7,'top_p':0.95,'reasoning_effort':'medium','max_tokens':2048}],
-  ['gemma4', 'lmstudio', 'off', {'temperature':0.7,'top_p':0.95,'top_k':64,'reasoning_effort':'none','max_tokens':1024}],
+  ['gemma4', 'lmstudio', 'off', {'temperature':0.7,'top_p':0.95,'top_k':64,'reasoning_effort':'low','max_tokens':1024}],
   ['gemma4', 'lmstudio', 'medium', {'temperature':0.7,'top_p':0.95,'top_k':64,'reasoning_effort':'medium','max_tokens':2048}],
   ['gemma4', 'openwebui', 'off', {'temperature':0.7,'top_p':0.95,'top_k':64,'reasoning_effort':'none','max_tokens':1024}],
   ['gemma4', 'openwebui', 'medium', {'temperature':0.7,'top_p':0.95,'top_k':64,'reasoning_effort':'medium','max_tokens':2048}],

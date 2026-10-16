@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.13.0] — 2026-10-16
+
 ### Changed
 
 - **Gemma 4 no longer shows its thinking in the companion chat.** With Gemma 4 in LM Studio the thinking used to appear as part of Kuro's reply (until the reply ended); the reply now shows only the answer.

@@ -195,6 +195,8 @@ export default class KuroPlugin extends Plugin {
       const opts = {
         dailyFolder: this.data.settings.dailyFolder,
         weeklyFolder: this.data.settings.weeklyFolder,
+        dailyFormat: this.data.settings.dailyDateFormat,
+        weeklyFormat: this.data.settings.weeklyDateFormat,
       };
       const dailies = await this.vaultReader.readDailies(opts);
       const weeklies = await this.vaultReader.readWeeklies(opts);

@@ -88,6 +88,8 @@ export class ItemView {
   constructor(leaf: any) { this.leaf = leaf; }
 }
 
+import momentLib from 'moment';
+export const moment = momentLib;
 export const setIcon = (_el: any, _name: string) => {};
 export const normalizePath = (s: string) => s;
 /** Tests overwrite this with their own jest.fn() per case (no shared jest dep in this mock file). */

@@ -35,7 +35,7 @@ Das Plugin muss wissen, wo du deine Daily-Notes aufbewahrst und welches Datumsfo
 | Einstellung | Standard | Was du einstellen solltest |
 |---|---|---|
 | Daily-Notes-Ordner | _(leer — beim ersten Start aus dem Core-Plugin „Tägliche Notizen" übernommen)_ | Deinen tatsächlichen Daily-Notes-Ordner (z. B. `Journal/Daily`) |
-| Datumsformat | `YYYY-MM-DD` | Das Datumsmuster in deinen Dateinamen (derzeit werden nur Namen im Format `YYYY-MM-DD` gelesen) |
+| Datumsformat | `YYYY-MM-DD` | Das Datumsmuster in deinen Dateinamen (Dateinamen in diesem Format zählen; der Standard `YYYY-MM-DD` und z. B. `DD-MM-YYYY` funktionieren beide) |
 
 > [!warning] Ordner setzen
 > Beim ersten Start übernimmt das Plugin den Ordner aus dem Core-Plugin **„Tägliche Notizen"**, falls du es nutzt. Ist dort nichts gesetzt, bleibt das Feld **leer** — und die Sidebar zeigt „Noch keine Daten", bis du hier deinen Daily-Notes-Ordner einträgst.

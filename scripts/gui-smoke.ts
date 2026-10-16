@@ -124,6 +124,7 @@ const PUNKTE = [
   'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
   'streak/laufender-tag-ist-keine-luecke',
   'streak/arbeitstag-schalter-speichert',
+  'streak/datumsformat-der-einstellung-gilt',
   'ton/stimmt-der-ton',
 ] as const;
 
@@ -665,6 +666,53 @@ async function sektionStreak(cdp: Cdp): Promise<void> {
       'streak/laufender-tag-ist-keine-luecke',
       lauf.streak === 2 && /2 DAYS/.test(lauf.seite),
       `lastSnapshot.streak = ${lauf.streak}, Seitenleiste zeigt „2 DAYS“: ${/2 DAYS/.test(lauf.seite)}`,
+    );
+  }
+
+  // Das Datumsformat der Einstellung bestimmt, welche Dateinamen als Tagesnotiz zaehlen (Welle 23). Tagesnotizen heissen hier DD-MM-YYYY:
+  // mit dem ISO-Format (Vorbedingung) sieht das Plugin keine Notiz, mit `DD-MM-YYYY` dieselbe Streak wie in ISO. Obsidians `moment` ist
+  // nicht das npm-Paket der Unit-Tests, deshalb gehoert die Messung in die laufende Instanz.
+  const format = await cdp.evaluate<{ ohne: number; mit: number; seite: string } | { fehler: string }>(`
+    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+    const ordner = "smoke-format";
+    const alt = p.data.settings.dailyFolder, altFormat = p.data.settings.dailyDateFormat;
+    const adapter = app.vault.adapter;
+    const name = (back) => {
+      const d = new Date(); d.setDate(d.getDate() - back);
+      const pad = (n) => String(n).padStart(2, "0");
+      return pad(d.getDate()) + "-" + pad(d.getMonth() + 1) + "-" + d.getFullYear();
+    };
+    try {
+      await app.vault.createFolder(ordner).catch(() => {});
+      await adapter.write(ordner + "/" + name(1) + ".md", "- [x] a\\n- [x] b\\n");
+      await adapter.write(ordner + "/" + name(2) + ".md", "- [x] a\\n- [x] b\\n");
+      p.data.settings.dailyFolder = ordner;
+      p.data.settings.dailyDateFormat = "YYYY-MM-DD";
+      await p.refreshStatus(true);
+      await new Promise((r) => setTimeout(r, 400));
+      const ohne = p.data.lastSnapshot.streak;
+      p.data.settings.dailyDateFormat = "DD-MM-YYYY";
+      await p.refreshStatus(true);
+      await new Promise((r) => setTimeout(r, 500));
+      return { ohne, mit: p.data.lastSnapshot.streak, seite: ${VIEW_EL}?.textContent ?? "" };
+    } catch (e) {
+      return { fehler: String(e) };
+    } finally {
+      p.data.settings.dailyFolder = alt;
+      p.data.settings.dailyDateFormat = altFormat;
+      await adapter.rmdir(ordner, true).catch(() => {});
+      await p.refreshStatus(true);
+    }
+  `);
+  if ('fehler' in format) {
+    unmeasured('streak/datumsformat-der-einstellung-gilt', format.fehler);
+  } else if (format.ohne !== 0) {
+    unmeasured('streak/datumsformat-der-einstellung-gilt', `Vorbedingung verfehlt: mit ISO-Format hat das Plugin schon ${format.ohne} Tage gesehen (die DD-MM-YYYY-Namen waeren lesbar)`);
+  } else {
+    record(
+      'streak/datumsformat-der-einstellung-gilt',
+      format.mit === 2 && /2 DAYS/.test(format.seite),
+      `Namen DD-MM-YYYY: Streak mit ISO-Format ${format.ohne}, mit DD-MM-YYYY ${format.mit}, Seitenleiste zeigt „2 DAYS“: ${/2 DAYS/.test(format.seite)}`,
     );
   }
 

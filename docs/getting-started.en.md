@@ -35,7 +35,7 @@ The plugin needs to know where you keep your daily notes and what date format yo
 | Setting | Default | What to set it to |
 |---|---|---|
 | Daily notes folder | _(empty — seeded from the core "Daily notes" plugin on first launch)_ | Your actual daily notes folder (e.g. `Journal/Daily`) |
-| Date format | `YYYY-MM-DD` | The date pattern in your file names (currently only `YYYY-MM-DD` names are read) |
+| Date format | `YYYY-MM-DD` | The date pattern in your file names (file names that match it count; the default `YYYY-MM-DD` and e.g. `DD-MM-YYYY` both work) |
 
 > [!warning] Set the folder
 > On first launch the plugin picks up the folder from Obsidian's core **"Daily notes"** plugin, if you use it. If nothing is set there, the field stays **empty** — and the sidebar shows "No data yet" until you enter your daily notes folder here.

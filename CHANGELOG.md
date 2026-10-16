@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- **The date formats in the settings now work.** "Daily date format" and "Weekly date format" decide which file names count as daily and weekly notes (before, only `YYYY-MM-DD` and `YYYY-Www` names were ever read). Notes named e.g. `14-10-2026` now count for XP and streaks, so a streak you could not see before may grow retroactively. Names that do not match the format (or are no real date, like `13-14-2026`) are still ignored.
+
 ## [1.12.2] — 2026-10-14
 
 ### Fixed

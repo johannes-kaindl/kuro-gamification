@@ -132,6 +132,13 @@ export class KuroChatPanel {
     area.followTail();
   }
 
+  /** Gemma 4 ohne Öffner: der bisher gezeigte Text war Denken. Der Aufrufer hat `session.streaming` schon auf `''` gesetzt; neu zeichnen
+   *  statt `writer.resetContent()`: das Kit leert dort den `bodyEl` der EIGENEN Fläche (`area.resetContent`), und dieser Panel lenkt die
+   *  Blöcke in die Spalte der laufenden Zeile um — der Reset risse den ganzen Verlauf weg und hinge den Tail an den Log. */
+  resetContent(): void {
+    this.render();
+  }
+
   /** Laufenden Text fortschreiben, statt pro Token neu zu zeichnen. */
   appendToken(token: string): void {
     if (this.area === null || this.writer === null) { this.render(); return; }

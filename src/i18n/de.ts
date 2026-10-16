@@ -313,7 +313,6 @@ export const de: Record<string, string> = {
   'chat.err.truncated': 'Die Antwort wurde vor dem ersten Wort abgeschnitten — das Denken hat das Token-Limit verbraucht.',
   'chat.warn.truncated': 'Die Antwort wurde am Token-Limit abgeschnitten.',
   'chat.err.aborted': 'Abgebrochen.',
-  'chat.err.noEndpoint': 'Kein Endpunkt aus der Liste ist erreichbar — Einstellungen prüfen.',
 
   /* Chat-Einstellungen */
   'settings.section.chat': '💬 Kuro-Chat',

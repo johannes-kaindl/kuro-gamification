@@ -142,6 +142,11 @@ export class KuroSidebarView extends ItemView {
     this.chatPanel?.appendToken(token);
   }
 
+  /** Der bisher gestreamte Text war Denken (Gemma 4 ohne Öffner): die laufende Antwort leeren. */
+  resetChatContent(): void {
+    this.chatPanel?.resetContent();
+  }
+
   showTab(id: KuroTab): void {
     this.hub?.setTab(id);
   }

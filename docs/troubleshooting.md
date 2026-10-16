@@ -74,7 +74,7 @@ Each entry starts with what you see — the wording is the plugin's own English 
 
 ## The companion chat cannot reach its endpoint
 
-> No endpoint from the list is reachable — check the settings.
+> No endpoint reachable. Check the endpoint list in the settings — the test button says which one answers.
 
 > Could not reach the endpoint.
 

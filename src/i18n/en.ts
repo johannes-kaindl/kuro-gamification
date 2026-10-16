@@ -301,7 +301,6 @@ export const en: Record<string, string> = {
   'chat.err.truncated': 'The answer was cut off before the first word — thinking used up the token limit.',
   'chat.warn.truncated': 'The answer was cut off at the token limit.',
   'chat.err.aborted': 'Stopped.',
-  'chat.err.noEndpoint': 'No endpoint from the list is reachable — check the settings.',
 
   /* Chat settings */
   'settings.section.chat': '💬 Kuro chat',

@@ -5,6 +5,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **Gemma 4 no longer shows its thinking in the companion chat.** With Gemma 4 in LM Studio the thinking used to appear as part of Kuro's reply (until the reply ended); the reply now shows only the answer.
+- **Gemma 4 on LM Studio cannot be switched off completely.** "Thinking: off" sends the lowest level there, because LM Studio ignores "none" for this model; the model still thinks a little (a few tokens, a little time).
+- **The "no endpoint" message in the chat** now comes from the shared endpoint component. With a local endpoint list it reads "No endpoint reachable. Check the endpoint list in the settings — the test button says which one answers." (before: "No endpoint from the list is reachable — check the settings."); with the LLM Endpoint Manager every reason, also a configuration message, names where to fix it.
+- **The LLM Endpoint Manager switched on after the plugin** is noticed: the chat picks up its endpoints when it appears, instead of staying silent for the session.
+- **A model backend or family this version does not know yet** no longer breaks the request; it is sent as unknown.
+
 ### Fixed
 
 - **The date formats in the settings now work.** "Daily date format" and "Weekly date format" decide which file names count as daily and weekly notes (before, only `YYYY-MM-DD` and `YYYY-Www` names were ever read). Notes named e.g. `14-10-2026` now count for XP and streaks, so a streak you could not see before may grow retroactively. Names that do not match the format (or are no real date, like `13-14-2026`) are still ignored.

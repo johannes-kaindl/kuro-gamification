@@ -22,7 +22,7 @@ import { WelcomeModal } from './modals/WelcomeModal';
 import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
 import { readCoreDailyNotesConfig } from './utils/coreDailyNotes';
-import { noEndpointText } from './utils/chatErrors';
+import { LLM_CONNECTION_STRINGS_DE, LLM_CONNECTION_STRINGS_EN, noEndpointText } from './vendor/kit-obsidian/llm-connection-strings';
 import {
   readTaskNotesConfig, readPomodoroSessions, readCompletedTasks, taskRuleFromSettings,
   subscribeTaskNotes, markedDates,
@@ -128,8 +128,7 @@ export default class KuroPlugin extends Plugin {
       if (this.data.settings.openSidebarOnStartup) void this.activateSidebar();
       void this.refreshStatus(true);
       this.scheduleMidnightTick();
-      // Erst nach dem Layout abonnieren: lädt der Manager nach uns, bliebe ein früheres Abo
-      // für die ganze Sitzung wirkungslos (Kit-Hinweis an onEndpointManagerChanged).
+      // Das Kit hängt das Abo nach, wenn der Manager erst später erscheint (seit 0.61.0); der Rückruf kommt dann einmal.
       this.managerUnsubscribe = onEndpointManagerChanged(this.app, () => {
         this.llm.invalidate();
         this.syncChat();
@@ -396,6 +395,11 @@ export default class KuroPlugin extends Plugin {
             for (const view of this.chatViews()) view.appendChatToken(token);
             this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
           },
+          // Gemma 4 schreibt sein Denken ohne Öffner in den Inhalt (Kit meldet es am Kanalende): den bisherigen Text verwerfen.
+          onContentReset: () => {
+            this.chatSession.streaming = '';
+            for (const view of this.chatViews()) view.resetChatContent();
+          },
           signal: this.chatAbort.signal,
         },
       );
@@ -421,7 +425,7 @@ export default class KuroPlugin extends Plugin {
       // Gültig, aber am Token-Limit abgeschnitten: sagen, statt es wie eine fertige Antwort stehen zu lassen.
       if (result.truncated) this.chatSession.append({ role: 'error', text: t('chat.warn.truncated', lang) });
     } else if (result.kind === 'no-endpoint') {
-      this.chatSession.append({ role: 'error', text: noEndpointText(result.detail, lang, result.source.kind), detail: result.detail });
+      this.chatSession.append({ role: 'error', text: noEndpointText(lang === 'de' ? LLM_CONNECTION_STRINGS_DE : LLM_CONNECTION_STRINGS_EN, result.source, result.detail), detail: result.detail });
       this.logger.error('chat endpoint: none', result.detail);
     } else {
       // Teiltext bleibt stehen, statt beim Fehler zu verschwinden.

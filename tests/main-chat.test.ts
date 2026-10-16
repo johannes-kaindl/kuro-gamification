@@ -44,6 +44,33 @@ describe('chat round trip (askKuro)', () => {
     expect(p.chatSession.entries[1]).toMatchObject({ role: 'error', text: expect.stringContaining('No endpoint') });
   });
 
+  it.each([
+    ['secret-missing', 'API key'],
+    ['disabled', 'switched off'],
+    ['no-endpoint', 'no usable endpoint'],
+  ] as const)('Manager ohne Endpunkt (%s): die Fehlerzeile nennt die Stelle des Managers', async (code, part) => {
+    const api = {
+      version: 1, list: () => [], get: () => null, models: async () => [],
+      resolve: async () => ({ error: code }), materialize: async () => ({ error: 'not-found' }),
+      importEndpoints: async () => ({ added: [], merged: [], skipped: [] }), on: () => () => {},
+    };
+    const p = await makePlugin(api);
+    p.chatSession = new ChatSession();
+    p.logger = { error: () => {}, info: () => {} };
+    await p.askKuro('Frage');
+    expect(p.chatSession.entries[1]).toMatchObject({ role: 'error', text: expect.stringContaining(part) });
+  });
+
+  it('Gemma 4 ohne Öffner: das Denken vor <channel|> wird aus der laufenden Antwort genommen (onContentReset)', async () => {
+    const p = await plugin(recordingTransport([sse('Ich wäge ab'), sse('<channel|>'), sse('Die fertige '), sse('Antwort.')]).transport);
+    p.data.settings.chatEndpoints = [{ url: 'http://x', model: 'google/gemma-4-e4b' }];
+    const calls: string[] = [];
+    p.chatViews = () => [{ appendChatToken: (t: string) => calls.push(`+${t}`), resetChatContent: () => calls.push('reset'), renderChat: () => {}, refreshChatContext: () => {} }];
+    await p.askKuro('Frage');
+    expect(calls).toEqual(['+Ich wäge ab', 'reset', '+Die fertige ', '+Antwort.']);
+    expect(p.chatSession.entries.map((e: { text: string }) => e.text)).toEqual(['Frage', 'Die fertige Antwort.']);
+  });
+
   it('wirft die Verbindung vor dem Senden, bleibt die Eingabe nicht gesperrt', async () => {
     const p = await makePlugin();
     p.chatSession = new ChatSession();

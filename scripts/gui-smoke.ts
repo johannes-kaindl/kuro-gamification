@@ -56,6 +56,7 @@ import { cwd } from 'node:process';
 
 import { Cdp, attachTo, beimAbbruch, bereiteInstanzVor, entferneFakeManager, installFakeManager as installZentralFakeManager, istAbgebrochen, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
 import { messeFolge, zeichneFolge } from '../../tools/obsidian-cdp/folge.js';
+import { gegenprobeErreichbarkeit, gegenprobeFokus, messeErreichbarkeit, messeFokusErhalt, mitHoehe, zeichnePflicht, type PflichtTeilurteil } from '../../tools/obsidian-cdp/pflichtpunkte.js';
 import { echoText, startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
@@ -123,6 +124,12 @@ const PUNKTE = [
   'stream/folgt-wieder-nach-dem-zurueckscrollen',
   'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
   'stream/gemma-denken-nicht-in-der-antwort',
+  'stream/denkblock-kopierbar',
+  'pflicht/fokus-erhalt',
+  'pflicht/fokus-gegenprobe',
+  'pflicht/erreichbar-natuerliche-hoehe',
+  'pflicht/erreichbar-kurzes-panel',
+  'pflicht/erreichbar-gegenprobe',
   'streak/laufender-tag-ist-keine-luecke',
   'streak/arbeitstag-schalter-speichert',
   'streak/datumsformat-der-einstellung-gilt',
@@ -1183,6 +1190,54 @@ async function sektionGemma(cdp: Cdp): Promise<void> {
   }
 }
 
+/** Pflichtpunkte § 3a (Baustein `pflichtpunkte` der Brücke, Vorbild lingotuner) für den Chat-Tab: (a) das Eingabefeld behält den Fokus,
+ *  (b) jedes Bedienelement der Eingabezeile ist erreichbar, wenn der Verlauf wächst (Füller im Log, natürliche Höhe und 420 px). Dazu der
+ *  Punkt „Denkblock kopierbar“: der Kopier-Knopf (obsidian-kit 0.63.0) hängt am Gedankenblock, und Kuro zeigt kein Denken an
+ *  (kein `onReasoning`), es gibt also keinen Block, an dem er sitzen könnte — nicht anwendbar, nicht grün. */
+async function sektionPflicht(cdp: Cdp): Promise<void> {
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  const NAMEN = ['pflicht/fokus-erhalt', 'pflicht/fokus-gegenprobe', 'pflicht/erreichbar-natuerliche-hoehe', 'pflicht/erreichbar-kurzes-panel', 'pflicht/erreichbar-gegenprobe'] as const;
+  skipped('stream/denkblock-kopierbar', 'nicht anwendbar: der Companion-Chat zeigt kein Denken an (kein onReasoning, nie appendReasoning), es gibt keinen Denkblock mit Kopier-Knopf');
+  const zeichne = (name: (typeof NAMEN)[number], u: PflichtTeilurteil): void => zeichnePflicht({ record: (n, ok, d) => record(n, ok, d ?? ''), unmeasured: (n, why) => unmeasured(n, why) }, name, u);
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  try {
+    await removeFakeManager(cdp);
+    // Ohne Endpunkt zeigt der Tab nur den Einrichtungs-Hinweis, ohne Eingabezeile: der Stub gibt dem Chat einen erreichbaren Endpunkt (es wird nichts gefragt).
+    stub = await startLlmStub({ models: [MANAGER_DEFAULT_MODEL] });
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await cdp.evaluate(`${P}.llm.invalidate(); ${P}.chatSession.reset(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    const FELD = '.kuro-chat-input';
+    zeichne('pflicht/fokus-erhalt', await messeFokusErhalt(cdp, { selector: FELD }));
+    zeichne('pflicht/fokus-gegenprobe', await gegenprobeFokus(cdp, { selector: FELD }));
+    const opts = {
+      selektoren: ['.kuro-chat-input', '.kuro-chat-inputrow .kuro-btn'],
+      erforderlich: ['.kuro-chat-input'],
+      fuelle: { in: '.kuro-chat-log' },
+      ueberlauf: '.kuro-chat-log',
+    };
+    zeichne('pflicht/erreichbar-natuerliche-hoehe', await messeErreichbarkeit(cdp, opts));
+    zeichne('pflicht/erreichbar-kurzes-panel', await mitHoehe<PflichtTeilurteil>(cdp, { element: '.workspace-leaf', enthaelt: '.kuro-chat-inputrow', hoehe: 420 }, () => messeErreichbarkeit(cdp, opts)));
+    const gegen = await gegenprobeErreichbarkeit(cdp, { selektoren: opts.selektoren, rollbereich: '.kuro-chat-log', fuelle: opts.fuelle });
+    // Gemessen (Welle 24): die Eingabezeile steht UNTER dem Log, das in sich rollt (Punkt layout/log-scrollt-intern). Nimmt man dem Log den Rollbalken,
+    // bleibt die Eingabezeile erreichbar: die Gegenprobe kann in diesem Layout nicht rot werden — nicht anwendbar, nicht grün.
+    if (gegen.urteil === 'rot' && gegen.detail.startsWith('overflow:hidden, aber alle')) {
+      skipped('pflicht/erreichbar-gegenprobe', `in dieser Lage nicht anwendbar: die Eingabezeile steht ausserhalb des Rollbereichs (${gegen.detail})`);
+    } else zeichne('pflicht/erreichbar-gegenprobe', gegen);
+  } catch (e) {
+    if (istAbgebrochen()) throw e;
+    for (const n of NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    if (!istAbgebrochen()) {
+      await setSetting(cdp, 'chatEndpoints', []).catch(() => undefined);
+      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`).catch(() => undefined);
+    }
+    if (stub) await stub.stop().catch(() => undefined);
+  }
+}
+
 /* ------------------------------------- 12 · Echter Endpunkt (Kit-Chat-Client) */
 
 /** Ein bereits GELADENES Chat-Modell auf dem lokalen LM-Studio-Endpunkt, sonst `null`.
@@ -1807,6 +1862,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 17 · Gemma 4 ohne Öffner');
     await sektionGemma(cdp);
+    console.log('');
+    console.log('── 18 · Pflichtpunkte § 3a (Fokus-Erhalt, Erreichbarkeit)');
+    await sektionPflicht(cdp);
     console.log('');
 
     console.log('── Nicht mechanisch prüfbar (bleibt Hand-Runde)');

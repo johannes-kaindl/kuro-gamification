@@ -27,6 +27,7 @@ function makeHost(): any {
   el.addClass = (c: string) => { el.classes.add(c); };
   el.createEl = (_tag: string, opts?: any) => {
     const child = makeHost();
+    child.parent = el;
     if (opts?.text) child.setText(opts.text);
     if (opts?.cls) child.classes = new Set(String(opts.cls).split(/\s+/).filter(Boolean));
     el.children.push(child);
@@ -41,6 +42,8 @@ function makeHost(): any {
   // nur Aussagen, die unter BEIDEN Zaehlweisen gelten (z. B. "der letzte Treffer").
   el.appendChild = (c: any) => { el.children.push(c); };
   el.addEventListener = () => {};
+  // `remove` nimmt den Knoten aus dem Elternknoten (der Schreiber legt Blöcke ab und nimmt sie bei `resetContent` zurück).
+  el.remove = () => { if (el.parent) el.parent.children = el.parent.children.filter((c: any) => c !== el); };
   return el;
 }
 
@@ -292,6 +295,39 @@ describe('KuroChatPanel', () => {
       panel.render();
       expect(m.calls).toEqual(['Eins\n\n']);
       expect(findAll(host, 'okit-stream-tail').pop().text).toBe('Zw');
+    });
+
+    describe('resetContent (Gemma 4 ohne Öffner)', () => {
+      it('nimmt nur den laufenden Strom zurück: der Verlauf bleibt dieselbe Zeile, der Tail ist leer', () => {
+        const s = new ChatSession();
+        s.append({ role: 'user', text: 'frage' });
+        s.streaming = '';
+        const m = md();
+        const { panel, host } = makePanel(s, { renderMarkdown: m.renderMarkdown });
+        panel.render();
+        panel.appendToken('Denken\n\nnoch mehr');
+        const logLineBefore = findAll(host, 'kuro-chat-line')[0];
+
+        s.streaming = '';
+        panel.resetContent();
+
+        // Kein Neuzeichnen: der Verlauf ist unberührt, der Schreiber hat nur seinen eigenen Strom zurückgenommen.
+        expect(findAll(host, 'kuro-chat-line')[0]).toBe(logLineBefore);
+        expect(findAll(host, 'okit-stream-tail').pop().text).toBe('');
+      });
+
+      it('danach läuft die Antwort im selben Schreiber weiter', () => {
+        const s = new ChatSession();
+        s.streaming = '';
+        const m = md();
+        const { panel, host } = makePanel(s, { renderMarkdown: m.renderMarkdown });
+        panel.render();
+        panel.appendToken('Denken\n\nrest');
+        s.streaming = '';
+        panel.resetContent();
+        panel.appendToken('Antwort');
+        expect(findAll(host, 'okit-stream-tail').pop().text).toBe('Antwort');
+      });
     });
   });
 

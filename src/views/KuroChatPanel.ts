@@ -132,11 +132,12 @@ export class KuroChatPanel {
     area.followTail();
   }
 
-  /** Gemma 4 ohne Öffner: der bisher gezeigte Text war Denken. Der Aufrufer hat `session.streaming` schon auf `''` gesetzt; neu zeichnen
-   *  statt `writer.resetContent()`: das Kit leert dort den `bodyEl` der EIGENEN Fläche (`area.resetContent`), und dieser Panel lenkt die
-   *  Blöcke in die Spalte der laufenden Zeile um — der Reset risse den ganzen Verlauf weg und hinge den Tail an den Log. */
+  /** Gemma 4 ohne Öffner: der bisher gezeigte Text war Denken. Der Aufrufer hat `session.streaming` schon auf `''` gesetzt. Der Schreiber nimmt nur
+   *  die Blöcke zurück, die er selbst in die Spalte der laufenden Zeile gelegt hat (seit obsidian-kit 0.63.0; vorher leerte das Kit den ganzen Body und riss
+   *  den Verlauf mit, deshalb zeichnete dieser Panel hier neu). Ohne laufenden Strom (kein Schreiber) bleibt das Neuzeichnen. */
   resetContent(): void {
-    this.render();
+    if (this.writer === null) { this.render(); return; }
+    this.writer.resetContent();
   }
 
   /** Laufenden Text fortschreiben, statt pro Token neu zu zeichnen. */

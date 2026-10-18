@@ -11,6 +11,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 - **With LM Studio, whether a model thinks or reads images now comes from the model's own metadata instead of only its name.** A model whose name gave no hint is no longer treated as text-only.
 - **The request section of the settings warns before a request would load another model in LM Studio.** If the model you send is not loaded but others are, a line names the loaded ones: the request loads it on demand and can unload a running one ("Model unloaded.").
 - **At the note "Model family recognized", a button "Set family in the manager" opens the LLM Endpoint Manager settings.**
+- **With Gemma 4 on LM Studio, moving the model's thinking into the thinking block leaves the chat history as it is** instead of redrawing the whole chat (the answer area now takes back only its own stream).
 - **A connection type the plugin does not support (for example the manager's Claude API endpoint) is now reported as such**, instead of as a general configuration error.
 
 ## [1.13.1] — 2026-10-16

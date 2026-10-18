@@ -3,7 +3,8 @@
    produces engine-ready DailyInput[] / WeeklyInput[].
    Wraps Obsidian Vault + MetadataCache APIs.
    ========================================================== */
-import { type App, TFile, TFolder, moment, normalizePath } from 'obsidian';
+import { type App, TFile, TFolder, normalizePath } from 'obsidian';
+import { callableMoment } from '../vendor/kit-obsidian/moment';
 import { countCheckboxes, type CheckboxStats } from '../utils/checkboxes';
 import type { DailyInput, WeeklyInput } from '../engine/XpEngine';
 import type { Logger } from '../utils/logger';
@@ -22,14 +23,10 @@ export interface VaultReadOptions {
   weeklyFormat?: string;
 }
 
-/** Obsidians `moment` ist als Namespace getypt (`import * as Moment`) und damit nicht aufrufbar, zur Laufzeit
- *  aber die Funktion (Muster obsidian-kit `daily-notes.ts`, health-vitals `daily-note.ts`). Ohne den Cast ist
- *  der Aufruf im Store-Review ein `error`-Typ: 1.13.0 bekam dafuer vier `no-unsafe-*`-Befunde und „Satisfactory“. */
-const parseStrict = moment as unknown as (
-  input: string,
-  format: string,
-  strict: boolean,
-) => { isValid(): boolean; format(f: string): string };
+/** Strenges Parsen nach Format: Obsidians `moment`, aufrufbar getypt aus dem Kit (ein direkter Aufruf des Namespaces ist im Store-Review ein
+ *  `error`-Typ: 1.13.0 bekam dafuer vier `no-unsafe-*`-Befunde und „Satisfactory“). */
+const parseStrict = (input: string, format: string, strict: boolean): { isValid(): boolean; format(f: string): string } =>
+  callableMoment(input, format, strict);
 
 /** Name (ohne `.md`) → interner Schluessel, oder `null`, wenn er nicht zum Format passt. Streng:
  *  `13-14-2026` ist kein Datum. Wochen werden ueber das ISO-Wochenjahr (`GGGG`) benannt, damit der

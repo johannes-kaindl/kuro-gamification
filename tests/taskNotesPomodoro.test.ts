@@ -7,7 +7,7 @@
 
    readTaskNotesPomodoroInfo reads an undocumented cross-plugin
    API (app.plugins.plugins['tasknotes'].settings) defensively —
-   same pattern as readCoreDailyNotesConfig for the core API.
+   same pattern as readDailyNotesConfig (kit) for the core API.
    ========================================================== */
 import type { App } from 'obsidian';
 import { readTaskNotesPomodoroInfo, pomodoroFieldMismatch } from '../src/utils/taskNotesPomodoro';

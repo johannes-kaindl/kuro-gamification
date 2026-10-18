@@ -1,5 +1,5 @@
 /* ==========================================================
-   readCoreDailyNotesConfig — adapt to the vault by reading the
+   readDailyNotesConfig (kit) — adapt to the vault by reading the
    folder/format from Obsidian's built-in "Daily notes" core
    plugin, so fresh installs don't start with a foreign path.
 
@@ -8,7 +8,7 @@
    unexpected so a missing/renamed API can never crash onload.
    ========================================================== */
 import type { App } from 'obsidian';
-import { readCoreDailyNotesConfig } from '../src/utils/coreDailyNotes';
+import { readDailyNotesConfig as readCoreDailyNotesConfig } from '../src/vendor/kit-obsidian/daily-notes';
 
 /** Teil-Fake als App: der Test stellt nur die Felder bereit, die der Leser anfasst. */
 const asApp = (fake: unknown): App => fake as App;
@@ -34,9 +34,9 @@ describe('readCoreDailyNotesConfig', () => {
     expect(readCoreDailyNotesConfig(app)).toEqual({ folder: 'Daily', format: 'YYYY-MM-DD' });
   });
 
-  it('falls back to empty strings when options fields are missing', () => {
+  it('falls back to what Obsidian assumes (vault root, YYYY-MM-DD) when options fields are missing', () => {
     const app = appWithDailyNotes({});
-    expect(readCoreDailyNotesConfig(app)).toEqual({ folder: '', format: '' });
+    expect(readCoreDailyNotesConfig(app)).toEqual({ folder: '', format: 'YYYY-MM-DD' });
   });
 
   it('returns null when the core plugin is not present', () => {

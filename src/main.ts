@@ -21,7 +21,7 @@ import { LootRedeemModal } from './modals/LootRedeemModal';
 import { WelcomeModal } from './modals/WelcomeModal';
 import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
-import { readCoreDailyNotesConfig } from './utils/coreDailyNotes';
+import { readDailyNotesConfig } from './vendor/kit-obsidian/daily-notes';
 import { LLM_CONNECTION_STRINGS_DE, LLM_CONNECTION_STRINGS_EN, noEndpointText } from './vendor/kit-obsidian/llm-connection-strings';
 import {
   readTaskNotesConfig, readPomodoroSessions, readCompletedTasks, taskRuleFromSettings,
@@ -153,7 +153,7 @@ export default class KuroPlugin extends Plugin {
     s.language = detectLang();
     if (s.habits.length === 0) s.habits = defaultHabits(s.language);
     if (s.dailyFolder === '') {
-      const core = readCoreDailyNotesConfig(this.app);
+      const core = readDailyNotesConfig(this.app);
       if (core?.folder) s.dailyFolder = core.folder;
       if (core?.format) s.dailyDateFormat = core.format;
     }

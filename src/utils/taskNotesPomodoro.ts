@@ -9,7 +9,7 @@
    Uses an undocumented internal API (app.plugins.plugins) —
    accessed defensively so a missing/renamed API degrades to
    null rather than crashing settings render. Same pattern as
-   ../utils/coreDailyNotes.ts for Obsidian's core API.
+   vendor/kit-obsidian/daily-notes.ts for Obsidian's core API.
    ========================================================== */
 import type { App } from 'obsidian';
 

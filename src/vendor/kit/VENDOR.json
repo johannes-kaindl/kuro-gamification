@@ -4,7 +4,7 @@
   "version": "0.31.0",
   "sha": "7e3bdb3",
   "date": "2026-09-26",
-  "vendored": "backend-probe.ts, capabilities.ts, embeddings-client.ts, endpoint.ts, endpoint_config.ts, endpoint_diagnostics.ts, error_body.ts, model-choice.ts, model-context.ts, local-stamp.ts, model-list-cache.ts, num.ts, reasoning.ts, redact.ts, safe-markdown.ts, sampling-profiles.ts, secrets.ts, sse.ts, stream-blocks.ts, think-splitter.ts, timeout.ts, clipboard.ts, remote-resources.ts",
+  "vendored": "backend-probe.ts, capabilities.ts, embeddings-client.ts, endpoint.ts, endpoint_config.ts, endpoint_diagnostics.ts, error_body.ts, model-choice.ts, model-context.ts, local-stamp.ts, model-list-cache.ts, num.ts, reasoning.ts, redact.ts, safe-markdown.ts, sampling-profiles.ts, secrets.ts, sse.ts, stream-blocks.ts, think-splitter.ts, timeout.ts, rel-path.ts, folder-scope.ts, clipboard.ts, remote-resources.ts",
   "note": "Verbatim snapshot von code-kit/src/ts (plus Herkunfts-Header in Zeile 1). Der Ordner heisst historisch 'kit'; die Quelle ist seit dem code-kit-Split (obsidian-kit@2ab1bb5) code-kit, nicht obsidian-kit. Pins in tools/kit-sync.json, re-vendor via tools/sync-kit.sh (zentrales kit-sync im Dach). Never hand-edit. kit-obsidian/ siehe dortige VENDOR.json.",
   "obsidian_kit_version": "0.63.0",
   "obsidian_kit_sha": "9209efa",

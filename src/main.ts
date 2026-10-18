@@ -21,6 +21,7 @@ import { LootRedeemModal } from './modals/LootRedeemModal';
 import { WelcomeModal } from './modals/WelcomeModal';
 import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
+import { isInFolder } from './vendor/kit/folder-scope';
 import { readDailyNotesConfig } from './vendor/kit-obsidian/daily-notes';
 import { LLM_CONNECTION_STRINGS_DE, LLM_CONNECTION_STRINGS_EN, noEndpointText } from './vendor/kit-obsidian/llm-connection-strings';
 import {
@@ -176,8 +177,10 @@ export default class KuroPlugin extends Plugin {
     if (!(file instanceof TFile)) return;
     if (file.extension !== 'md') return;
     const s = this.data.settings;
-    const inDaily = file.path.startsWith(`${s.dailyFolder}/`);
-    const inWeekly = file.path.startsWith(`${s.weeklyFolder}/`);
+    // Segmentregeln aus dem Kit (`folder-scope`): ein leerer Ordner haelt nichts, `Daily/` ist `Daily`, `Daily` haelt nicht `Daily-Archiv/x.md`.
+    // Die Einstellung wird vor dem Aufruf getrimmt (das Kit trimmt nie).
+    const inDaily = isInFolder(file.path, s.dailyFolder.trim());
+    const inWeekly = isInFolder(file.path, s.weeklyFolder.trim());
     if (!inDaily && !inWeekly) return;
     if (inDaily && !isIsoDate(file.basename)) return;
     if (inWeekly && !isIsoWeek(file.basename)) return;

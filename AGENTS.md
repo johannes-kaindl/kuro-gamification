@@ -2,8 +2,7 @@
 
 > **Workspace-Standards (maintainer-lokal):** Die verbindliche Leitkonvention steht in `_docs/CONVENTIONS.md`
 > im Multi-Projekt-Workspace des Maintainers, `../../workspace/_docs` relativ zu diesem Repo — nicht Teil dieses Repos,
-> ignorieren falls im Klon nicht vorhanden. Modell comply-or-explain. Offene Punkte für
-> dieses Repo siehe Abschnitt "Offene Konventions-Punkte".
+> ignorieren falls im Klon nicht vorhanden. Modell comply-or-explain.
 
 Conventions for AI agents (Claude Code, Codex, …) working on this repository.
 
@@ -12,12 +11,6 @@ Conventions for AI agents (Claude Code, Codex, …) working on this repository.
 (XP, Level, Streaks mit Freeze-Tokens, deterministische Loot-Drops, gothic-cyberpunk Lore).
 Leitprinzip: **off-by-default** für alles, was eskalieren könnte. Plugin-Code liegt am
 **Repo-Root** (`src/`, `tests/`); `main.js` wird gebaut, nicht getrackt.
-
-> **Historie/Archiv:** Vor v1.0.0 lebte dieses Plugin in einem verschachtelten Container-Repo
-> (`40_src/`, bewusst getrackte `node_modules`, Workflow-Ordner `10_discovery…90_workflow-log`).
-> Bei der Öffentlich-Machung (CORE-GIT-01, 2026-07-24) auf flache Sibling-Form migriert, frische
-> Historie ab v1.0.0. Die volle Vor-1.0.0-Historie liegt lokal im Archiv
-> `~/Archive/repos/kuro-gamification-container` (seit 2026-09-14; vorher `../kuro-gamification-container`, nur als privates Forgejo-Archiv gesichert).
 
 ## Architecture principles
 Pure-Function-Engines (`src/engine/`) bleiben frei von Obsidian-Imports und in Node testbar
@@ -51,7 +44,7 @@ Arbeitsverzeichnis: **Repo-Root**.
 - shots: `STAGING_VAULTS_DIR=<dir> npm run shots -- --port <Port>` (README-Bilder aufnehmen; `-- --setup` baut den
   Aufnahme-Vault aus `docs/images/fixture/`, s. `docs/images/README.md`) ·
   `npm run shots:check` prüft Vertrag ↔ Dateien ↔ README
-- gate: `npm run gate` (lint → lint:obsidian → typecheck → typecheck:scripts → test → build; **die** Gate-Definition —
+- gate: `npm run gate` (lint → lint:obsidian → typecheck → typecheck:test → typecheck:scripts → test → build; **die** Gate-Definition —
   `.github/workflows/release.yml` ruft nur diesen Befehl, damit lokal und CI nie auseinanderlaufen)
 - version-bump: `npm run version-bump <ver>` (3-File-Sync package/manifest/versions)
 - release: `npm run release <ver>` (Ein-Befehl-Release: bump → changelog → preflight → commit →
@@ -65,172 +58,42 @@ Arbeitsverzeichnis: **Repo-Root**.
   Schema-Migration schiefgeht.)
 
 ## Conventions
+
 Projektspezifische Konventionen hier. Workspace-weite Standards: siehe `_docs/CONVENTIONS.md`.
 Profile dieses Repos: **ts-node · obsidian-plugin**.
 - Linter: **biome** (Linter only, Formatter bewusst aus — kein Massen-Reformat des Release-Stands).
   Deaktivierte Regeln mit Begründung: `complexity/noStaticOnlyClass` (statisch-only Engines sind
   bewusstes Architektur-Pattern), `complexity/noUselessConstructor` nur in `tests/**`
   (Mock-Konstruktoren spiegeln Obsidian-API-Signaturen).
-- **Store-Gate:** biome bleibt Formatter/Haupt-Linter; zusätzlich läuft `eslint-plugin-obsidianmd`
-  additiv über `src/**/*.ts` (`npm run lint:obsidian`, `eslint.config.mjs`, Muster wie
-  json_viewer/vault-crews) — genau die Guideline-Regeln, die der echte Community-Store-Scanner
-  prüft (2026-07-25 eingeführt, nachdem ein manueller Review-Auftrag reale Findings zutage
-  förderte, die biome/SubmissionGate blind waren: doppeltes Command-Präfix, `minAppVersion` zu
-  niedrig für tatsächlich genutzte APIs, `globalThis`/`console.info`/`element.style`-Verstöße).
-  **Der Einstellungs-Tab ist seit 2026-08-18 rein deklarativ** (`minAppVersion` 1.13.0):
-  `getSettingDefinitions()` ist die einzige Wahrheit, `display()` und die ganze imperative
-  Fallback-Maschinerie (`_renderItem`/`_renderControl`/`_section`) sind gelöscht. Damit ist
-  auch die letzte `no-deprecated`-Ausnahme aus `eslint.overrides.mjs` verschwunden —
-  `eslint.overrides.mjs` trägt jetzt nur noch die `parserOptions`.
-  **Anlass war eine Messung, keine Meinung:** der Guard in `preflight.mjs` verbot 1.13+ als
-  „Catalyst-only"-Floor, aber `latestVersion` im **public** Kanal von `desktop-releases.json`
-  stand am 2026-08-18 auf **1.13.7**, identisch mit `beta.latestVersion` — 1.13 war längst
-  öffentlich, die hartkodierte Konstante (1.12.7) war schlicht veraltet. Sie ist im Dach
-  nachgezogen worden, mitsamt Mess-Datum und Quelle im Kommentar.
-  **Was das gekostet hat:** die Collapsible-Sections. Der deklarative Gruppentyp kennt
-  `heading`/`cls`/`search`/`visible` — **kein** Collapse. Die eingeklappten Abschnitte
-  (Overload-Reduktion für die ADHS/Autismus-Zielgruppe) sind damit endgültig weg. Sie waren
-  es faktisch aber schon vorher: auf jedem 1.13-Host ruft das Framework `display()` nie auf,
-  sobald `getSettingDefinitions()` ein nichtleeres Array liefert — die Löschung hat niemandem
-  etwas genommen, was er noch sah. Wer die Reduktion zurückholen will, muss sie mit den
-  Mitteln der API bauen (`search` auf Gruppenebene, `type: 'page'` für Unterseiten), nicht
-  mit einem zweiten Renderpfad. Mit `display()` fiel auch das damit tot gewordene Vendoring
-  (`collapsible.ts`, `folder-suggest.ts`) und das Settings-Feld `uiCollapsed`; den Ordner-
-  Vorschlag zieht jetzt Obsidians eigener `folder`-Control. `SubmissionGate`
-  (`src/engine/SubmissionGate.ts`, verdrahtet über
-  `tests/submission-gate.test.ts`) deckt ergänzend `manifest.json`/`LICENSE` test-seitig ab — die
-  echten Dateien laufen durchs Gate, ein kaputtes Manifest failt `npm test`.
+- **Store-Gate:** biome bleibt Formatter/Haupt-Linter; zusätzlich läuft `eslint-plugin-obsidianmd` additiv über `src/**/*.ts` (`npm run lint:obsidian`, `eslint.config.mjs`, Muster wie json_viewer/vault-crews) — genau die Guideline-Regeln, die der echte Community-Store-Scanner prüft (das Warum in `docs/internal/decisions.md`).
 - Commits: Conventional Commits; **nur berührte Dateien stagen, nie `git add -A`**; AI-Trailer
   `Co-Authored-By: …` bei substanziellem AI-Beitrag. Details: `CONTRIBUTING.md`.
 
 ## Gotchas
-- **Zwei CDP-Treiber unter `scripts/`** (`gui-smoke.ts`, `shots.ts`) arbeiten gegen ein laufendes
-  Obsidian. Die Brücke dazu wird **importiert, nicht vendored**: `../tools/obsidian-cdp/` im Dach.
-  Fehlt ihr etwas, wird sie **dort** ergänzt (als Parameter, nicht als Sonderfall) — eine lokale
-  `scripts/lib/cdp.ts` meldet `tools/template_drift_check.py` als Rückstand. Beide Treiber laufen
-  nie in CI; `typecheck:scripts` überspringt sich ohne Dach-Checkout selbst.
-  **Beide brechen ab, wenn der Build im Vault nicht der gebaute Repo-Stand ist**
-  (`requireEigenerBuild`, seit 2026-09-02) — Abhilfe ist immer `npm run deploy`, nicht ein
-  Flag. Anlass: der Lauf 16/16 vom 28.08. lief gegen die Store-Installation 1.3.0, und
-  `manifest.version` ist dagegen strukturell blind, weil beide Builds dieselbe Nummer tragen.
-  ⚠️ **Die Versionszeile im Protokoll ist kein Herkunftsbeleg:** `enablePlugin` lädt den Code
-  neu, das Manifest nicht (Obsidian liest es beim Vault-Start) — gemessen 1.3.0 im Speicher
-  gegen 1.4.0 auf Platte. Der sha1-Vergleich ist die einzige Aussage.
-- **Release-Tooling ist zentral** (`../tools/release/{release,version-bump,preflight}.mjs`) — kein
-  vendored `scripts/release.mjs` mehr im Repo. Voraussetzung: dieses Repo muss im Dach-Verzeichnis
-  `obsidian-plugins/` neben `tools/` liegen (ein Clone ohne Dach ist nicht release-fähig, die
-  npm-Scripts prüfen das und brechen mit klarer Fehlermeldung ab). `preflight.mjs` deckt die
-  Store-Checkliste release-seitig ab; `SubmissionGate.ts`/`tests/submission-gate.test.ts` deckt
-  dieselben Checks test-seitig ab (`npm test`) — bewusste Teil-Doppelung, nicht redundant
-  (verschiedene Zeitpunkte). Migriert 2026-07-25, s. `_docs/LESSONS.md` (2026-07-25).
-- **Kit-Vendoring hat ZWEI Quellen** (seit 2026-09-02): `src/vendor/kit/` kommt aus **`code-kit`**
-  (plattformneutral), `src/vendor/kit-obsidian/` aus **`obsidian-kit`**. Der Ordnername `kit` ist
-  historisch und sagt die Quelle **nicht** — die steht in `VENDOR.json` und im Header jeder Datei.
-  Anlass: obsidian-kit hat seine domänenfreie pure-Teilmenge nach code-kit abgegeben
-  (`obsidian-kit@2ab1bb5`); von den zehn Modulen liegen sechs im Kit als Vendor-Kopie und
-  **vier — `num`, `reasoning`, `sse`, `think-splitter` — gar nicht mehr darin**. Wer nur die
-  Kit-Pfade nachzieht, läuft bei diesen vier weiter ins Leere. `tools/sync-kit.sh` liest aus
-  `git show "$REF:…"`, nicht aus dem Arbeitsstand des Nachbar-Repos; deshalb braucht es keinen
-  Arbeitsstand-Guard mehr. **`^{commit}` beim Pin ist Pflicht, nicht Kür:** code-kit taggt
-  annotiert, `rev-parse 0.5.0` liefert dort die SHA des Tag-**Objekts** (`41e96e0`) statt des
-  Commits (`efcd456`). Bei obsidian-kit fiel das nie auf, weil dessen Tags leichtgewichtig sind —
-  Zufall, kein Schutz. Gegenproben zu jedem Re-Vendor: Idempotenz, Fehlerpfad (unbekannte Ref →
-  0 Dateien angefasst), Verbatim-Vergleich gegen die Ref.
-- **`moment` aus `obsidian` nie direkt aufrufen.** Obsidian typt es als Namespace (`import * as Moment`); lokal lässt die tsconfig den Aufruf durch, der Store-Review nicht, und dort wird jeder Wert daraus `error`-getypt (1.13.0: vier `no-unsafe-*`-Befunde, „Satisfactory“). Einen typisierten Cast nehmen wie `parseStrict` in `src/persistence/VaultReader.ts` (Muster obsidian-kit `daily-notes.ts`). Nachbilden lässt sich der Befund nur mit `esModuleInterop: true`.
-- **Pure-Logik in `src/engine/`** (Node-testbar); UI ist dünner Glue über der Obsidian-API.
-- **Vault-reactive:** `vault.modify` ist 800 ms debounced.
-- **`onload`-Reihenfolge (load-bearing):** Debounced Fns (`debouncedSave`/`debouncedRefresh`)
-  müssen **vor** jeder Methode zugewiesen werden, die sie aufrufen kann — speziell
-  `regenFreezeTokensIfNeeded()`. Sonst Fresh-Vault-only Ladecrash (`this.debouncedSave is not a
-  function`), für Engine/DataStore-Tests unsichtbar. Abgesichert durch `tests/main-onload.test.ts`.
-- **Pack-I/O:** `📚 Packs` (SettingsTab) ist DER Ort für alle Pack-Operationen; die
-  Einheiten-Sektionen tragen nur Inhalts-Einstellungen. Pure-Logik in `src/utils/packLibrary.ts`.
-- **Companion-Chat (`src/llm/`, seit 1.1.0):**
-  - **Off-by-default** (`enableChat`). Ist er aus, wird keine Tab-Leiste gezeichnet, kein
-    Endpunkt kontaktiert und `lastDailyText` gar nicht erst gelesen.
-  - **Vorschau nie nachbauen.** Settings-Vorschau, Chat-Ausklapper und Prompt-Bau rufen
-    alle `kuroContext.renderDailyExtract`. Eine zweite Formatierung driftet und zeigt
-    beruhigend etwas anderes, als tatsächlich gesendet wird.
-  - **Prompt-Blockreihenfolge ist load-bearing:** Rolle → Stimme → Kontext → Merkzettel →
-    **Regeln zuletzt**. Stimme (importiertes Pack) und Kontext (eigene Notizen) sind Text,
-    den das Plugin nicht kontrolliert; die Regeln sagen ausdrücklich, dass frühere Blöcke
-    sie nicht aufheben. Neue Blöcke **vor** den Regeln einfügen, nie danach.
-  - **Merkzettel kappt hart** (`kuroNotes`, 20 × 200 Zeichen): bei Erreichen wird der
-    Hinzufügen-Knopf deaktiviert, statt still den ältesten Eintrag zu verwerfen. Der
-    Gesprächsverlauf wird bewusst **nicht** persistiert.
-  - **Timer über den injizierten `ClockPort`** (`vendor/kit-obsidian/clock`), nicht über
-    nacktes `setTimeout`: Der Store-Lint verlangt `window.setTimeout`, das es in jests
-    node-Umgebung nicht gibt. Ohne den Port wäre der Client entweder lint-widrig oder nur
-    mit Obsidian-Mock testbar.
-  - **`activePersona` folgt der Lore**, nicht dem Loot — wer die Gothic-Lore aktiviert, will
-    auch die Gothic-Stimme.
-  - **Verbindung (seit Kit 0.51.2): `createLlmConnection` ist der einzige Weg zum Endpunkt und zur Anfrage.** `main.ts` erzeugt sie in `onload()` aus den Optionen von `src/llm/kuroConnection.ts` (Modus companion, Budget, Settings-Namen `chatEndpoints`/`chatChoice`/`request`, `truncated: 'error'`); `askKuro` ruft `this.llm.complete`, die Einstellungen zeichnet `this.llm.renderSettings`, die Modellliste liefert `this.llm.models()`. Eigener Resolver, Client-Fabrik, Backend-Probe und Abweichungstexte gibt es nicht mehr — ein Neubau davon ist ein Rückstand. Der Manager wird bei jedem Aufruf frisch gelesen (nie gemerkt), die lokale Auflösung bis `invalidate()`; wer `chatEndpoints` am Tab vorbei ändert (Treiber), ruft danach `llm.invalidate()`. `choice` gilt nur mit Manager; das Modell steht allein auf der Zeile der lokalen Liste (`rowModel`), ein globales `chatModel` gibt es seit 1.10.0 nicht mehr — `DataStore.mergeSettings` verteilt den Altwert einmal über `fillMissingRowModels` auf Zeilen ohne Modell und nimmt den Schlüssel danach aus dem gemergten Objekt (sonst füllt jeder Start eine bewusst geleerte Zeile neu; Test für den zweiten Lauf in `tests/DataStore.test.ts`). API-Schlüssel der lokalen Liste liegen im Obsidian-Schlüsselbund, nie in `data.json` (Prüfpunkt `verbindung/kein-apikey-in-data-json`). Gesendete Texte werden geschwärzt; **modellerzeugter Text geht nur über `createStableWriter` oder `neutralizeModelMarkdown` an einen Renderer** — jeder neue direkte `MarkdownRenderer`-Aufruf auf Modelltext braucht das vorher (Panel: `KuroChatPanel.renderEntry`).
-  - **Markdown im Chat:** `KuroChatPanel` bekommt `renderMarkdown` als Callback (die View liefert `MarkdownRenderer.render(app, …, this)`), damit das Panel weder `App` noch eine Component kennt. Fertige Kuro-Antworten werden gerendert, im Stream schneidet der Kit-`stable-writer` an der Absatzgrenze; eigene Fragen und Fehler bleiben Rohtext. Der Schreiber legt seine Blöcke in `.kuro-chat-stream-content` der laufenden Zeile ab, nicht in den ganzen Log.
-- **TaskNotes-Quellen (seit 1.4.0):** `src/utils/taskNotesBridge.ts` ist die **einzige** Stelle,
-  die `app.plugins.plugins.tasknotes` kennt. TaskNotes gibt keinen Vertrag (kein `apiVersion`),
-  deshalb gilt dort die defensive Konsumenten-Regel: bei jedem Zugriff frisch lesen, Form prüfen
-  statt Existenz, nie werfen.
-  - **Aufgaben kommen aus dem Vault, Sessions aus TaskNotes' Speicher.** Der Vault überlebt eine
-    Deaktivierung des Nachbarplugins; `pomodoroHistory` ist internes Feld ohne Zusage.
-  - **Woran eine Aufgabe erkannt wird, ist Kuros EIGENE Einstellung** (`taskMatchField`/-`Value`,
-    `taskStatusField`, `taskDoneValues`) — TaskNotes' Konfiguration ist nur ein Übernahme-Vorschlag.
-    Der Grund ist gemessen: am 2026-09-01 fand TaskNotes' Standard (`tags: task`, Status `done`) im
-    Vault des Maintainers **4** erledigte Aufgaben, das tatsächlich genutzte Schema
-    (`type: 💪 Aufgabe`, `6_erledigt_✅`) **340**. Wer dem Fremdplugin folgt, baut eine Quelle, die
-    korrekt rechnet und nichts findet.
-  - **`diagnoseSources` (`src/engine/TaskNotesXp.ts`) ist die einzige Wahrheit** darüber, welche
-    Quelle zählt: Rechnung UND Herkunfts-Panel lesen sie. Eine zweite Beurteilung driftet.
-  - **Das Panel hängt bewusst nicht hinter `statusVerbose`.** Anlass war ein Pomodoro-Bonus, der
-    bei `pomodoroStorageLocation: "plugin"` strukturell nie feuern konnte, ohne dass es jemand sah.
-    Diagnose ist immer sichtbar, Buchhaltung bleibt schaltbar.
-  - **XP wird abgeleitet, nicht gezählt.** Das Ereignis vom Emitter löst Neuberechnung und
-    Rückmeldung aus; die Zahl kommt aus gelesenem Zustand. Deshalb kosten doppelte Ereignisse
-    nichts und Idempotenz entsteht nicht als Problem. Ein Ereignis-Journal in `data.json` wäre ein
-    zweiter, nicht rekonstruierbarer Zustand — nicht einführen.
-  - **Streak wird vorwärts nachgespielt, nicht gespeichert.** `StreakEngine.compute` läuft vom frühesten qualifizierenden Tag bis heute (Kalenderschritt, kein Fenster): der laufende Tag ist neutral, ein Freeze-Token überbrückt je Lücke einmal (Reset am Monatsersten), der Bonus ist `bonusFor(L) − bonusFor(L−1)` je Streak-Tag und bleibt nach dem Ende. `data.freezeTokens` und `regenFreezeTokensIfNeeded` sind nur noch Altbestand; die Anzeige liest `tokensLeft`. Tage ohne Arbeit (sieben `streakDay*`-Schalter, `streakSkipKey`/`streakSkipValues`) sind neutral und machen nie einen Tag aktiv. Verbrauchte Tokens oder gutgeschriebene Boni in `data.json` zu persistieren wäre ein zweiter, nicht rekonstruierbarer Zustand — nicht einführen.
-- **CRT/Phosphor-Optik** (`docs/aesthetic-css.{en,de}.md`) wird **nicht** mit dem Plugin
-  gebündelt — der User installiert es als Vault-CSS-Snippet. Bewusst als Markdown-Codeblock
-  gepflegt, nicht als getrackte `.css`-Datei: eine `assets/kuro-gamification.css` wurde vom
-  Store-Review-CSS-Lint gescannt (obwohl nie geshippt/referenziert), was auf `!important`
-  (strukturell nötig, um beliebige Host-Themes zu überschreiben) und `clip-path` Warnings warf.
-  Als Markdown-Doc bekommt es nie eine `.css`-Endung im Repo und wird so nicht mehr gescannt.
+
+- **`moment` aus `obsidian` nie direkt aufrufen.** Obsidian typt es als Namespace (`import * as Moment`); lokal lässt die tsconfig den Aufruf durch, der Store-Review nicht, und dort wird jeder Wert daraus `error`-getypt (1.13.0: vier `no-unsafe-*`-Befunde, „Satisfactory“). Einen typisierten Zugriff nehmen: `callableMoment` aus `vendor/kit-obsidian/moment`, umhüllt von `parseStrict` in `src/persistence/VaultReader.ts` (Muster obsidian-kit `daily-notes.ts`). Nachbilden lässt sich der Befund nur mit `esModuleInterop: true`.
+
+## Context index
+
+- Bevor du `src/llm/` oder `src/views/KuroChatPanel.ts` (Companion-Chat: Kontext, Prompt-Reihenfolge, Verbindung, Markdown) änderst: `.claude/rules/companion-chat.md`.
+- Bevor du die TaskNotes-Quellen, XP, Streak oder den Notiz-Parser (`src/utils/taskNotesBridge.ts`, `src/engine/`, `src/persistence/VaultReader.ts`) anfasst: `.claude/rules/tasknotes-und-streak.md`.
+- Bevor du den Einstellungs-Tab (`src/settings/`) oder die Pack-Ablage änderst: `.claude/rules/settings-tab.md`.
+- Bevor du `src/main.ts` (Lade-Reihenfolge, Vault-Ereignisse) änderst: `.claude/rules/onload-und-vault.md`.
+- Bevor du `scripts/gui-smoke.ts` oder `scripts/shots.ts` änderst: `.claude/rules/smoke-treiber.md`, `docs/SMOKE.md` und im Dach `../.claude/rules/gui-smoke-treiber.md`, `../.claude/rules/obsidian-instanz.md`, `../.claude/rules/cdp-lock.md`.
+- Bevor du `tools/kit-sync.json` oder etwas unter `src/vendor/` änderst (zwei Quellen, nie von Hand): `.claude/rules/vendoring.md`.
+- Vor einem Release oder am Submission-Gate (`src/engine/SubmissionGate.ts`): `.claude/rules/release-und-gate.md` und im Dach `../.claude/rules/release-und-store.md`; `npm run release` fährt der Master.
+- Bevor du die Optik als Vault-Snippet (`docs/aesthetic-css.*.md`) oder `styles.css` änderst: `.claude/rules/aesthetic-css.md`, dazu im Dach `../.claude/rules/store-css.md`.
+- Bevor du eine Altentscheidung übernimmst (Store-Gate, deklarative Einstellungen, Herkunft des Repos): `docs/internal/decisions.md`.
 
 ## Memory
 
 Projekt-Memory unter `~/.claude/projects/<slug>/memory/` (Index: `MEMORY.md`).
 Session-Handoff unter `.remember/` (gitignored).
 
-- **SDD-Artefakte (seit 2026-07-16): Cockpit, nicht Repo** — Specs/Plans/Task-Reports leben im
-  Coding-Cockpit des Maintainers (`$VAULT/25_Coding/kuro-gamification/_SDD/`, CORE-META-14, maintainer-lokal).
-  Sie tragen Arbeitskontext (Vault-Pfade, Schwester-Repo-Interna), der in einem public Repo niemandem nützt.
-  Das Repo behält die Design-Essenz in dieser Datei + `CHANGELOG.md`.
-- Specs und Pläne liegen im Vault-Cockpit unter `_SDD/` (CORE-META-14); `docs/superpowers/` gibt es im Repo nicht mehr, nichts Neues dort ablegen.
+- **SDD-Artefakte (seit 2026-07-16): Cockpit, nicht Repo** — Specs, Pläne und Task-Reports leben im Coding-Cockpit des Maintainers (`$VAULT/25_Coding/kuro-gamification/_SDD/`, CORE-META-14, maintainer-lokal); `docs/superpowers/` gibt es im Repo nicht mehr, nichts Neues dort ablegen. Das Repo behält die Design-Essenz in `docs/internal/` und `CHANGELOG.md`.
 - **Nie im Repo:** absolute Pfade außerhalb des Repos (`/Users/…`, Vault-Pfade) — Platzhalter nutzen
   (`$VAULT/…`, `~/…`, repo-relativ). Herkunftsnachweise als Repo-Name + `Datei:Zeile` sind dagegen erwünscht.
   Gate: `scripts/check-no-abs-paths.mjs` (Teil von `npm test`).
-
-## Offene Konventions-Punkte
-
-- [x] CORE-GIT-01 (2026-07-25) — Forgejo-`origin`
-      (`git.jkaindl.de/jkaindl/kuro-gamification`) + GitHub-Mirror
-      (`github.com/johannes-kaindl/kuro-gamification`) eingerichtet; Release `1.0.0`
-      dual-gepusht, GitHub-`release.yml` grün (attestierte Assets), Store-Release live.
-- [x] Developer-Dashboard-Review-Status (2026-07-25) — nach drei Runden Submission-Readiness-
-      Fixes (bis Release 1.0.6) von **Satisfactory** auf **Passed** gesprungen. Bestätigt:
-      Zero-Warnings-Ziel erreicht, keine offenen Dashboard-Findings mehr.
-- [x] CORE-META-10 — Forge-Beschreibung + Topics auf Forgejo **und** GitHub gesetzt.
-- [x] CORE-META-02 (2026-07-25) — Release-Badge von statisch auf dynamischen
-      Forgejo-Gitea-Badge umgestellt (`img.shields.io/gitea/v/release/...`), EN+DE.
-- [x] CORE-META-01 (2026-07-25) — README (EN+DE) um die 4 fehlenden Pflicht-Sektionen
-      ergänzt (Requirements / Usage / Configuration / How it works); `readme_lint.py`
-      meldet jetzt „keine Befunde".
-- [x] Release-Tooling-Migration (2026-07-25) — vendored `scripts/release.mjs` (stale, ohne
-      preflight/push-order-fix) durch Delegation an zentrales `../tools/release/` ersetzt;
-      s. `_docs/LESSONS.md` (2026-07-25).
-
-Erledigt (Konventions-Sweep 2026-06-10 + Submission-Readiness 2026-07-24):
-CORE-META-01/02/05/07/08 (README EN+DE, Badges, LICENSE am Root, AGPL, LICENSE-DOCS),
-PROF-TS-01/04, PROF-OBS-02, CORE-AGENT-03/04/06, sowie das Store-Submission-Gate.
 
 ## Abweichungen von der Leitkonvention
 

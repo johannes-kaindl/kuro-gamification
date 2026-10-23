@@ -10,7 +10,8 @@ data.json
 
 # Session tooling / local
 .remember/
-.claude/
+.claude/*
+!.claude/rules/
 .vscode/
 .idea/
 coverage/

@@ -135,3 +135,39 @@ describe('buildContext', () => {
     expect(out).toContain('FESTER GRUND');
   });
 });
+
+describe('number fields in the extract', () => {
+  const NOTE = ['---', 'aufgaben: 10', 'offen: "3"', 'text: abc', 'qigong: true', '---', '# Heute'].join('\n');
+
+  it('hands on a numeric frontmatter field under its label (Befund Welle 8: "aufgaben: 10")', () => {
+    const x = buildDailyExtract(NOTE, settings({ dailyNumberFields: 'aufgaben=Aufgaben heute' }));
+    expect(x.numbers).toEqual(['Aufgaben heute: 10']);
+    expect(renderDailyExtract(x)).toContain('- Aufgaben heute: 10');
+  });
+
+  it('accepts a quoted number and a decimal comma, never text', () => {
+    const x = buildDailyExtract(NOTE.replace('text: abc', 'text: 2,5'), settings({ dailyNumberFields: 'offen, text, qigong' }));
+    expect(x.numbers).toEqual(['offen: 3', 'text: 2.5']);
+  });
+
+  it('skips a configured field that is absent from the note', () => {
+    expect(buildDailyExtract(NOTE, settings({ dailyNumberFields: 'gibtsnicht' })).numbers).toEqual([]);
+  });
+
+  it('stays empty without configured fields, so existing users see no change', () => {
+    const x = buildDailyExtract(NOTE, settings());
+    expect(x.numbers).toEqual([]);
+    expect(renderDailyExtract(x)).not.toContain('aufgaben');
+  });
+
+  it('adds nothing in none mode and leaves full mode to the raw text', () => {
+    expect(buildDailyExtract(NOTE, settings({ chatDailyContext: 'none', dailyNumberFields: 'aufgaben' })).numbers).toEqual([]);
+    expect(buildDailyExtract(NOTE, settings({ chatDailyContext: 'full', dailyNumberFields: 'aufgaben' })).numbers).toEqual([]);
+  });
+
+  it('lists the numbers after tasks and habits', () => {
+    const out = renderDailyExtract(buildDailyExtract(`${NOTE}\n- [ ] Eins`, settings({ dailyNumberFields: 'aufgaben' })));
+    expect(out.indexOf('- [ ] Eins')).toBeLessThan(out.indexOf('- 🧘 Qi Gong'));
+    expect(out.indexOf('- 🧘 Qi Gong')).toBeLessThan(out.indexOf('- aufgaben: 10'));
+  });
+});

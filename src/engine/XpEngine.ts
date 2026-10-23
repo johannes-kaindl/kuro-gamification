@@ -7,6 +7,8 @@ import type {
   KuroSettings, KuroXpAdjustment, KuroXpBreakdownRow, KuroLevel,
 } from '../types';
 import type { CheckboxStats } from '../utils/checkboxes';
+import { parseNumeric } from '../vendor/kit/num';
+import { parseNumberFields } from '../utils/numberFields';
 import { computeTaskNotesXp, pomodoroBonusSuppressed } from './TaskNotesXp';
 import type { TaskNotesInput } from './TaskNotesXp';
 
@@ -63,6 +65,22 @@ export class XpEngine {
         amount: cb,
         reason: `${d.stats.done} ✓ × ${s.xpPerCheckbox} XP`,
       });
+    }
+
+    // Zahlenfelder im Notiz-Kopf (Einstellung `dailyNumberFields`) zählen wie erledigte Aufgaben.
+    // `total` und damit der Abschlussbonus bleiben bei den Checkbox-Zeilen: ein Feld sagt nichts darüber, wie viele es hätten sein sollen.
+    if (s.enableXpFromCheckboxes) {
+      for (const f of parseNumberFields(s.dailyNumberFields)) {
+        const n = Math.floor(parseNumeric(d.frontmatter[f.key]) ?? 0);
+        if (n <= 0) continue;
+        const amount = n * s.xpPerCheckbox;
+        xp += amount;
+        rows.push({
+          source: `Daily ${d.date} — Zahlenfeld`,
+          amount,
+          reason: `${f.key}: ${n} × ${s.xpPerCheckbox} XP`,
+        });
+      }
     }
 
     if (s.enableXpFromCheckboxes && d.stats.total > 0) {

@@ -65,7 +65,7 @@ function findAll(root: any, cls: string): any[] {
 }
 
 const extract = (over: Partial<DailyExtract> = {}): DailyExtract => ({
-  tasks: [], habits: [], raw: null, mode: 'tasks', ...over,
+  tasks: [], habits: [], numbers: [], raw: null, mode: 'tasks', ...over,
 });
 
 function makePanel(session: ChatSession, over: Partial<ChatPanelCallbacks> = {}) {
@@ -158,6 +158,23 @@ describe('KuroChatPanel', () => {
     const body = findAll(host, 'kuro-chat-context-body')[0];
     expect(body.text).toContain('eine Aufgabe');
     expect(body.text).toContain('Qi Gong');
+  });
+
+  it('counts the number fields in the summary line and lists them in the body', () => {
+    const { panel, host } = makePanel(new ChatSession(), {
+      contextInfo: () => extract({ tasks: ['[ ] eine Aufgabe'], numbers: ['Aufgaben: 10'] }),
+    });
+    panel.render();
+    expect(findAll(host, 'kuro-chat-context-summary')[0].text).toContain('1 Zahlenfelder');
+    expect(findAll(host, 'kuro-chat-context-body')[0].text).toContain('Aufgaben: 10');
+  });
+
+  it('keeps the old summary line without number fields', () => {
+    const { panel, host } = makePanel(new ChatSession(), {
+      contextInfo: () => extract({ tasks: ['[ ] eine Aufgabe'] }),
+    });
+    panel.render();
+    expect(findAll(host, 'kuro-chat-context-summary')[0].text).not.toContain('Zahlenfelder');
   });
 
   it('reports "nothing" for an empty extract', () => {

@@ -8,7 +8,7 @@
       "dir": "src/vendor/kit",
       "source": "code-kit",
       "from": "src/ts/pure",
-      "modules": ["backend-probe", "capabilities", "embeddings-client", "endpoint", "endpoint_config", "endpoint_diagnostics", "error_body", "model-choice", "model-context", "local-stamp", "model-list-cache", "num", "reasoning", "redact", "safe-markdown", "sampling-profiles", "secrets", "sse", "stream-blocks", "think-splitter", "timeout", "rel-path", "folder-scope"]
+      "modules": ["backend-probe", "capabilities", "embeddings-client", "endpoint", "endpoint_config", "endpoint_diagnostics", "error_body", "model-choice", "model-context", "local-stamp", "model-list-cache", { "name": "num", "ref": "0.35.0" }, "reasoning", "redact", "safe-markdown", "sampling-profiles", "secrets", "sse", "stream-blocks", "think-splitter", "timeout", "rel-path", "folder-scope"]
     },
     {
       "dir": "src/vendor/kit",

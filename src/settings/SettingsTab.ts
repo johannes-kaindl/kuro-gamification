@@ -653,6 +653,8 @@ export class KuroSettingsTab extends PluginSettingTab {
             tasks: t('set.chatDailyContext.tasks', lang),
             full: t('set.chatDailyContext.full', lang),
           } } },
+        { name: t('set.dailyNumberFields.name', lang), desc: t('set.dailyNumberFields.desc', lang),
+          control: { type: 'text', key: 'dailyNumberFields' } },
         { name: t('set.chatDailyContext.preview', lang),
           render: (setting) => this._renderContextPreview(this._hostFor(setting), lang) },
         { name: t('set.chatPersona.name', lang), desc: t('set.chatPersona.desc', lang),

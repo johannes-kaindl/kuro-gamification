@@ -206,7 +206,7 @@ Ein API-Schlüssel, den du für einen lokalen Endpunkt einträgst, liegt im **Ob
 
 | Immer | Je nach `Aus der heutigen Notiz` |
 |---|---|
-| Level, XP, Streak, Freeze-Tokens, Tagesfortschritt, offene Drops, zuletzt freigeschalteter Lore-Titel | `Nichts` — kein Notiz-Inhalt · `Aufgaben und Habits` (Standard) — die Checkbox-Zeilen und deine konfigurierten Habit-Felder · `Die ganze Notiz` |
+| Level, XP, Streak, Freeze-Tokens, Tagesfortschritt, offene Drops, zuletzt freigeschalteter Lore-Titel | `Nichts` — kein Notiz-Inhalt · `Aufgaben und Habits` (Standard) — die Checkbox-Zeilen, deine konfigurierten Habit-Felder und die Zahlenfelder, die du unter `Zahlenfelder im Notiz-Kopf` einträgst (z. B. `aufgaben: 10`; der Wert zählt auch als erledigte Aufgaben für XP) · `Die ganze Notiz` |
 | Dein Merkzettel (s. u.) | |
 
 Der Standard lässt Journal-Prosa bewusst außen vor. Einstellungen → 💬 Kuro-Chat zeigt eine

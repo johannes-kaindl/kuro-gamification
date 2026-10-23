@@ -11,12 +11,16 @@
    etwas anderes zeigen, als tatsächlich gesendet wird.
    ========================================================== */
 import type { ChatDailyContext, KuroSettings, KuroSnapshot } from '../types';
+import { parseNumeric } from '../vendor/kit/num';
+import { parseNumberFields } from '../utils/numberFields';
 
 export interface DailyExtract {
   /** Checkbox-Zeilen ohne Listen-Marker, z. B. "[ ] Arzttermin ausmachen". */
   tasks: string[];
   /** Habit-Zeilen als "Label: ja|nein". */
   habits: string[];
+  /** Zahlenfelder aus dem Notiz-Kopf als "Label: 10" (Einstellung `dailyNumberFields`). */
+  numbers: string[];
   /** Rohtext — nur im Modus 'full', sonst null. */
   raw: string | null;
   mode: ChatDailyContext;
@@ -45,10 +49,10 @@ export function buildDailyExtract(
 ): DailyExtract {
   const mode = settings.chatDailyContext;
   if (mode === 'none' || dailyText === null || dailyText === '') {
-    return { tasks: [], habits: [], raw: null, mode };
+    return { tasks: [], habits: [], numbers: [], raw: null, mode };
   }
   if (mode === 'full') {
-    return { tasks: [], habits: [], raw: dailyText, mode };
+    return { tasks: [], habits: [], numbers: [], raw: dailyText, mode };
   }
 
   const tasks: string[] = [];
@@ -62,7 +66,13 @@ export function buildDailyExtract(
     habits.push(`${h.label}: ${value === 'true' ? 'ja' : 'nein'}`);
   }
 
-  return { tasks, habits, raw: null, mode };
+  const numbers: string[] = [];
+  for (const f of parseNumberFields(settings.dailyNumberFields)) {
+    const n = parseNumeric(fm[f.key]);
+    if (n !== null) numbers.push(`${f.label}: ${n}`);
+  }
+
+  return { tasks, habits, numbers, raw: null, mode };
 }
 
 /** Die eine Formatierung — für Prompt UND Vorschau. */
@@ -72,6 +82,7 @@ export function renderDailyExtract(x: DailyExtract): string {
   const parts: string[] = [];
   if (x.tasks.length > 0) parts.push(x.tasks.map((l) => `- ${l}`).join('\n'));
   if (x.habits.length > 0) parts.push(x.habits.map((l) => `- ${l}`).join('\n'));
+  if (x.numbers.length > 0) parts.push(x.numbers.map((l) => `- ${l}`).join('\n'));
   return parts.join('\n');
 }
 

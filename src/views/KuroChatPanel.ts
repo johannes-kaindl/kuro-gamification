@@ -151,10 +151,16 @@ export class KuroChatPanel {
       ? t('chat.contextNone', this.lang)
       : info.mode === 'full'
         ? t('chat.contextFull', this.lang)
-        : t('chat.contextToggle', this.lang, {
-            tasks: info.tasks.length,
-            habits: info.habits.length,
-          });
+        : info.numbers.length > 0
+          ? t('chat.contextToggleNumbers', this.lang, {
+              tasks: info.tasks.length,
+              habits: info.habits.length,
+              numbers: info.numbers.length,
+            })
+          : t('chat.contextToggle', this.lang, {
+              tasks: info.tasks.length,
+              habits: info.habits.length,
+            });
   }
 
   private contextBody(info: DailyExtract): string {

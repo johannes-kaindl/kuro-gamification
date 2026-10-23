@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **Number fields in the note header (new setting "Number fields in the note header").** A daily note with `tasks: 10` in its header used to show "(nothing)" in "This is what goes to Kuro", because only checkbox lines and habit fields counted. Enter the field names in the settings (`field` or `field=Display name`, several separated by commas) and Kuro sees them under "Tasks and habits" as "Display name: 10"; the chat's context line counts them ("… 1 number fields"). **The value also counts as a number of completed tasks for XP**, like that many ticked checkboxes (XP per checkbox applies, a row "Number field" shows in the XP breakdown). The daily completion bonus (50/75/90 %) still comes only from the checkbox lines, and "Today: x of y done" in the status is unchanged. The list is empty by default, so nothing changes until you enter a field; text, `true` and lists in a field are ignored, only numbers count (also `"3"` and `2,5`); for XP a fraction is rounded down and a negative number gives nothing. A single comma is always a decimal comma: `1,000` reads as 1, and `1,000.5` is not a number.
+
 ## [1.14.0] — 2026-10-18
 
 ### Changed

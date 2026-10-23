@@ -198,6 +198,8 @@ export interface KuroSettings {
    *  `resolveRequestParams` aus der Kit-Tabelle auf — sie stehen nie im Plugin. */
   request: RequestSettings;
   chatDailyContext: ChatDailyContext;
+  /** Zahlenfelder im Kopf der Tagesnotiz ("aufgaben, offen=Offene Aufgaben"): der Chat-Kontext zeigt sie, die XP zählen sie wie erledigte Aufgaben. Leer = aus. */
+  dailyNumberFields: string;
   chatPersonaOverride: string;
 }
 
@@ -334,6 +336,7 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   chatChoice: {},
   request: { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false },
   chatDailyContext: 'tasks',
+  dailyNumberFields: '',
   chatPersonaOverride: '',
 };
 

@@ -204,7 +204,7 @@ An API key you enter for a local endpoint is stored in **Obsidian's keychain**, 
 
 | Always | Depending on `From today's note` |
 |---|---|
-| Level, XP, streak, freeze tokens, today's progress, open drops, last unlocked lore title | `Nothing` — no note content at all · `Tasks and habits` (default) — the checkbox lines and your configured habit fields · `The whole note` |
+| Level, XP, streak, freeze tokens, today's progress, open drops, last unlocked lore title | `Nothing` — no note content at all · `Tasks and habits` (default) — the checkbox lines, your configured habit fields and the number fields you list under `Number fields in the note header` (e.g. `tasks: 10`; the value also counts as completed tasks for XP) · `The whole note` |
 | Your notes list (see below) | |
 
 The default deliberately leaves journal prose out of it. Settings → 💬 Kuro chat shows a

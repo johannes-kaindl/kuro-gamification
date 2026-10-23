@@ -148,6 +148,55 @@ describe('XpEngine.computeDaily', () => {
   });
 });
 
+describe('XpEngine.computeDaily — Zahlenfelder im Notiz-Kopf', () => {
+  const withFields = { ...DEFAULT_SETTINGS, dailyNumberFields: 'aufgaben=Aufgaben' };
+
+  it('counts a configured field like that many ticked checkboxes, as its own row', () => {
+    const r = XpEngine.computeDaily(
+      { date: '2026-10-23', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { aufgaben: 10 } },
+      withFields,
+    );
+    expect(r.xp).toBe(10 * DEFAULT_SETTINGS.xpPerCheckbox);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]?.reason).toContain('aufgaben: 10');
+  });
+
+  it('leaves total and the completion bonus to the checkbox lines', () => {
+    // 1 von 4 = 25 %, kein Abschlussbonus; das Feld darf keinen auslösen.
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 4, done: 1, pct: 0.25 }, frontmatter: { aufgaben: 10 } },
+      withFields,
+    );
+    expect(r.xp).toBe((1 + 10) * DEFAULT_SETTINGS.xpPerCheckbox);
+  });
+
+  it('changes nothing without configured fields (existing users)', () => {
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { aufgaben: 10 } },
+      DEFAULT_SETTINGS,
+    );
+    expect(r.xp).toBe(0);
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it('ignores text, negative numbers and absent fields; rounds a fraction down', () => {
+    const s = { ...DEFAULT_SETTINGS, dailyNumberFields: 'a, b, c, d' };
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { a: 'viel', b: -3, d: 2.9 } },
+      s,
+    );
+    expect(r.xp).toBe(2 * DEFAULT_SETTINGS.xpPerCheckbox);
+  });
+
+  it('gives no XP when checkbox XP is switched off', () => {
+    const r = XpEngine.computeDaily(
+      { date: 'd', stats: { total: 0, done: 0, pct: 0 }, frontmatter: { aufgaben: 10 } },
+      { ...withFields, enableXpFromCheckboxes: false },
+    );
+    expect(r.xp).toBe(0);
+  });
+});
+
 describe('XpEngine.levelForXp', () => {
   it('returns level 1 for 0 XP', () => {
     const r = XpEngine.levelForXp(0, DEFAULT_SETTINGS.levels);

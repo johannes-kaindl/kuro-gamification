@@ -53,6 +53,7 @@ import {
   pollUntil,
   reopenNote,
   schliesseDialog,
+  schliesseEinstellungen,
   setAppConfig,
 } from '../../tools/obsidian-cdp/cdp.js';
 import { type Rect, boxOf, capture, setWindowSize, withMetrics, writeShot } from '../../tools/obsidian-cdp/shot.js';
@@ -450,7 +451,7 @@ async function settingsBild(cdp: Cdp, port: number, outDir: string): Promise<str
     });
   } finally {
     if (fenster !== cdp) fenster.close();
-    await cdp.evaluate(`app.setting.close?.(); return true;`).catch(() => undefined);
+    await schliesseEinstellungen(cdp).catch(() => undefined);
   }
 }
 

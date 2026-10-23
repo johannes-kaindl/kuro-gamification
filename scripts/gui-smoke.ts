@@ -54,9 +54,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-import { Cdp, attachTo, beimAbbruch, bereiteInstanzVor, entferneFakeManager, installFakeManager as installZentralFakeManager, istAbgebrochen, pollUntil, requireVisible } from '../../tools/obsidian-cdp/cdp.js';
+import { Cdp, attachTo, beimAbbruch, bereiteInstanzVor, entferneFakeManager, installFakeManager as installZentralFakeManager, istAbgebrochen, pollUntil, requireVisible, schliesseEinstellungen as schliesseEinstellungenZentral } from '../../tools/obsidian-cdp/cdp.js';
 import { messeFolge, zeichneFolge } from '../../tools/obsidian-cdp/folge.js';
-import { gegenprobeErreichbarkeit, gegenprobeFokus, messeErreichbarkeit, messeFokusErhalt, mitHoehe, zeichnePflicht, type PflichtTeilurteil } from '../../tools/obsidian-cdp/pflichtpunkte.js';
+import { gegenprobeErreichbarkeit, gegenprobeFokus, messeDenkblockKopierbar, messeErreichbarkeit, messeFokusErhalt, mitHoehe, optOutPflicht, zeichneDenkblock, zeichnePflicht, type PflichtTeilurteil } from '../../tools/obsidian-cdp/pflichtpunkte.js';
 import { echoText, startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
@@ -125,6 +125,7 @@ const PUNKTE = [
   'stream/folgt-ohne-stoerung-bei-absatzgrossen-stuecken',
   'stream/gemma-denken-nicht-in-der-antwort',
   'stream/denkblock-kopierbar',
+  'stream/denkblock-gegenprobe',
   'pflicht/fokus-erhalt',
   'pflicht/fokus-gegenprobe',
   'pflicht/erreichbar-natuerliche-hoehe',
@@ -270,7 +271,7 @@ async function sektionEinschalten(cdp: Cdp): Promise<void> {
     );
   }
 
-  await cdp.evaluate(`app.setting.close?.(); return true;`);
+  await schliesseEinstellungenZentral(cdp);
 
   // Zustand nach der MESSUNG herstellen, nicht davor: die folgenden Abschnitte prüfen
   // Layout, Kontext und Sprache und brauchen dafür einen eingeschalteten Chat. Ohne das
@@ -462,7 +463,7 @@ async function sektionKontext(cdp: Cdp): Promise<void> {
     }
   }
 
-  await cdp.evaluate(`app.setting.close?.(); return true;`);
+  await schliesseEinstellungenZentral(cdp);
 
   if (vorschau === null) {
     unmeasured(
@@ -788,7 +789,7 @@ async function sektionManager(cdp: Cdp): Promise<void> {
       return text;
     };
     const text = await settingsText();
-    await cdp.evaluate(`app.setting.close?.(); return true;`);
+    await schliesseEinstellungenZentral(cdp);
     const zeigtManager = text !== null && (text.includes('Endpoints come from the LLM Endpoint Manager') || text.includes('Endpunkte kommen vom LLM Endpoint Manager'));
     record(
       'manager/einstellungen-zeigen-den-manager-abschnitt',
@@ -949,7 +950,8 @@ async function oeffneEinstellungen(cdp: Cdp): Promise<SettingsUi | null> {
 }
 async function schliesseEinstellungen(cdp: Cdp, ui: SettingsUi | null): Promise<void> {
   if (ui?.eigenes) ui.cdp.close();
-  await cdp.evaluate(`app.setting.close?.(); await new Promise((r) => setTimeout(r, 200)); return true;`);
+  await schliesseEinstellungenZentral(cdp);
+  await new Promise((r) => setTimeout(r, 200));
 }
 
 /** N-Punkte: Sampling-Profile. Gegen einen Fake-Endpunkt mit Qwen-Modellnamen (die Familie
@@ -1190,14 +1192,56 @@ async function sektionGemma(cdp: Cdp): Promise<void> {
   }
 }
 
+/** Punkt „Denkblock kopierbar“ (Brücke `messeDenkblockKopierbar`, Kopier-Knopf des Kit-Blocks seit obsidian-kit 0.63.0). Voraussetzung ist ein Denkblock im
+ *  DOM: der Stub liefert Reasoning-Deltas und hält den Strom offen. Kuro zeigt heute kein Denken an (kein `onReasoning`); der Treiber MISST das, statt es
+ *  anzunehmen. Erscheint ein Block, gelten die zwei Prüfpunkte der Brücke (Kopie, Gegenprobe); erscheint keiner, steht der Opt-out samt gemessenem Grund in der
+ *  Bilanz (`optOutPflicht`: nicht anwendbar, nicht grün). Baut Kuro das Denken einmal ein, wird aus dem Opt-out von selbst eine Messung. */
+async function sektionDenkblock(cdp: Cdp): Promise<void> {
+  const NAMEN = { kopie: 'stream/denkblock-kopierbar', gegen: 'stream/denkblock-gegenprobe' };
+  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+  const bil = { record: (n: string, ok: boolean, d?: string) => record(n, ok, d ?? ''), unmeasured: (n: string, w: string) => unmeasured(n, w), skipped: (n: string, w: string) => skipped(n, w) };
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  try {
+    await removeFakeManager(cdp);
+    // Das Denken kommt VOR dem Inhalt; `nachlaufMs` hält den Strom nach dem letzten Stück offen, solange gemessen wird.
+    stub = await startLlmStub({
+      models: [MANAGER_DEFAULT_MODEL],
+      takt: 250,
+      standard: { reasoning: 'Ich wäge erst die Quellen ab und prüfe dann den Kontext.', reasoningFeld: 'reasoning_content', text: 'Die fertige Antwort.', nachlaufMs: 9000 },
+    });
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await cdp.evaluate(`${P}.llm.invalidate(); ${P}.chatSession.reset(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await leereVerlauf(cdp);
+    await cdp.evaluate(`window.__smokeDenk = { fertig: false }; ${P}.askKuro("Denk-Frage").finally(() => { window.__smokeDenk.fertig = true; }); return true;`);
+    const block = (await pollUntil<boolean>(cdp, `return ${VIEW_EL}?.querySelector(".okit-stream-reasoning") ? true : null;`, 5000, 100)) === true;
+    if (block) {
+      zeichneDenkblock(bil, NAMEN, await messeDenkblockKopierbar(cdp, { block: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning`, knopf: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning-copy` }));
+    } else {
+      const grund = 'Kuro zeigt kein Denken an (gemessen: der Stub lieferte Reasoning-Deltas im Strom, nach 5 s steht kein .okit-stream-reasoning im Chat-Tab; im Quelltext kein onReasoning), es gibt keinen Block, an dem ein Kopier-Knopf sitzen könnte';
+      optOutPflicht(bil, NAMEN.kopie, grund);
+      optOutPflicht(bil, NAMEN.gegen, grund);
+    }
+  } catch (e) {
+    if (istAbgebrochen()) throw e;
+    for (const n of Object.values(NAMEN)) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    if (!istAbgebrochen()) {
+      await setSetting(cdp, 'chatEndpoints', []).catch(() => undefined);
+      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`).catch(() => undefined);
+    }
+    if (stub) await stub.stop().catch(() => undefined);
+  }
+}
+
 /** Pflichtpunkte § 3a (Baustein `pflichtpunkte` der Brücke, Vorbild lingotuner) für den Chat-Tab: (a) das Eingabefeld behält den Fokus,
  *  (b) jedes Bedienelement der Eingabezeile ist erreichbar, wenn der Verlauf wächst (Füller im Log, natürliche Höhe und 420 px). Dazu der
- *  Punkt „Denkblock kopierbar“: der Kopier-Knopf (obsidian-kit 0.63.0) hängt am Gedankenblock, und Kuro zeigt kein Denken an
- *  (kein `onReasoning`), es gibt also keinen Block, an dem er sitzen könnte — nicht anwendbar, nicht grün. */
+ *  (Der Punkt „Denkblock kopierbar“ steht in `sektionDenkblock`.) */
 async function sektionPflicht(cdp: Cdp): Promise<void> {
   const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
   const NAMEN = ['pflicht/fokus-erhalt', 'pflicht/fokus-gegenprobe', 'pflicht/erreichbar-natuerliche-hoehe', 'pflicht/erreichbar-kurzes-panel', 'pflicht/erreichbar-gegenprobe'] as const;
-  skipped('stream/denkblock-kopierbar', 'nicht anwendbar: der Companion-Chat zeigt kein Denken an (kein onReasoning, nie appendReasoning), es gibt keinen Denkblock mit Kopier-Knopf');
   const zeichne = (name: (typeof NAMEN)[number], u: PflichtTeilurteil): void => zeichnePflicht({ record: (n, ok, d) => record(n, ok, d ?? ''), unmeasured: (n, why) => unmeasured(n, why) }, name, u);
   let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
   try {
@@ -1455,7 +1499,7 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
   }
 
   fenster?.close();
-  await cdp.evaluate(`app.setting.close?.(); return true;`);
+  await schliesseEinstellungenZentral(cdp);
 
   // Satz 0 und Quelle nicht lesbar (Sessions/Pausen ohne TaskNotes): ein Hinweis (is-warning), keine Fehlerzeile (is-error).
   // Gegenprobe im selben Punkt: mit Satz > 0 ist dieselbe Lage ein Fehler (die obigen Punkte laufen mit dem Default-Satz).
@@ -1495,7 +1539,7 @@ async function sektionDestruktiv(cdp: Cdp): Promise<void> {
       }
     }
     f?.close();
-    await cdp.evaluate(`app.setting.close?.(); return true;`);
+    await schliesseEinstellungenZentral(cdp);
     return m;
   };
   const ohneSatz = await satz0(0);
@@ -1595,7 +1639,7 @@ async function sektionHerkunft(cdp: Cdp): Promise<void> {
   }
 
   fenster?.close();
-  await cdp.evaluate(`app.setting.close?.(); return true;`);
+  await schliesseEinstellungenZentral(cdp);
 }
 
 /* -------------------------------------------------------------------- main */
@@ -1862,6 +1906,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 17 · Gemma 4 ohne Öffner');
     await sektionGemma(cdp);
+    console.log('');
+    console.log('── 17b · Denkblock kopierbar');
+    await sektionDenkblock(cdp);
     console.log('');
     console.log('── 18 · Pflichtpunkte § 3a (Fokus-Erhalt, Erreichbarkeit)');
     await sektionPflicht(cdp);

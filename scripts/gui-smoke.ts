@@ -1218,7 +1218,7 @@ async function sektionDenkblock(cdp: Cdp): Promise<void> {
     await cdp.evaluate(`window.__smokeDenk = { fertig: false }; ${P}.askKuro("Denk-Frage").finally(() => { window.__smokeDenk.fertig = true; }); return true;`);
     const block = (await pollUntil<boolean>(cdp, `return ${VIEW_EL}?.querySelector(".okit-stream-reasoning") ? true : null;`, 5000, 100)) === true;
     if (block) {
-      zeichneDenkblock(bil, NAMEN, await messeDenkblockKopierbar(cdp, { block: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning`, knopf: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning-copy` }));
+      zeichneDenkblock(bil, NAMEN, await messeDenkblockKopierbar(cdp, { block: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning`, knopf: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning-copy`, erwartetKnopf: true }));
     } else {
       const grund = 'Kuro zeigt kein Denken an (gemessen: der Stub lieferte Reasoning-Deltas im Strom, nach 5 s steht kein .okit-stream-reasoning im Chat-Tab; im Quelltext kein onReasoning), es gibt keinen Block, an dem ein Kopier-Knopf sitzen könnte';
       optOutPflicht(bil, NAMEN.kopie, grund);

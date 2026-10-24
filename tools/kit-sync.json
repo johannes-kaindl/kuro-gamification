@@ -1,14 +1,14 @@
 {
   "sources": {
-    "obsidian-kit": { "ref": "0.63.0" },
-    "code-kit": { "ref": "0.31.0" }
+    "obsidian-kit": { "ref": "0.67.1" },
+    "code-kit": { "ref": "0.36.0" }
   },
   "targets": [
     {
       "dir": "src/vendor/kit",
       "source": "code-kit",
       "from": "src/ts/pure",
-      "modules": ["backend-probe", "capabilities", "embeddings-client", "endpoint", "endpoint_config", "endpoint_diagnostics", "error_body", "model-choice", "model-context", "local-stamp", "model-list-cache", { "name": "num", "ref": "0.35.0" }, "reasoning", "redact", "safe-markdown", "sampling-profiles", "secrets", "sse", "stream-blocks", "think-splitter", "timeout", "rel-path", "folder-scope"]
+      "modules": ["backend-probe", "capabilities", "embeddings-client", "endpoint", "endpoint_config", "endpoint_diagnostics", "error_body", "model-choice", "model-context", "local-stamp", "model-list-cache", "num", "reasoning", "redact", "safe-markdown", "sampling-profiles", "secrets", "sse", "stream-blocks", "chat-history", "think-splitter", "timeout", "rel-path", "folder-scope"]
     },
     {
       "dir": "src/vendor/kit",
@@ -28,7 +28,7 @@
       "dir": "src/vendor/kit-obsidian",
       "source": "obsidian-kit",
       "from": "src/obsidian",
-      "modules": ["backend-probe", "chat-client", "chat-transport", "clipboard", "clock", "collapsible", "confirm", "dom-guard", "embedding-connection", "endpoint-list", "endpoint-plumbing", "endpoint-secrets", "endpoint-status-text", "endpoint-source", "help-setting", "hub", "llm-connection", "llm-connection-strings", "model-picker", "request-section", "request-session", "secrets", "shortcuts-bridge", "stable-writer", "stream-area", "plugin-api", "anthropic-transport", "daily-notes", "moment"],
+      "modules": ["backend-probe", "chat-client", "chat-transport", "clipboard", "clock", "collapsible", "confirm", "dom-guard", "embedding-connection", "endpoint-list", "endpoint-plumbing", "endpoint-secrets", "endpoint-status-text", "endpoint-source", "help-setting", "hub", "llm-connection", "llm-connection-strings", "model-picker", "request-section", "request-session", "secrets", "shortcuts-bridge", "stable-writer", "stream-area", "plugin-api", "anthropic-transport", "daily-notes", "moment", "chat-window", "chat-window-strings", "model-bar", "model-bar-strings", "thinking-control"],
       "rewrite": [["../vendor/code-kit/pure/", "../kit/"], ["../vendor/code-kit/web/", "../kit/"], ["../pure/", "../kit/"]]
     },
     {

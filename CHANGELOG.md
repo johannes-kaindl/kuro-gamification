@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **Claude models are recognized as models that read images and always think.** A model whose id starts with `claude-` (`claude-sonnet-5-5`, `anthropic/claude-…`) now counts as image-capable and as a thinking model that cannot be switched off; a local model that merely carries the word in its name (`qwen3.6-claude-opus-distill`) does not. This comes with the shared-code update (obsidian-kit 0.67.1, code-kit 0.36.0); nothing else in the plugin's behavior changes with it.
+
 ## [1.15.0] — 2026-10-23
 
 ### Added

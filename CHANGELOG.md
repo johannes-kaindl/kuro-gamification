@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.16.0] — 2026-10-24
+
 ### Added
 
 - **A model row above the chat.** One line shows which model the chat uses and switches it: a dropdown with the models of the active endpoint, "Automatic (default model)", a reload button, and "Other endpoint …" as the last entry (it opens the LLM Endpoint Manager settings; without the manager the entry is not there). A model you chose that the endpoint no longer lists stays chosen and is marked "saved". The row is locked while an answer is running, and it follows every change of endpoint or model in the settings. Kuro still shows no thinking, so the row has no thinking control.

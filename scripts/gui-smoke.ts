@@ -692,6 +692,10 @@ const FENSTER_NAMEN = [
   'modellzeile/gesperrt-waehrend-des-laufs',
 ] as const;
 
+/** Der Punkt bleibt rot, bis das Kit den Schutz hat (Entscheidung des Masters, Welle 26): kein Eigenbau neben dem Fenster, keine Ausnahme. Der Stand
+ *  gegenüber 1.15.0 ist unverändert (dieselbe Kette `neutralizeModelMarkdown` + `MarkdownRenderer.render`, gemessen am Tag 1.15.0). */
+const BEKANNTER_BEFUND_LINKSCHUTZ = '[bekannter Befund, Kit-Task Welle 27: „Linkschutz in Modellantworten — domGuard kappt gefährliche Link-Ziele, damit das Kit-Chatfenster keine Lücke hat“; rot bis das Kit den Schutz hat]';
+
 const LINKS_ANTWORT = '[a-js](javascript:alert(1)) [b-data](data:text/html,x) [c-obs](obsidian://open?vault=x) [d-file](file:///etc/passwd) [e-app](app://obsidian.md/x) [f-ok](https://example.org/ok)';
 
 async function sektionFenster(cdp: Cdp): Promise<void> {
@@ -810,7 +814,7 @@ async function sektionFenster(cdp: Cdp): Promise<void> {
     record(
       'chat/linkschutz-skript-schemata',
       alleDa && gekappt.every((x) => x.link?.h === null || x.link?.h === undefined) && von('f-ok')?.h === 'https://example.org/ok',
-      `Anker im Antworttext: ${links.map((l) => `${l.t} -> ${String(l.h)}`).join('; ') || '(keine)'} · alle fünf Anker da: ${String(alleDa)}`,
+      `${BEKANNTER_BEFUND_LINKSCHUTZ} Anker im Antworttext: ${links.map((l) => `${l.t} -> ${String(l.h)}`).join('; ') || '(keine)'} · alle fünf Anker da: ${String(alleDa)}`,
     );
   } catch (e) {
     if (istAbgebrochen()) throw e;

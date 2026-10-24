@@ -197,9 +197,7 @@
 /* ── Companion-Chat: Panel ────────────────────────────── */
 /* Inherits flex:1+min-height:0 from .kuro-view-body (shared with the status
    body) — overflow-y goes back to hidden here because THIS body has its own
-   nested scroll region (.kuro-chat-stream/.okit-stream-body below), not the
-   whole body at once; context + input row stay fixed at their natural size
-   via flex:0 0 auto. */
+   nested scroll region (.okit-chat-log below), not the whole body at once. */
 .kuro-chat-body { overflow-y: hidden; }
 .kuro-chat-context {
   flex: 0 0 auto;
@@ -217,38 +215,9 @@
   border-radius: var(--radius-s);
   padding: var(--size-2-2);
 }
-/* Wurzel des Kit-Streaming-Antwortbereichs (buildStreamArea, UI-STANDARD §8): füllt den
-   verbleibenden Platz im kuro-chat-body — die interne Scroll-Grenze setzt bereits
-   .okit-stream-body (s. u.). min-height:0 ist der eigentliche Fix (Schritt 6, 2026-08-12):
-   flex:1 allein stoppte das Wachstum nicht — Eingabezeile und Abbrechen-Knopf rollten sonst
-   mit dem ganzen Verlauf aus dem Sichtfeld. */
-.kuro-chat-stream { flex: 1 1 auto; min-height: 0; margin-bottom: var(--size-4-2); }
-.kuro-chat-line { margin-bottom: var(--size-4-2); }
-.kuro-chat-who {
-  color: var(--text-accent);
-  margin-right: var(--size-2-2);
-  font-weight: var(--font-semibold);
-}
-.kuro-chat-text { white-space: pre-wrap; }
-/* Gerendertes Markdown bricht selbst um — pre-wrap würde jeden Quelltext-Umbruch zusätzlich zeigen. */
-.kuro-chat-md, .kuro-chat-stream-content .markdown-rendered { white-space: normal; }
-.kuro-chat-stream-content { flex: 1 1 0; min-width: 0; }
-.kuro-chat-error .kuro-chat-text { color: var(--text-error); }
-.kuro-chat-detail {
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  margin-top: var(--size-2-1);
-}
-.kuro-chat-cursor { color: var(--text-accent); }
-/* Die laufende Zeile hängt „Wer" + Kit-Tail (ein <div>, kein <span>) nebeneinander —
-   ohne diese Regel bräche der Tail als Block-Element in eine eigene Zeile um. */
-.kuro-chat-streaming { display: flex; align-items: baseline; gap: var(--size-2-2); flex-wrap: wrap; }
-.kuro-chat-inputrow {
-  display: flex; gap: var(--size-2-2); align-items: center; flex: 0 0 auto;
-  /* Mobil: Home-Indikator bzw. Gesten-Leiste des Systems darf das Eingabefeld nicht überdecken. */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-.kuro-chat-input { flex: 1; min-width: 0; }
+/* Wirt des Kit-Chat-Fensters (buildChatWindow): ohne begrenzte Höhe rollt der Verlauf nicht, die Eingabezeile mit ihm aus dem Bild
+   (Regression 2026-08-12, Smoke layout/eingabezeile-sichtbar). Das Fenster füllt den Wirt, den Rest erledigt CHAT_WINDOW_CSS unten. */
+.kuro-chat-host { height: 100%; }
 
 /* ── Streaming-Antwortbereich (obsidian-kit@0.67.1, STREAM_AREA_CSS) ──
    Laut Kit-Vertrag kopiert, nicht importiert — wortgleich, der Test tests/kit-css.test.ts wacht darüber. */

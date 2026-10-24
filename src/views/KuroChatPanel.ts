@@ -1,149 +1,137 @@
 /* ==========================================================
-   Chat-Oberfläche — reines Obsidian-DOM (createEl/createDiv),
-   kein JSX.
+   Der Wirt des Chat-Fensters (obsidian-kit `buildChatWindow`,
+   UI-STANDARD §8 Baustein 12) und der Modellzeile (`buildModelBar`,
+   Baustein 15) im Chat-Tab der Sidebar.
 
-   Verlauf und laufende Antwort liegen in der ChatSession; das
-   Eingabefeld ist absichtlich unkontrolliert, damit ein Entwurf
-   jedes Neuzeichnen überlebt.
+   Hier steht nur, was Kuro selbst sagt: die Kontextzeile, der
+   Einrichtungs-Hinweis und das Anbinden von Senden, Verlauf und
+   „merk dir“. Verlauf, Eingabe, Abbruch, Fehlerzeile, Kopieren und
+   Markdown (Neutralisierung, Stream-Schreiber) trägt das Kit.
 
    Die Kontext-Zeile ruft dieselbe Funktion wie der Prompt-Bau
    (renderDailyExtract) — eine nachgebaute Vorschau würde driften
    und beruhigend etwas anderes zeigen, als gesendet wird.
    ========================================================== */
-import { setIcon } from 'obsidian';
+import type { App } from 'obsidian';
 import type { Lang } from '../types';
 import { t } from '../i18n';
-import type { ChatEntry, ChatSession } from '../llm/ChatSession';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
-import { neutralizeModelMarkdown } from '../vendor/kit/safe-markdown';
-import { buildStreamArea, type StreamArea } from '../vendor/kit-obsidian/stream-area';
-import { createStableWriter, type StableMarkdownWriter } from '../vendor/kit-obsidian/stable-writer';
+import type { ChatHistory, ChatModelMessage } from '../vendor/kit/chat-history';
+import {
+  buildChatWindow,
+  type ChatSendHandlers,
+  type ChatSendResult,
+  type ChatWindow,
+} from '../vendor/kit-obsidian/chat-window';
+import { buildModelBar, type ModelBar, type ModelBarConnection } from '../vendor/kit-obsidian/model-bar';
 
-export interface ChatPanelCallbacks {
-  onAsk(question: string): void;
-  onAbort(): void;
-  onClear(): void;
+export interface ChatPanelDeps {
+  app: App;
+  /** Teilmenge der Verbindung, die die Modellzeile braucht (Modelle, Wechsel, laufendes Modell). */
+  llm: ModelBarConnection;
+  /** Der Verlauf lebt im Plugin (Speicher, nie auf Platte); das Fenster bekommt ihn beim Bau zurück. */
+  initial: ChatHistory;
+  onChange(history: ChatHistory): void;
+  send(messages: readonly ChatModelMessage[], h: ChatSendHandlers): Promise<ChatSendResult>;
+  /** „merk dir: …“ ist ein Merkzettel-Eintrag, keine Frage ans Modell: `true`, wenn die Nachricht damit erledigt ist. */
+  handleCommand(text: string): boolean;
   contextInfo(): DailyExtract;
+  /** Gibt es eine Quelle für Chat-Endpunkte (Manager oder lokale Zeile)? Ohne zeigt das Fenster den Einrichtungs-Hinweis. */
+  hasEndpoint(): boolean;
   openSettings(): void;
-  /** Rendert Markdown in ein Element (Obsidians `MarkdownRenderer` — braucht `App` und eine
-   *  Component, beides gehört der View, nicht diesem Panel). Fehlt der Callback, bleibt es
-   *  beim Rohtext. */
-  renderMarkdown?: (el: HTMLElement, markdown: string) => Promise<void>;
+  /** Rendert Markdown in ein Element (Obsidians `MarkdownRenderer` — braucht `App` und eine Component, beides gehört der View). */
+  renderMarkdown(el: HTMLElement, markdown: string): Promise<void>;
 }
 
-/** Naht für Tests: das Fake-DOM trägt keinen MutationObserver. Produktiv bleibt der dom-guard
- *  des Kit-Schreibers an (Default seit obsidian-kit 0.52.0). */
+/** Naht für Tests: das Fake-DOM trägt keinen MutationObserver. Produktiv bleibt der dom-guard des Kit-Schreibers an. */
 export interface ChatPanelOptions {
   domGuard?: boolean;
 }
 
 export class KuroChatPanel {
-  /** Streaming-Antwortbereich aus dem Kit (UI-STANDARD §8, `buildStreamArea`, Bauart 2:
-   *  append-only Rohtext). Kuro hat keinen Gedankenstrom — der Reasoning-Slot des Bausteins
-   *  bleibt deshalb ungenutzt (nie `appendReasoning`/`setReasoning` aufgerufen). */
-  private area: StreamArea | null = null;
-  private inputEl: HTMLInputElement | null = null;
-  /** Inkrementeller Markdown-Schreiber auf dem laufenden Absatz (Kit `stable-writer`):
-   *  abgeschlossene Absätze werden genau einmal gerendert, der laufende bleibt Rohtext. */
-  private writer: StableMarkdownWriter | null = null;
+  private win: ChatWindow | null = null;
+  private bar: ModelBar | null = null;
   private ctxSummaryEl: HTMLElement | null = null;
   private ctxBodyEl: HTMLElement | null = null;
+  /** Zustand von `hasEndpoint()` beim letzten Zeichnen: nur ein Wechsel zeichnet das Fenster neu (`refresh()` baut den Kopf neu). */
+  private endpointOk = false;
 
   constructor(
     private readonly host: HTMLElement,
     private readonly lang: Lang,
-    private readonly session: ChatSession,
-    private readonly cb: ChatPanelCallbacks,
+    private readonly deps: ChatPanelDeps,
     private readonly opts: ChatPanelOptions = {},
   ) {}
 
-  /** Trennt den dom-guard des laufenden Schreibers; die View ruft es beim Schließen. */
-  destroy(): void {
-    this.writer?.destroy();
-    this.writer = null;
+  /** Baut das Fenster in den Wirt; ein zweiter Aufruf baut neu (der Verlauf kommt aus `deps.initial`). */
+  build(): void {
+    this.win?.destroy();
+    this.bar?.destroy();
+    this.win = null;
+    this.bar = null;
+    this.host.empty();
+    // Der Wirt braucht eine begrenzte Höhe, sonst rollt der Verlauf nicht (Kit-Falle); die Regel steht in der styles.css.
+    this.host.addClass('kuro-chat-host');
+    this.endpointOk = this.deps.hasEndpoint();
+    const d = this.deps;
+    this.win = buildChatWindow(this.host, {
+      cls: 'kuro-chat',
+      strings: { lang: this.lang, placeholder: t('chat.placeholder', this.lang) },
+      send: (messages, h) => this.send(messages, h),
+      render: (el, markdown) => d.renderMarkdown(el, markdown),
+      header: (el) => { this.drawHeader(el); },
+      beforeSubmit: (text) => this.beforeSubmit(text),
+      empty: {
+        when: () => !this.endpointOk,
+        title: t('chat.setup.title', this.lang),
+        text: t('chat.setup.body', this.lang),
+        cta: { label: t('chat.setup.openSettings', this.lang), onClick: () => { d.openSettings(); } },
+      },
+      initial: d.initial,
+      onChange: (h) => {
+        d.onChange(h);
+        // Die Zeile sperrt sich während eines Laufs und gibt sich danach frei.
+        this.bar?.update();
+      },
+      ...(this.opts.domGuard === undefined ? {} : { domGuard: this.opts.domGuard }),
+    });
   }
 
-  /** Hinweis statt Chat, solange kein Endpunkt eingerichtet ist. */
-  showSetupHint(): void {
-    this.host.empty();
-    this.area = null;
-    this.writer?.destroy();
-    this.writer = null;
+  /** Läuft eine Antwort? Das Kit-Fenster hat kein `running()`, aber `startAnswer` läuft vor `send`, also zeigt der Verlauf den Lauf. */
+  private running(): boolean {
+    return this.win?.history().entries.some((e) => e.kind === 'assistant' && e.state === 'streaming') ?? false;
+  }
+
+  private send(messages: readonly ChatModelMessage[], h: ChatSendHandlers): Promise<ChatSendResult> {
+    // `startAnswer` ist vor `send` gelaufen: ab hier ist der Lauf im Verlauf sichtbar, die Zeile sperrt sich.
+    this.bar?.update();
+    return this.deps.send(messages, h);
+  }
+
+  private beforeSubmit(text: string): boolean {
+    if (!this.deps.handleCommand(text)) return true;
+    // Der Entwurf bliebe sonst stehen („merk dir …“ im Feld); hier, vor dem `false`, ist das Fenster noch beteiligt.
+    this.win?.setDraft('');
+    return false;
+  }
+
+  private drawHeader(el: HTMLElement): void {
+    // `refresh()` ruft den Einschub erneut; die alte Zeile gibt das Kit nicht frei (kein Abmelde-Hook), also hier.
+    this.bar?.destroy();
+    this.bar = null;
     this.ctxSummaryEl = null;
     this.ctxBodyEl = null;
-    this.inputEl = null;
-    const box = this.host.createDiv({ cls: 'kuro-empty' });
-    box.createEl('h3', { text: t('chat.setup.title', this.lang) });
-    box.createEl('p', { text: t('chat.setup.body', this.lang) });
-    const btn = box.createEl('button', {
-      cls: 'kuro-btn kuro-btn-primary',
-      text: t('chat.setup.openSettings', this.lang),
+    // Im Leerzustand blendet das Kit den Kopf nicht aus: keinen bauen.
+    if (!this.endpointOk) return;
+    this.bar = buildModelBar({
+      app: this.deps.app,
+      containerEl: el,
+      llm: this.deps.llm,
+      label: t('chat.tab.chat', this.lang),
+      strings: { lang: this.lang },
+      disabled: () => this.running(),
     });
-    btn.addEventListener('click', () => this.cb.openSettings());
-  }
-
-  render(): void {
-    const draft = this.inputEl?.value ?? '';
-    this.host.empty();
-
-    this.renderContextLine();
-
-    // Wurzel bekommt eine eigene Klasse fürs Layout (flex:1 1 auto im kuro-chat-body,
-    // s. styles.css) — das Kit stylt nur seine eigenen okit-stream-*-Klassen.
-    const area = buildStreamArea(this.host, {
-      strings: { reasoning: '' },
-      cls: 'kuro-chat-stream',
-    });
-    this.area = area;
-    // `kuro-chat-log` bleibt als Alias auf dem Kit-Body stehen: der GUI-Smoke-Treiber
-    // (scripts/gui-smoke.ts, Schritt 4) und ältere Referenzen suchen strukturell danach,
-    // nicht nach dem Kit-eigenen `.okit-stream-body`.
-    area.bodyEl.addClass('kuro-chat-log');
-
-    for (const e of this.session.entries) this.renderEntry(area.bodyEl, e);
-
-    this.writer?.destroy();
-    this.writer = null;
-    if (this.session.streaming !== null) {
-      const line = area.bodyEl.createDiv({ cls: 'kuro-chat-line kuro-chat-assistant kuro-chat-streaming' });
-      line.createSpan({ cls: 'kuro-chat-who', text: t('chat.kuro', this.lang) });
-      const content = line.createDiv({ cls: 'kuro-chat-stream-content' });
-      area.tailEl.addClass('kuro-chat-text');
-      // `tailEl` liegt nach buildStreamArea() als erstes (einziges) Kind des Bodys — hinter
-      // die fertigen Einträge verschieben, statt es dort neu einzufügen (Muster aus
-      // obsidian-transmute/src/obsidian/view-render.ts, dort für denselben Zweck; die Umlenkung des Schreibers auf eine eigene Spalte unten gibt es nur hier).
-      content.appendChild(area.tailEl);
-      // Der Schreiber legt fertige Blöcke in `area.bodyEl` ab — hier soll das die Inhalts-
-      // spalte der laufenden Zeile sein, nicht der ganze Log. Die Handles des Bereichs
-      // (Tail, Scrollen) bleiben dieselben; nur der Ablageort der Blöcke wird umgelenkt.
-      this.writer = createStableWriter({
-        area: { ...area, bodyEl: content },
-        render: (el, md) => this.renderMd(el, md),
-        blockCls: 'okit-stream-block markdown-rendered',
-        ...(this.opts.domGuard === undefined ? {} : { domGuard: this.opts.domGuard }),
-      });
-      this.writer.push(this.session.streaming);
-      line.createSpan({ cls: 'kuro-chat-cursor', text: '▮' });
-    } else {
-      area.bodyEl.appendChild(area.tailEl);
-    }
-
-    this.renderInputRow(draft);
-    area.followTail();
-  }
-
-  /** Gemma 4 ohne Öffner: der bisher gezeigte Text war Denken. Der Aufrufer hat `session.streaming` schon auf `''` gesetzt. Der Schreiber nimmt nur
-   *  die Blöcke zurück, die er selbst in die Spalte der laufenden Zeile gelegt hat (seit obsidian-kit 0.63.0; vorher leerte das Kit den ganzen Body und riss
-   *  den Verlauf mit, deshalb zeichnete dieser Panel hier neu). Ohne laufenden Strom (kein Schreiber) bleibt das Neuzeichnen. */
-  resetContent(): void {
-    if (this.writer === null) { this.render(); return; }
-    this.writer.resetContent();
-  }
-
-  /** Laufenden Text fortschreiben, statt pro Token neu zu zeichnen. */
-  appendToken(token: string): void {
-    if (this.area === null || this.writer === null) { this.render(); return; }
-    this.writer.push(token);
+    this.drawContextLine(el);
   }
 
   private contextLabel(info: DailyExtract): string {
@@ -168,9 +156,9 @@ export class KuroChatPanel {
     return body === '' ? t('set.chatDailyContext.previewEmpty', this.lang) : body;
   }
 
-  private renderContextLine(): void {
-    const info = this.cb.contextInfo();
-    const details = this.host.createEl('details', { cls: 'kuro-chat-context' });
+  private drawContextLine(el: HTMLElement): void {
+    const info = this.deps.contextInfo();
+    const details = el.createEl('details', { cls: 'kuro-chat-context' });
     this.ctxSummaryEl = details.createEl('summary', {
       cls: 'kuro-chat-context-summary',
       text: this.contextLabel(info),
@@ -181,84 +169,54 @@ export class KuroChatPanel {
     });
   }
 
-  /** Kontextzeile und Vorschau aus dem aktuellen Stand neu schreiben — ohne den Chat neu
-   *  zu zeichnen (Verlauf, Scrollposition und ein laufender Stream bleiben stehen, und der
-   *  Ausklapper behält seinen Zustand). No-op, solange kein Chat gezeichnet ist. */
+  /** Kontextzeile und Vorschau aus dem aktuellen Stand neu schreiben — ohne das Fenster neu zu zeichnen (Verlauf, Scrollposition,
+   *  ein laufender Stream und der Zustand des Ausklappers bleiben stehen; `win.refresh()` baut den Kopf neu). */
   refreshContext(): void {
     if (this.ctxSummaryEl === null || this.ctxBodyEl === null) return;
-    const info = this.cb.contextInfo();
+    const info = this.deps.contextInfo();
     this.ctxSummaryEl.setText(this.contextLabel(info));
     this.ctxBodyEl.setText(this.contextBody(info));
   }
 
-  /** Markdown in ein Element; ohne Renderer der Rohtext. */
-  private renderMd(el: HTMLElement, markdown: string): Promise<void> {
-    const r = this.cb.renderMarkdown;
-    if (r === undefined) { el.setText(markdown); return Promise.resolve(); }
-    return r(el, markdown);
+  /** Nach Änderungen an Endpunkt, Modell oder Einstellungen. Wechselt der Endpunkt-Zustand (Einrichtung ↔ Chat), zeichnet das Fenster
+   *  neu; sonst genügt die Modellzeile. `models`: auch die Modell-Liste neu laden (Endpunkt oder Liste der Endpunkte hat sich geändert). */
+  refresh(opts: { models?: boolean } = {}): void {
+    const now = this.deps.hasEndpoint();
+    if (now !== this.endpointOk) {
+      this.endpointOk = now;
+      this.win?.refresh();
+      return;
+    }
+    this.bar?.update();
+    if (opts.models === true) void this.bar?.refresh();
+    this.refreshContext();
   }
 
-  private renderEntry(container: HTMLElement, e: ChatEntry): void {
-    const line = container.createDiv({ cls: `kuro-chat-line kuro-chat-${e.role}` });
-
-    if (e.role !== 'error') {
-      line.createSpan({
-        cls: 'kuro-chat-who',
-        text: e.role === 'user' ? t('chat.you', this.lang) : t('chat.kuro', this.lang),
-      });
-    }
-    if (e.role === 'assistant' && this.cb.renderMarkdown !== undefined) {
-      // Nur Kuros Antworten sind Markdown; die eigene Frage und Fehlertexte bleiben Rohtext.
-      const box = line.createDiv({ cls: 'kuro-chat-text kuro-chat-md markdown-rendered' });
-      // Modell-Ausgabe: Bilder, aktive Codeblöcke und HTML vorher entschärfen (der Schreiber tut das nur für seinen
-      // eigenen Weg; fertige Antworten und `syncChat` zeichnen hier, am Schreiber vorbei).
-      this.renderMd(box, neutralizeModelMarkdown(e.text)).catch(() => { box.setText(e.text); });
-    } else {
-      line.createSpan({ cls: 'kuro-chat-text', text: e.text });
-    }
-
-    if (e.detail !== undefined) {
-      line.createDiv({ cls: 'kuro-chat-detail', text: e.detail });
-    }
+  /** Sendet eine Frage wie die Eingabe (Treiber und Test); ohne Text die Eingabe. */
+  async submit(text?: string): Promise<void> {
+    await this.win?.submit(text);
   }
 
-  private renderInputRow(draft: string): void {
-    const row = this.host.createDiv({ cls: 'kuro-chat-inputrow' });
-
-    const input = row.createEl('input', {
-      cls: 'kuro-chat-input',
-      attr: { type: 'text', placeholder: t('chat.placeholder', this.lang) },
-    });
-    input.value = draft;
-    input.disabled = this.session.busy;
-    input.addEventListener('keydown', (ev: KeyboardEvent) => {
-      if (ev.key === 'Enter') this.submit();
-    });
-    this.inputEl = input;
-
-    if (this.session.busy) {
-      const stop = row.createEl('button', { cls: 'kuro-btn', text: t('chat.abort', this.lang) });
-      stop.addEventListener('click', () => this.cb.onAbort());
-    } else {
-      const send = row.createEl('button', {
-        cls: 'kuro-btn kuro-btn-primary',
-        text: t('chat.send', this.lang),
-      });
-      send.addEventListener('click', () => this.submit());
-    }
-
-    const clear = row.createEl('button', {
-      cls: 'kuro-btn',
-      attr: { 'aria-label': t('chat.clear', this.lang) },
-    });
-    setIcon(clear, 'eraser');
-    clear.addEventListener('click', () => this.cb.onClear());
+  /** „Neu“ des Fensters: leert den Verlauf und bricht einen laufenden Lauf ab. */
+  clear(): void {
+    this.win?.clear();
   }
 
-  private submit(): void {
-    const q = this.inputEl?.value.trim() ?? '';
-    if (q === '' || this.session.busy) return;
-    if (this.inputEl) this.inputEl.value = '';
-    this.cb.onAsk(q);
+  abort(): void {
+    this.win?.abort();
+  }
+
+  history(): ChatHistory | null {
+    return this.win?.history() ?? null;
+  }
+
+  /** Bricht einen laufenden Lauf ab und trennt Fenster und Modellzeile; die View ruft es beim Schließen. */
+  destroy(): void {
+    this.win?.destroy();
+    this.bar?.destroy();
+    this.win = null;
+    this.bar = null;
+    this.ctxSummaryEl = null;
+    this.ctxBodyEl = null;
   }
 }

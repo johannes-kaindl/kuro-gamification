@@ -73,7 +73,6 @@ export class KuroSidebarView extends ItemView {
     }
 
     this.renderSnapshot();
-    this.renderChat();
   }
 
   async onClose(): Promise<void> {
@@ -96,16 +95,22 @@ export class KuroSidebarView extends ItemView {
       icon: 'message-square',
       mount: (el) => {
         this.chatBodyEl = el.createDiv({ cls: 'kuro-view-body kuro-chat-body' });
-        this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, this.plugin.chatSession, {
-          onAsk: (q) => { void this.plugin.askKuro(q); },
-          onAbort: () => this.plugin.abortChat(),
-          onClear: () => this.plugin.clearChat(),
-          contextInfo: () => buildDailyExtract(this.plugin.lastDailyText, this.plugin.data.settings),
-          openSettings: () => this.plugin.openOwnSettings(),
+        const plugin = this.plugin;
+        this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, {
+          app: this.app,
+          llm: plugin.llm,
+          initial: plugin.chatHistory,
+          onChange: (h) => { plugin.chatHistory = h; },
+          send: (messages, h) => plugin.sendChat(messages, h),
+          handleCommand: (text) => plugin.handleChatCommand(text),
+          contextInfo: () => buildDailyExtract(plugin.lastDailyText, plugin.data.settings),
+          hasEndpoint: () => plugin.hasChatEndpointSource(),
+          openSettings: () => plugin.openOwnSettings(),
           // Die View ist die Component, an der die gerenderten Blöcke hängen: schließt sie, räumt
-          // Obsidian deren Listener und eingebettete Kinder mit ab.
+          // Obsidian deren Listener und eingebettete Kinder mit ab. Neutralisiert wird im Kit-Fenster.
           renderMarkdown: (el2, md) => MarkdownRenderer.render(this.app, md, el2, '', this),
         });
+        this.chatPanel.build();
       },
       destroy: () => { this.chatPanel?.destroy(); },
     };
@@ -122,29 +127,14 @@ export class KuroSidebarView extends ItemView {
     this.chatPanel = null;
   }
 
-  /** Chat-Tab neu zeichnen; ohne eingerichteten Endpunkt der Setup-Hinweis. */
-  renderChat(): void {
-    if (this.chatPanel === null) return;
-    if (!this.plugin.hasChatEndpointSource()) {
-      this.chatPanel.showSetupHint();
-      return;
-    }
-    this.chatPanel.render();
+  /** Chat-Fenster an den Stand von Endpunkt und Modell anpassen (Einrichtungs-Hinweis ↔ Chat, Modellzeile). */
+  refreshChat(opts: { models?: boolean } = {}): void {
+    this.chatPanel?.refresh(opts);
   }
 
   /** Kontextzeile nachziehen, nachdem `plugin.lastDailyText` neu gelesen wurde. */
   refreshChatContext(): void {
     this.chatPanel?.refreshContext();
-  }
-
-  /** Laufende Antwort fortschreiben, ohne den ganzen Tab neu zu zeichnen. */
-  appendChatToken(token: string): void {
-    this.chatPanel?.appendToken(token);
-  }
-
-  /** Der bisher gestreamte Text war Denken (Gemma 4 ohne Öffner): die laufende Antwort leeren. */
-  resetChatContent(): void {
-    this.chatPanel?.resetContent();
   }
 
   showTab(id: KuroTab): void {

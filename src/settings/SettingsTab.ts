@@ -182,7 +182,6 @@ export class KuroSettingsTab extends PluginSettingTab {
    *  Vault-Scan pro Tastendruck wäre hier reine Verschwendung. */
   private async _persistOnly(): Promise<void> {
     await this.plugin.persist();
-    this.plugin.syncChat();
   }
 
   private async _save(): Promise<void> {

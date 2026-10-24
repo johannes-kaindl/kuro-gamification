@@ -23,7 +23,6 @@ import { KuroSettingsTab } from './settings/SettingsTab';
 import { registerCommands } from './commands/registerCommands';
 import { isInFolder } from './vendor/kit/folder-scope';
 import { readDailyNotesConfig } from './vendor/kit-obsidian/daily-notes';
-import { LLM_CONNECTION_STRINGS_DE, LLM_CONNECTION_STRINGS_EN, noEndpointText } from './vendor/kit-obsidian/llm-connection-strings';
 import {
   readTaskNotesConfig, readPomodoroSessions, readCompletedTasks, taskRuleFromSettings,
   subscribeTaskNotes, markedDates,
@@ -35,7 +34,9 @@ import { todayIso, isIsoDate, isIsoWeek } from './utils/dateUtils';
 import { fmtNum } from './utils/progressBar';
 import { t, detectLang } from './i18n';
 import { defaultHabits } from './data/default-habits';
-import { ChatSession } from './llm/ChatSession';
+import { splitChatMessages } from './llm/chatRequest';
+import { EMPTY_CHAT, type ChatHistory, type ChatModelMessage } from './vendor/kit/chat-history';
+import type { ChatSendHandlers, ChatSendResult } from './vendor/kit-obsidian/chat-window';
 import { kuroConnectionOptions } from './llm/kuroConnection';
 import { createLlmConnection, type LlmConnection } from './vendor/kit-obsidian/llm-connection';
 import { buildContext } from './llm/kuroContext';
@@ -44,12 +45,6 @@ import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
 import { findEndpointManager, onEndpointManagerChanged } from './vendor/kit-obsidian/endpoint-source';
 import { activePersona } from './utils/packLibrary';
 
-/** Die Frist steht nur im Fehlertext des Kit-Clients („no data for 600s“) — von dort lesen statt eine Zahl zu raten. */
-function secondsOf(detail: string): number {
-  const m = /no data for (\d+(?:\.\d+)?)s/.exec(detail);
-  return m ? Math.round(Number(m[1])) : 600;
-}
-
 export default class KuroPlugin extends Plugin {
   // public so views/modals/settings can read/mutate
   public data: KuroPluginData = JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA)) as KuroPluginData;
@@ -57,8 +52,10 @@ export default class KuroPlugin extends Plugin {
   public vaultReader!: VaultReader;
   public logger!: Logger;
 
-  /** Companion-Chat: Verlauf einer Obsidian-Sitzung, bewusst nicht persistiert. */
-  public chatSession = new ChatSession();
+  /** Companion-Chat: Verlauf einer Obsidian-Sitzung, bewusst nicht persistiert (ein wachsender Verlauf in data.json gefährdet die Datei mit
+   *  den Schema-Migrationen und wäre trotz Token-Kosten kein verlässliches Gedächtnis; dafür gibt es den Merkzettel). Das Chat-Fenster
+   *  der Sidebar hält ihn und meldet jede Änderung hierher, damit er ein Neuaufbauen der Ansicht überlebt. */
+  public chatHistory: ChatHistory = EMPTY_CHAT;
   /** Rohtext der heutigen Daily — nur gefüllt, wenn der Chat aktiv ist. */
   public lastDailyText: string | null = null;
   /** Die ganze LLM-Anbindung: Endpunkt-Quelle (Manager oder lokale Liste mit Schlüsselbund), Modellliste,
@@ -73,7 +70,6 @@ export default class KuroPlugin extends Plugin {
   private xpEventPending = false;
   private debouncedSave!: () => void;
   private midnightTimeout: number | null = null;
-  private chatAbort: AbortController | null = null;
 
   async onload(): Promise<void> {
     this.dataStore = new DataStore(this);
@@ -93,7 +89,8 @@ export default class KuroPlugin extends Plugin {
       app: this.app,
       pluginId: this.manifest.id,
       settings: () => this.data.settings,
-      persist: () => this.persist(),
+      // Jede Änderung an Endpunkten, Wahl, Modell oder Anfrage kommt hier vorbei: die Modellzeile des Chat-Fensters zieht nach.
+      persist: async () => { await this.persist(); this.syncChat({ models: true }); },
     }));
 
     // Must precede regenFreezeTokensIfNeeded(): on a fresh vault the regen
@@ -132,7 +129,7 @@ export default class KuroPlugin extends Plugin {
       // Das Kit hängt das Abo nach, wenn der Manager erst später erscheint (seit 0.61.0); der Rückruf kommt dann einmal.
       this.managerUnsubscribe = onEndpointManagerChanged(this.app, () => {
         this.llm.invalidate();
-        this.syncChat();
+        this.syncChat({ models: true });
       });
       if (!this.data.onboardingShown) new WelcomeModal(this.app, this).open();
     });
@@ -345,36 +342,26 @@ export default class KuroPlugin extends Plugin {
   }
 
   /** Kontextzeile jedes offenen Chat-Tabs an den frisch gelesenen Tagesnotiz-Stand anpassen.
-   *  Bewusst nicht `syncChat()`: das zeichnet den ganzen Tab neu, und `refreshStatus` läuft
-   *  bei jeder Änderung in irgendeiner Notiz. */
+   *  Bewusst nicht `syncChat()`: `refreshStatus` läuft bei jeder Änderung in irgendeiner Notiz. */
   syncChatContext(): void {
     for (const view of this.chatViews()) view.refreshChatContext();
   }
 
-  /** Chat-Tab neu zeichnen. No-op bei geschlossener Seitenleiste. */
-  syncChat(): void {
-    for (const view of this.chatViews()) view.renderChat();
+  /** Chat-Fenster jeder offenen Ansicht an den Stand von Endpunkt und Modell anpassen: wechselt der Endpunkt-Zustand, zeichnet das
+   *  Fenster neu (Einrichtungs-Hinweis ↔ Chat), sonst zieht die Modellzeile nach. `models`: auch die Modell-Liste neu laden. */
+  syncChat(opts: { models?: boolean } = {}): void {
+    for (const view of this.chatViews()) view.refreshChat(opts);
   }
 
   /**
-   * Eine Frage an Kuro. Baut den Kontext aus Snapshot + heutiger Notiz,
-   * löst die Stimme auf (Settings → Pack → Default) und streamt die Antwort.
+   * Die Anfrage des Chat-Fensters an Kuro. Baut den Kontext aus Snapshot + heutiger Notiz, löst die Stimme auf
+   * (Settings → Pack → Default) und streamt die Antwort. Verlauf, Abbruch und Fehlerzeile trägt das Fenster.
    */
-  async askKuro(question: string): Promise<void> {
+  async sendChat(messages: readonly ChatModelMessage[], h: ChatSendHandlers): Promise<ChatSendResult> {
     const s = this.data.settings;
     const lang = s.language;
-
-    // "merk dir: …" ist ein Merkzettel-Eintrag, keine Frage ans Modell.
-    const note = extractNoteFromMessage(question);
-    if (note !== null) { this.rememberNote(note); return; }
-
-    const history = this.chatSession.historyForPrompt();
-    this.chatSession.append({ role: 'user', text: question });
-    this.chatSession.busy = true;
-    this.chatSession.streaming = '';
-    this.syncChat();
-
-    const messages = buildMessages({
+    const { history, question } = splitChatMessages(messages);
+    const request = buildMessages({
       lang,
       persona: resolvePersona({
         override: s.chatPersonaOverride,
@@ -386,76 +373,38 @@ export default class KuroPlugin extends Plugin {
       history,
       question,
     });
-
-    this.chatAbort = new AbortController();
-    let result: Awaited<ReturnType<LlmConnection['complete']>>;
     try {
-      result = await this.llm.complete(
-        { messages },
+      const result = await this.llm.complete(
+        { messages: request },
         {
           // Reasoning wird bewusst nicht angezeigt: kein `onReasoning`.
-          onToken: (token) => {
-            for (const view of this.chatViews()) view.appendChatToken(token);
-            this.chatSession.streaming = (this.chatSession.streaming ?? '') + token;
-          },
+          onToken: (token) => { h.onToken(token); },
           // Gemma 4 schreibt sein Denken ohne Öffner in den Inhalt (Kit meldet es am Kanalende): den bisherigen Text verwerfen.
-          onContentReset: () => {
-            this.chatSession.streaming = '';
-            for (const view of this.chatViews()) view.resetChatContent();
-          },
-          signal: this.chatAbort.signal,
+          onContentReset: () => { h.onContentReset(); },
+          signal: h.signal,
         },
       );
+      if (!result.ok) this.logger.error('chat failed', result.kind, result.detail);
+      return result;
     } catch (err) {
-      // Die Verbindung wirft nur bei einem Fehler VOR dem Senden (Auflösung, Manager-API). Ohne diesen Zweig
-      // bliebe `busy` für immer gesetzt und die Eingabe gesperrt.
-      this.chatSession.busy = false;
-      this.chatSession.streaming = null;
-      this.chatAbort = null;
-      const detail = err instanceof Error ? err.message : String(err);
-      this.chatSession.append({ role: 'error', text: t('chat.err.network', lang), detail });
-      this.logger.error('chat failed before sending', detail);
-      this.syncChat();
-      return;
+      // Die Verbindung wirft nur bei einem Fehler VOR dem Senden (Auflösung, Manager-API); das Fenster zeigt die Fehlerzeile.
+      this.logger.error('chat failed before sending', err instanceof Error ? err.message : String(err));
+      throw err;
     }
+  }
 
-    this.chatSession.busy = false;
-    this.chatSession.streaming = null;
-    this.chatAbort = null;
-
-    if (result.ok) {
-      this.chatSession.append({ role: 'assistant', text: result.content });
-      // Gültig, aber am Token-Limit abgeschnitten: sagen, statt es wie eine fertige Antwort stehen zu lassen.
-      if (result.truncated) this.chatSession.append({ role: 'error', text: t('chat.warn.truncated', lang) });
-    } else if (result.kind === 'no-endpoint') {
-      this.chatSession.append({ role: 'error', text: noEndpointText(lang === 'de' ? LLM_CONNECTION_STRINGS_DE : LLM_CONNECTION_STRINGS_EN, result.source, result.detail), detail: result.detail });
-      this.logger.error('chat endpoint: none', result.detail);
-    } else {
-      // Teiltext bleibt stehen, statt beim Fehler zu verschwinden.
-      if (result.partial !== '') {
-        this.chatSession.append({ role: 'assistant', text: result.partial });
-      }
-      this.chatSession.append({
-        role: 'error',
-        text: t(`chat.err.${result.kind}`, lang, { seconds: secondsOf(result.detail) }),
-        detail: result.detail,
-      });
-      this.logger.error('chat stream failed', result.kind, result.detail);
-    }
-    this.syncChat();
+  /** „merk dir: …“ ist ein Merkzettel-Eintrag, keine Frage ans Modell: `true`, wenn die Nachricht damit erledigt ist. */
+  handleChatCommand(text: string): boolean {
+    const note = extractNoteFromMessage(text.trim());
+    if (note === null) return false;
+    this.rememberNote(note);
+    return true;
   }
 
   /** Gibt es überhaupt eine Quelle für Chat-Endpunkte — den Manager oder mindestens eine
    *  lokale Zeile? Ohne beides zeigt der Chat-Tab den Einrichtungs-Hinweis. */
   hasChatEndpointSource(): boolean {
     return findEndpointManager(this.app) !== null || this.data.settings.chatEndpoints.length > 0;
-  }
-
-  abortChat(): void { this.chatAbort?.abort(); }
-
-  clearChat(): void {
-    this.chatSession.reset();
-    this.syncChat();
   }
 
   /** Merkzettel-Eintrag anlegen. Kappt hart, statt still zu vergessen. */
@@ -472,7 +421,6 @@ export default class KuroPlugin extends Plugin {
     new Notice(t('chat.remembered', lang, {
       note: this.data.kuroNotes[this.data.kuroNotes.length - 1],
     }));
-    this.syncChat();
   }
 
   /* ── Sidebar lifecycle ────────────────────────────────── */

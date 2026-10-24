@@ -175,4 +175,21 @@ describe('Verbindung — was das Plugin dazutut', () => {
     await p;
     expect(saved).toHaveLength(1);
   });
+
+  it('Claude-Opt-in: die Verbindung fragt den Manager auch nach Endpunkten mit dem Transport „anthropic“ (list und resolve)', async () => {
+    const calls = { list: [] as unknown[], resolve: [] as unknown[] };
+    const api = {
+      version: 1,
+      list: (q: unknown) => { calls.list.push(q); return []; },
+      get: () => null, models: async () => [],
+      resolve: async (...args: unknown[]) => { calls.resolve.push(args); return { error: 'no-endpoint' }; },
+      materialize: async () => ({ error: 'not-found' }),
+      importEndpoints: async () => ({ added: [], merged: [], skipped: [] }), on: () => () => {},
+    };
+    const plugin = await makePlugin(api);
+    await plugin.llm.resolve({ force: true });
+    expect(calls.resolve.length).toBeGreaterThan(0);
+    expect(calls.resolve.every((args) => JSON.stringify((args as Array<{ transports?: unknown }>)[1]?.transports) === JSON.stringify(['http', 'anthropic']))).toBe(true);
+    expect(calls.list.some((q) => JSON.stringify((q as { transports?: unknown }).transports) === JSON.stringify(['http', 'anthropic']))).toBe(true);
+  });
 });

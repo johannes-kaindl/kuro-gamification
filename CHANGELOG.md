@@ -5,8 +5,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **A model row above the chat.** One line shows which model the chat uses and switches it: a dropdown with the models of the active endpoint, "Automatic (default model)", a reload button, and "Other endpoint …" as the last entry (it opens the LLM Endpoint Manager settings; without the manager the entry is not there). A model you chose that the endpoint no longer lists stays chosen and is marked "saved". The row is locked while an answer is running, and it follows every change of endpoint or model in the settings. Kuro still shows no thinking, so the row has no thinking control.
+- **Claude as an endpoint of the LLM Endpoint Manager.** An endpoint of the manager that uses the Claude API now works in the chat; before, the plugin reported that connection type as unsupported.
+
 ### Changed
 
+- **The companion chat is the shared chat window of the plugin family.** The input is a multi-line field: Enter sends, Shift+Enter starts a new line. A "New" button replaces the eraser (it also stops a running answer); Escape stops an answer; every question and answer has a copy button; a failed answer can be retried with "Send again"; a status line and a timer show "thinking", "writing" and "done". Your question stands out as a block. Everything that was in the chat before (the note line "Kuro currently sees …", the setup hint, "remember: …", the Markdown rendering) works as before.
+- **The name labels "You" and "Kuro" and the blinking cursor in front of the answer are gone** with the old chat; the window shows who speaks by the block, not by a name.
+- **Error lines are worded by the window, not by the plugin.** The server's own reason is shown only for HTTP errors; for network errors and time-outs there is no technical second line any more (the details stay in the plugin log), and a time-out names the seconds as measured (for example "1.5 s" instead of a rounded whole number). An answer cut off at the token limit carries the hint under the answer; a partial answer stays when the request fails.
+- **Failed and stopped answers no longer go to the model with the next question** (before, only the error lines stayed out of the prompt).
 - **Claude models are recognized as models that read images and always think.** A model whose id starts with `claude-` (`claude-sonnet-5-5`, `anthropic/claude-…`) now counts as image-capable and as a thinking model that cannot be switched off; a local model that merely carries the word in its name (`qwen3.6-claude-opus-distill`) does not. This comes with the shared-code update (obsidian-kit 0.67.1, code-kit 0.36.0); nothing else in the plugin's behavior changes with it.
 
 ## [1.15.0] — 2026-10-23

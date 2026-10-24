@@ -10,7 +10,7 @@
       "complexity": { "noStaticOnlyClass": "off" }
     }
   },
-  "files": { "ignore": ["node_modules", "coverage", "main.js", "scripts", "src/vendor"] },
+  "files": { "ignore": ["node_modules", "coverage", "main.js", "scripts", "src/vendor", "tests/vendor"] },
   "overrides": [
     {
       "include": ["tests/**"],

@@ -26,8 +26,10 @@ export function kuroConnectionOptions(host: KuroConnectionHost): LlmConnectionOp
     capability: 'chat',
     mode: MODE,
     maxTokens: COMPANION_MAX_TOKENS,
-    // „Am Limit ohne Text“ bleibt eine eigene Fehlerart (chat.err.truncated); mit Text ist es ein Ergebnis mit Hinweis.
+    // „Am Limit ohne Text“ bleibt eine eigene Fehlerart (das Fenster sagt es als `errTruncated`); mit Text ist es ein Ergebnis mit Hinweis.
     truncated: 'error',
+    // Claude (native Messages-API) als Endpunkt des Endpunkt-Managers: ohne dieses Opt-in fragt die Verbindung den Manager nicht danach.
+    transports: { anthropic: true },
     lang: () => host.settings().language,
     // Die Settings heißen hier `chat…`; die Verbindung kennt `endpoints`/`choice`/`model`/`request`.
     getSettings: () => {

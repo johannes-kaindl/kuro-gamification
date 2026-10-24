@@ -9,6 +9,13 @@
    ========================================================== */
 import { KuroSidebarView } from '../src/views/KuroSidebarView';
 import { DEFAULT_PLUGIN_DATA } from '../src/types';
+import { EMPTY_CHAT } from '../src/vendor/kit/chat-history';
+import { installWindowTimers } from './vendor/kit/window-timers';
+
+// Das Kit-Fenster nimmt seine Uhr aus `window` (Renderer); die Testumgebung ist Node.
+let restoreWindow: () => void = () => {};
+beforeAll(() => { restoreWindow = installWindowTimers({ full: true }); });
+afterAll(() => { restoreWindow(); });
 
 const makePlugin = (enableChat: boolean, over: Record<string, unknown> = {}) => ({
   data: {
@@ -22,11 +29,18 @@ const makePlugin = (enableChat: boolean, over: Record<string, unknown> = {}) => 
   refreshStatus: async () => {},
   openRedeemModal: () => {},
   openOwnSettings: () => {},
-  chatSession: { entries: [], streaming: null, busy: false, reset: () => {} },
+  // Das Chat-Panel baut das echte Kit-Fenster und die Modellzeile; die Verbindung genügt als Stub.
+  llm: {
+    models: async () => ({ models: ['m1'], reachable: true }),
+    setModel: async () => {},
+    modelInUse: () => 'm1',
+    source: () => ({ family: null, model: 'm1', sentModel: 'm1' }),
+  },
+  chatHistory: EMPTY_CHAT,
   lastDailyText: null,
   hasChatEndpointSource: () => !!(over.chatEndpoints as unknown[] | undefined)?.length,
-  askKuro: async () => {},
-  abortChat: () => {},
+  sendChat: async () => ({ ok: true, content: '' }),
+  handleChatCommand: () => false,
   rememberNote: () => {},
 });
 
@@ -109,6 +123,28 @@ describe('KuroSidebarView tabs (Kit-Hub)', () => {
     await view.onOpen();
     expect(destroy).toHaveBeenCalledTimes(1);
     expect((view as any).chatPanel).not.toBe(first);
+  });
+
+  it('forwards refreshChat and refreshChatContext to the chat panel, and is a no-op without a chat', async () => {
+    const view = await openView(true);
+    const panel = (view as any).chatPanel;
+    const refresh = jest.spyOn(panel, 'refresh');
+    const context = jest.spyOn(panel, 'refreshContext');
+    view.refreshChat({ models: true });
+    expect(refresh).toHaveBeenCalledWith({ models: true });
+    context.mockClear();
+    view.refreshChatContext();
+    expect(context).toHaveBeenCalledTimes(1);
+    const off = await openView(false);
+    expect(() => { off.refreshChat(); off.refreshChatContext(); }).not.toThrow();
+  });
+
+  it('gives the chat panel the history the plugin holds, so it survives a rebuild', async () => {
+    const plugin = makePlugin(true);
+    const view = new KuroSidebarView({} as never, plugin as never);
+    await view.onOpen();
+    const panel = (view as any).chatPanel;
+    expect((panel as any).deps.initial).toBe(plugin.chatHistory);
   });
 
   it('clears everything on close and destroys the chat panel once', async () => {

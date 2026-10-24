@@ -25,7 +25,7 @@ describe('KuroPlugin.refreshStatus — Chat-Kontext', () => {
     const view = Object.create(KuroSidebarView.prototype) as KuroSidebarView;
     const calls = { context: 0, chat: 0 };
     view.refreshChatContext = () => { calls.context++; };
-    view.renderChat = () => { calls.chat++; };
+    view.refreshChat = () => { calls.chat++; };
     view.renderSnapshot = () => {};
 
     const plugin: any = new (KuroPlugin as any)();

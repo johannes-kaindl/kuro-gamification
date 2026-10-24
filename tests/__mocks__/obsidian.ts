@@ -140,6 +140,8 @@ function makeFakeEl(): any {
   el.createSpan = (opts?: any) => el.createEl('span', opts);
   el.appendChild = (c: any) => { el.children.push(c); };
   el.removeChild = (_c: any) => { el.children.shift(); };
+  // Das Kit-Fenster hängt seine Wurzel beim Abbau selbst aus; dieses Element kennt seinen Elternknoten nicht, also nichts zu tun.
+  el.remove = () => {};
   el.addEventListener = (e: string, fn: (ev: any) => void) => { const l = el.listeners[e] ?? []; l.push(fn); el.listeners[e] = l; };
   el.dispatchEvent = (ev: { type: string }) => { for (const fn of el.listeners[ev.type] ?? []) fn(ev); };
   el.click = () => el.dispatchEvent({ type: 'click' });

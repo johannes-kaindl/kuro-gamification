@@ -41,14 +41,14 @@ den zuletzt geladenen Stand und meldet ihn als Ergebnis für den gerade gebauten
 | 5 · Kontext | Ausklapper vorhanden · **Settings-Vorschau und Ausklapper zeigen dasselbe** | 10 |
 | 6 · Sprache | Platzhalter englisch · kein Text aus der deutschen Tabelle im Chat-Panel | 12 |
 | 7 · Destruktive Knöpfe | destruktiv markierte Knöpfe vorhanden · farblich abgesetzt (computed style, nicht Klasse) | 13 |
+| 9b · Chat-Fenster und Modellzeile | Modellzeile (Dropdown aus den Modellen des Endpunkts, Wechsel erreicht die nächste Anfrage, Sperre im Lauf) · Escape bricht ab · Fehlerzeile mit Begründung des Servers bei HTTP-Fehler · „merk dir“ geht nicht ans Modell · Linkschutz (**bekannter Befund, rot**, s. u.) | — |
 
 **Bewusst nicht automatisiert** — steht im Protokoll als `übersprungen` (der Ton) bzw. `nichts gemessen` (ohne geladenes Modell), damit die Lücke
 nicht wie Abdeckung aussieht:
 
 - **Schritt 11, der Ton.** Ob sich Kuros Antworten richtig anfühlen, ist keine mechanisch
   entscheidbare Frage. Das bleibt die Hand-Runde und ist der eigentliche Prüfstein.
-- **Streaming, Abbruch, Fehlertext bei totem Endpunkt** (Schritte 4, 6, 7). Braucht einen
-  echten Modell-Lauf; der Treiber würde sonst ein LLM messen, nicht das Plugin.
+- **Streaming, Abbruch und Fehlertext gegen ein echtes Modell** (Schritte 4, 6, 7). Der Treiber fährt sie gegen einen LLM-Stub (Abschnitte 9b, 16, 17); ein echtes Modell rechnet nur mit `--echtes-modell`, sonst würde der Treiber ein LLM messen, nicht das Plugin.
 
 Der Sprach-Prüfpunkt vergleicht gegen die **echten** Tabellen (`src/i18n/{de,en}.ts` werden
 in den Treiber gebündelt), nicht gegen kopierte Zeichenketten — sonst prüft der Smoke einen
@@ -153,3 +153,13 @@ gehalten wurde (`paperless-storage` → `koda-agent` → `obsidian-transmute` �
   Guard sieht das nicht, weil der Aufruf im gebündelten Treiber steckt und nicht im
   Kommandotext. **Text-Matching kann Absicht nicht prüfen; die Zurückhaltung muss von der
   Session kommen.**
+
+### 2026-10-24 · Welle 26: Chat-Fenster und Modellzeile aus dem Kit (Plugin 1.15.0 → 1.16.0, Obsidian 1.14.5)
+
+**Baseline am Stand `2189874`:** 55 grün · 0 rot · 5 übersprungen · 0 nichts gemessen von 60 Punkten. **Nach dem Umbau:** 62 grün · 1 rot · 5 übersprungen · 0 nichts gemessen von 68 Punkten (113 s). Die fünf übersprungenen sind dieselben (echter Endpunkt ohne `--echtes-modell`, zwei Denkblock-Opt-outs, Erreichbarkeits-Gegenprobe in dieser Lage nicht anwendbar, Ton).
+
+Der Treiber bedient das Fenster wie ein Nutzer (tippt ins `.okit-chat-input`, klickt `.okit-chat-send`, „Neu“ ist `.okit-chat-new`); Verläufe für Layout, Markdown und Bild entstehen als `chat-history`-Daten über `syncChatUI()`, nicht über ein Test-API am Plugin. Sieben Punkte sind neu (`setup/wechselt-nach-eintrag-in-den-chat`, `chat/merk-dir-geht-nicht-ans-modell`, `chat/escape-bricht-ab`, `chat/fehlerzeile-bei-http-fehler`, `chat/linkschutz-skript-schemata`, drei unter `modellzeile/`).
+
+**Der rote Punkt ist ein bekannter Befund, kein Fehler dieses Umbaus.** Eine Antwort mit sechs Links, am echten Fenster gemessen: `javascript:` und `data:` verlieren ihr `href`, `obsidian://`, `file://` und `app://` behalten es, `https` bleibt. Dieselbe Probe am Tag 1.15.0 (altes Panel, `neutralizeModelMarkdown` + `MarkdownRenderer.render`) liefert dasselbe Ergebnis: der Stand ist unverändert. Der Punkt bleibt rot, bis der Kit-Task „Linkschutz in Modellantworten“ (Welle 27) den Schutz im Fenster hat.
+
+**Gegenprobe (Mutanten):** drei Fehler gleichzeitig eingebaut (`disabled: () => false` in der Modellzeile, `refresh()` ohne Zustandswechsel, `handleChatCommand` immer `false`) → genau `modellzeile/gesperrt-waehrend-des-laufs`, `setup/wechselt-nach-eintrag-in-den-chat` und `chat/merk-dir-geht-nicht-ans-modell` wurden rot (59 grün · 4 rot, der vierte ist der bekannte Linkschutz), sonst nichts. Der erste Versuch scheiterte am Typcheck des Mutanten; `requireEigenerBuild` brach den Lauf ab, statt einen alten Build zu messen.

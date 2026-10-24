@@ -186,7 +186,7 @@ Das Snippet stylt `pre.kuro-status`, `pre.kuro-loot` und die Callouts `[!kuro]`,
 
 <img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/chat.png" width="600" alt="Companion chat in der Kuro-Seitenleiste">
 
-<sub>Der Companion-Chat in der Seitenleiste; der Ausklapper zeigt, was tatsächlich gesendet wird.</sub>
+<sub>Der Companion-Chat in der Seitenleiste: oben die Modellzeile, darunter der Ausklapper, der zeigt, was tatsächlich gesendet wird.</sub>
 
 Kuro kann mit dir reden: fragen, womit du anfangen sollst, sagen, dass du feststeckst, oder
 den Tag laut durchdenken. Der Chat ist **standardmäßig aus** — solange `Chat aktiv` aus ist,
@@ -198,7 +198,9 @@ keinen voreingestellten Anbieter und keinen Cloud-Default; gedacht ist er für e
 Server wie [LM Studio](https://lmstudio.ai) (`http://localhost:1234`) oder
 [Ollama](https://ollama.com) (`http://localhost:11434`).
 
-Ist das Plugin **LLM Endpoint Manager** installiert, holt sich der Chat Endpunkte und Modell von dort, und die Einstellungen zeigen statt der Liste dessen Endpunktwahl.
+Ist das Plugin **LLM Endpoint Manager** installiert, holt sich der Chat Endpunkte und Modell von dort, und die Einstellungen zeigen statt der Liste dessen Endpunktwahl. Ein Endpunkt des Managers, der die **Claude-API** nutzt, funktioniert ebenfalls; dafür gibt es keine eigene Einstellung.
+
+**Den Chat bedienen.** Die Eingabe ist ein mehrzeiliges Feld: <kbd>Enter</kbd> sendet, <kbd>Umschalt</kbd>+<kbd>Enter</kbd> beginnt eine neue Zeile, <kbd>Esc</kbd> stoppt eine laufende Antwort. **Neu** leert das Gespräch und stoppt eine laufende Antwort; jede Frage und jede Antwort hat einen Kopier-Knopf, und eine gescheiterte Antwort lässt sich erneut senden. Die **Modellzeile** über dem Gespräch zeigt, welches Modell der Chat benutzt, und wechselt es: die Modelle des aktiven Endpunkts, *Automatisch* (das Standardmodell des Endpunkts), ein Neu-laden-Knopf und, mit dem LLM Endpoint Manager, *Anderer Endpunkt …*, das die Einstellungen des Managers öffnet. Die Zeile ist gesperrt, solange eine Antwort läuft.
 
 Ein API-Schlüssel, den du für einen lokalen Endpunkt einträgst, liegt im **Obsidian-Schlüsselbund**, nicht in der `data.json` des Plugins. Bevor eine Frage rausgeht, ersetzt das Plugin Schlüssel, Tokens, `Bearer`-Header und Private-Key-Blöcke in deinem Text durch Platzhalter; in der Antwort siehst du wieder dein Original. Auf die ersten Daten wartet der Chat bis zu 10 Minuten (ein Modell, das noch lädt), danach bis zu 2 Minuten Stille. Bilder, ausführbare Codeblöcke und HTML in einer Antwort werden als einfacher Text gezeigt, nicht gerendert.
 

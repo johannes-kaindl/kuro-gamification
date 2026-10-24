@@ -185,7 +185,7 @@ The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!lev
 
 <img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/chat.png" width="600" alt="Companion chat in the Kuro sidebar">
 
-<sub>The companion chat in the sidebar, with the context disclosure showing exactly what gets sent.</sub>
+<sub>The companion chat in the sidebar: the model row on top, the context disclosure showing exactly what gets sent.</sub>
 
 Kuro can talk to you: ask what to start with, say you're stuck, or think out loud about the
 day. It is **off by default** — while `Enable chat` is off, the plugin makes no network
@@ -196,7 +196,9 @@ preset provider and no cloud default; it is meant for a local server such as
 [LM Studio](https://lmstudio.ai) (`http://localhost:1234`) or
 [Ollama](https://ollama.com) (`http://localhost:11434`).
 
-If you have the **LLM Endpoint Manager** plugin installed, the chat takes its endpoints and model from there instead, and the settings show the manager's endpoint choice in place of the list.
+If you have the **LLM Endpoint Manager** plugin installed, the chat takes its endpoints and model from there instead, and the settings show the manager's endpoint choice in place of the list. An endpoint of the manager that uses the **Claude API** works too; no extra setting is needed.
+
+**Using the chat.** The input is a multi-line field: <kbd>Enter</kbd> sends, <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line, <kbd>Esc</kbd> stops a running answer. **New** clears the conversation and stops a running answer; every question and answer has a copy button, and a failed answer can be sent again. The **model row** above the conversation shows which model the chat uses and switches it: the models of the active endpoint, *Automatic* (the endpoint's default model), a reload button and, with the LLM Endpoint Manager, *Other endpoint …*, which opens the manager's settings. The row is locked while an answer is running.
 
 An API key you enter for a local endpoint is stored in **Obsidian's keychain**, not in the plugin's `data.json`. Before a question is sent, keys, tokens, `Bearer` headers and private-key blocks in your text are replaced by placeholders; the answer shows your original again. The chat waits up to 10 minutes for the first data (a model that is still loading), then up to 2 minutes of silence. Pictures, executable code blocks and HTML in an answer are shown as plain text, not rendered.
 

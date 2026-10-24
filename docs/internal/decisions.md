@@ -14,6 +14,12 @@ Verdichtete Design-Essenz zu den Regeln im Kern (`AGENTS.md`) und in `.claude/ru
   öffentlich, die hartkodierte Konstante (1.12.7) war schlicht veraltet. Sie ist im Dach
   nachgezogen worden, mitsamt Mess-Datum und Quelle im Kommentar.
 
+## Warum der Chat das Kit-Fenster trägt und der Linkschutz offen bleibt (2026-10-24)
+
+Der Chat-Tab baut `buildChatWindow` und `buildModelBar` des Kits (UI-STANDARD § 8, Bausteine 12 und 15). Vier Chat-Plugins hatten dasselbe Fenster je für sich gebaut; das Kit trägt jetzt Verlauf, Eingabe, Abbruch, Fehlerzeilen und Markdown, und Kuro hält nur, was Kuro selbst sagt: Prompt und Kontext (`main.sendChat`, `llm/chatRequest`), die Kontextzeile, den Einrichtungs-Hinweis und „merk dir“. Die Namenszeile „Kuro“ über den Antworten gibt es im Kit-Fenster nicht; sie wurde nicht nachgebaut (Entscheidung steht beim Master).
+
+Der **Linkschutz** ist ein offener Befund, kein Umbau-Schaden: `neutralizeModelMarkdown` plus `MarkdownRenderer.render` kappen `javascript:` und `data:`, nicht `obsidian://`, `file://`, `app://`. Gemessen am echten Fenster und am Tag 1.15.0 mit derselben Sechs-Links-Probe, das Ergebnis ist gleich. Eine eigene Kappung neben dem Kit-Fenster wäre ein Doppelbau (anders als bei settings-assistant, dessen altes Panel `stripActiveContent` hatte); der Schutz kommt mit dem Kit-Task „Linkschutz in Modellantworten“. Bis dahin bleibt der Smoke-Punkt `chat/linkschutz-skript-schemata` rot und trägt den Hinweis.
+
 ## Herkunft: das Container-Repo vor v1.0.0
 
 Vor v1.0.0 lebte dieses Plugin in einem verschachtelten Container-Repo

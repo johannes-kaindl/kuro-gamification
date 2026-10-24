@@ -14,7 +14,7 @@ Datei, eine Datei ohne Eintrag und eine Einbettung ohne Vertragszeile sind je ei
 |---|---|---|---|
 | `hero.svg` | — | README (EN+DE), ganz oben | Das gezeichnete Banner. Kein Screenshot, bleibt von Hand gepflegt. |
 | `hero.png` | feature | README (EN+DE), § Features | Das ganze Fenster: eine gewöhnliche Notiz links, das Kuro-Panel rechts. Die ASCII-Box **vollständig** — Level, Titel, Gesamt-XP, Fortschrittsbalken, Streak mit Freeze-Tokens, heutiger Stand. Darunter Loot-Box und Lore-Fragment. |
-| `chat.png` | feature | README (EN+DE), § Companion chat | Dasselbe Fenster mit geöffnetem Chat-Tab: Tab-Leiste (Status · Chat), Kontext-Ausklapper („Kuro currently sees …"), ein Gespräch aus vier Nachrichten, die Eingabezeile **am unteren Rand**. |
+| `chat.png` | feature | README (EN+DE), § Companion chat | Dasselbe Fenster mit geöffnetem Chat-Tab: Tab-Leiste (Status · Chat), Modellzeile („Chat“ mit Modell-Dropdown), Kontext-Ausklapper („Kuro currently sees …"), ein Gespräch aus acht Nachrichten (die Fläche unter dem Gespräch darf nicht leer stehen, `readme_lint` misst Weißraum), Eingabefeld mit „Send“ und „New“ **am unteren Rand**. |
 | `status-block.png` | feature | README (EN+DE), § Status code block | Der `kuro-status`-Codeblock, wie er in einer gewöhnlichen Notiz rendert — mit erklärendem Text darüber und dem Lore-Callout darunter. |
 | `loot-redeem.png` | feature | README (EN+DE), § Features | Der Einlös-Dialog: drei Signale mit Tier-Symbol und Kategorie, Abbrechen/Einlösen. |
 | `settings.png` | detail | README (EN+DE), § Configuration — als 380-px-Vorschau aus `thumbs/`, verlinkt auf die Vollauflösung | Der Einstellungs-Tab **ganz**, alle vierzehn Abschnitte von „General" bis „About". Zu hoch für eine Inline-Einbettung (H/B 7.0) — deshalb Vorschau mit Bildunterschrift. |
@@ -42,7 +42,7 @@ verbietet ihn zu Recht).
 ## Was der Lauf voraussetzt
 
 - **Ein laufendes Obsidian mit offenem Debug-Port**, im Aufnahme-Vault. Kein LM Studio: der
-  Chat-Verlauf wird gesetzt, nicht generiert (s. u.).
+  Chat-Verlauf wird gesetzt, nicht generiert (s. u.), und die Modellzeile fragt einen LLM-Stub der Brücke mit zwei Modellnamen (`kuro-demo`), nie einen echten Server.
 - **Sonst nichts.** Kein Modell, kein Server, keine Zugangsdaten.
 - **Obsidians Oberfläche auf Englisch, bevor `--setup` läuft** (`obsidian.json` `"language": "en"` und `localStorage["language"]`). Der erste Plugin-Start übernimmt die Obsidian-Sprache als Kuro-Sprache; in einer deutschen Instanz zeigt der Einstellungs-Tab trotz `language = "en"` im Rezept deutsche Texte (gemessen 2026-10-10).
 - **Höhe des Einstellungs-Bilds:** `settingsBild` simuliert höchstens 7600 px; mit 14 Abschnitten reichen die früheren 6000 nicht mehr und das Bild endet in Leere vor „Notes“.
@@ -55,11 +55,7 @@ Level, Gesamt-XP, Streak und Tagesstand im Bild hat Kuro daraus selbst ausgerech
 Wert im Treiber ist gesetzt. Feste Datumsangaben wären am Tag nach dem Commit eine
 abgerissene Streak — das Bild dokumentierte dann den Aufnahmetag statt das Plugin.
 
-**2. Der Chat-Verlauf wird gesetzt, gerendert wird echt.** Die vier Nachrichten in
-`chat.png` stehen im Rezept. Ein Modell liefert bei jedem Lauf anderen Text, und zwei
-Aufnahmen sollen dasselbe Bild ergeben. Gesetzt sind nur die Nachrichten — der Weg dorthin
-ist der Produktionspfad (`chatSession` → `renderChat()`), und Kontext-Ausklapper,
-Merkzettel-Stand und Layout im Bild sind damit echt.
+**2. Der Chat-Verlauf wird gesetzt, gerendert wird echt.** Die acht Nachrichten in `chat.png` stehen im Rezept als `chat-history`-Daten. Ein Modell liefert bei jedem Lauf anderen Text, und zwei Aufnahmen sollen dasselbe Bild ergeben. Gesetzt sind nur die Nachrichten (`plugin.chatHistory`, danach `syncChatUI()`) — der Weg dorthin ist der Produktionspfad (das Kit-Fenster bekommt sie als `initial`), und Modellzeile, Kontext-Ausklapper und Layout im Bild sind damit echt.
 
 ## Was der Treiber am Wirt ändert (und warum)
 

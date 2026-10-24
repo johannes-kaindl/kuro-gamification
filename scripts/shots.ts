@@ -240,6 +240,9 @@ const SHOTS: Shot[] = [
     name: 'chat.png',
     klasse: 'feature',
     async run(cdp) {
+      // Dieselbe Notiz wie im Hero links: ohne sie stünde ein leerer „New tab“ im Bild, und `--only` ergäbe ein anderes Bild als der Sammellauf.
+      if (!(await openExisting(cdp, 'Projects/Acme site relaunch.md', 'preview'))) return null;
+      await closeExtraLeaves(cdp);
       // Die Modellzeile fragt die Modelle des Endpunkts: ein Stub mit zwei Namen, damit das Bild nicht von einem lokalen Server abhängt.
       const stub = await startLlmStub({ models: ['kuro-demo', 'kuro-demo-small'] });
       try {
@@ -259,6 +262,10 @@ const SHOTS: Shot[] = [
           { kind: 'assistant', text: "Then don't pick the biggest one. Take the task you could finish in ten minutes and let the panel show you the progress — momentum first, order later.\n\nWhich of the three is the smallest?" },
           { kind: 'user', text: 'Booking the venue, probably.' },
           { kind: 'assistant', text: 'Start there. The other two are still there afterwards, and you will have moved.' },
+          { kind: 'user', text: 'Done. Booked it.' },
+          { kind: 'assistant', text: 'Good. That is one of three, and it was the one you were avoiding.\n\nThe landing page copy is next: open it, write the first sentence, and stop there if you want to. Starting counts.' },
+          { kind: 'user', text: 'Okay, first sentence only.' },
+          { kind: 'assistant', text: 'First sentence only. I will be here when you are back.' },
         ].map((z, i) => (z.kind === 'user' ? { ...z, id: i + 1 } : { ...z, id: i + 1, reasoning: '', state: 'done' }));
         await cdp.evaluate(`
           const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];

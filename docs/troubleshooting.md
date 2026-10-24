@@ -76,19 +76,21 @@ Each entry starts with what you see — the wording is the plugin's own English 
 
 > No endpoint reachable. Check the endpoint list in the settings — the test button says which one answers.
 
-> Could not reach the endpoint.
+> Could not reach the endpoint — server down, wrong address, or network/VPN not connected.
 
-> Nothing has come from the endpoint for {seconds} seconds.
+> No answer from the model for {seconds} s — it may still be loading or is stuck. Try again.
 
 **Cause:** the chat is optional and off by default. When it is on, none of the addresses in its endpoint list answered, or the server sent nothing for too long. The chat waits up to 10 minutes for the first data (a model that is still loading) and ends an answer after 2 minutes without data. These times are fixed; there is no setting for them.
 
-**Fix:** start your local model server and load a model, then check the endpoint list under **Settings → 💬 Kuro chat** (the **Test connection** button shows what the server answers). With the LLM Endpoint Manager installed, the endpoints come from there instead. The error line also names the reason the manager or the list gave.
+**Fix:** start your local model server and load a model, then check the endpoint list under **Settings → 💬 Kuro chat** (the **Test connection** button shows what the server answers). With the LLM Endpoint Manager installed, the endpoints come from there instead. The error line also names the reason the manager or the list gave; for an HTTP error from the server it names the server's own reason.
 
 ## "The answer was cut off at the token limit"
 
 > The answer was cut off before the first word — thinking used up the token limit.
 
-**Cause:** the model hit the token budget while answering, or used it all for thinking before the first word.
+> The answer was cut off at the token limit.
+
+**Cause:** the model hit the token budget while answering (the second line, shown under the answer that came), or used it all for thinking before the first word (the first line).
 
 **Fix:** under **Settings → 💬 Kuro chat → Request** set **Thinking level** to *off* or *low*, or raise **Token budget (max_tokens)**.
 

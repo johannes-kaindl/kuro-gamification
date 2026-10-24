@@ -35,8 +35,9 @@
  *    ausgerechnet.
  * 2. **Der Chat-Verlauf wird gesetzt, der Rest nicht.** Ein Modell liefert bei jedem Lauf
  *    anderen Text; zwei Aufnahmen sollen dasselbe Bild ergeben. Gesetzt sind nur die
- *    Nachrichten — gerendert wird über den echten Pfad (`chatSession` → `renderChat()`),
- *    und Kontext-Ausklapper, Merkzettel und Layout sind damit echt.
+ *    Nachrichten (`chatHistory` des Plugins, danach `syncChatUI()`) — gerendert wird über das
+ *    echte Chat-Fenster des Kits, und Modellzeile, Kontext-Ausklapper und Layout sind damit echt.
+ *    Die Modellzeile fragt einen LLM-Stub mit zwei Namen, nie einen echten Server.
  *
  * Typen: `tsconfig.scripts.json` (im `gate` über `npm run typecheck:scripts`).
  */
@@ -58,6 +59,7 @@ import {
 } from '../../tools/obsidian-cdp/cdp.js';
 import { type Rect, boxOf, capture, setWindowSize, withMetrics, writeShot } from '../../tools/obsidian-cdp/shot.js';
 import { buildVault, requireEigenerBuild, stagingVaultDir } from '../../tools/obsidian-cdp/vault.js';
+import { startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { DEFAULT_HABITS_EN } from '../src/data/default-habits';
 
 const REPO_NAME = 'kuro-gamification';
@@ -238,42 +240,53 @@ const SHOTS: Shot[] = [
     name: 'chat.png',
     klasse: 'feature',
     async run(cdp) {
-      await cdp.evaluate(`
-        const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-        p.data.settings.enableChat = true;
-        p.data.settings.chatEndpoints = [{ url: "http://localhost:1234" }];
-        p.data.settings.kuroNotes = ["No streak reminders, please.", "Mornings are for deep work."];
-        await p.persist();
-        return true;
-      `);
-      if (!(await sidebarBereit(cdp))) return null;
-      await cdp.evaluate(`
-        const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-        p.chatSession.reset();
-        p.chatSession.append({ role: "user", text: "I have three things left today and no idea where to start." });
-        p.chatSession.append({ role: "assistant", text: "Then don't pick the biggest one. Take the task you could finish in ten minutes and let the panel show you the progress — momentum first, order later.\\n\\nWhich of the three is the smallest?" });
-        p.chatSession.append({ role: "user", text: "Booking the venue, probably." });
-        p.chatSession.append({ role: "assistant", text: "Start there. The other two are still there afterwards, and you will have moved." });
-        for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.view.renderChat?.();
-        await new Promise((r) => setTimeout(r, 300));
-        const view = ${VIEW_EL};
-        const tabs = view ? [...view.querySelectorAll(".okit-hub-tab")] : [];
-        if (tabs[1]) tabs[1].click();
-        await new Promise((r) => setTimeout(r, 500));
-        return true;
-      `);
-      const da = await pollUntil<boolean>(
-        cdp,
-        `const log = ${VIEW_EL}?.querySelector(".kuro-chat-log");
-         return Boolean(log && log.textContent.length > 80);`,
-        8000,
-      );
-      if (!da) return null;
-      // Das ganze Fenster, nicht nur die Leiste: der Ausschnitt allein kam auf H/B 2.7
-      // und sprengte die `feature`-Grenze von 1.6 — und ein hochkantiger Streifen lässt
-      // offen, wo der Chat im Fenster sitzt. Die Notiz daneben erklärt das Plugin besser.
-      await sidebarBox(cdp);
-      return boxOf(cdp, '.app-container');
+      // Die Modellzeile fragt die Modelle des Endpunkts: ein Stub mit zwei Namen, damit das Bild nicht von einem lokalen Server abhängt.
+      const stub = await startLlmStub({ models: ['kuro-demo', 'kuro-demo-small'] });
+      try {
+        await cdp.evaluate(`
+          const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+          p.data.settings.enableChat = true;
+          p.data.settings.chatEndpoints = [{ url: ${JSON.stringify(stub.url)}, model: "kuro-demo" }];
+          p.data.settings.chatChoice = {};
+          p.data.settings.kuroNotes = ["No streak reminders, please.", "Mornings are for deep work."];
+          p.llm.invalidate();
+          await p.persist();
+          return true;
+        `);
+        if (!(await sidebarBereit(cdp))) return null;
+        const zeilen = [
+          { kind: 'user', text: 'I have three things left today and no idea where to start.' },
+          { kind: 'assistant', text: "Then don't pick the biggest one. Take the task you could finish in ten minutes and let the panel show you the progress — momentum first, order later.\n\nWhich of the three is the smallest?" },
+          { kind: 'user', text: 'Booking the venue, probably.' },
+          { kind: 'assistant', text: 'Start there. The other two are still there afterwards, and you will have moved.' },
+        ].map((z, i) => (z.kind === 'user' ? { ...z, id: i + 1 } : { ...z, id: i + 1, reasoning: '', state: 'done' }));
+        await cdp.evaluate(`
+          const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
+          p.chatHistory = { entries: ${JSON.stringify(zeilen)}, nextId: ${zeilen.length + 1} };
+          p.syncChatUI();
+          await new Promise((r) => setTimeout(r, 900));
+          const view = ${VIEW_EL};
+          const tabs = view ? [...view.querySelectorAll(".okit-hub-tab")] : [];
+          if (tabs[1]) tabs[1].click();
+          await new Promise((r) => setTimeout(r, 500));
+          return true;
+        `);
+        const da = await pollUntil<boolean>(
+          cdp,
+          `const v = ${VIEW_EL};
+           const log = v?.querySelector(".okit-chat-log");
+           const sel = v?.querySelector(".okit-model-bar-select");
+           return Boolean(log && log.textContent.length > 80 && sel && sel.options.length >= 3);`,
+          8000,
+        );
+        if (!da) return null;
+        // Das ganze Fenster, nicht nur die Leiste: der Ausschnitt allein kam auf H/B 2.7 und sprengte die `feature`-Grenze von 1.6 — und ein
+        // hochkantiger Streifen lässt offen, wo der Chat im Fenster sitzt. Die Notiz daneben erklärt das Plugin besser.
+        await sidebarBox(cdp);
+        return await boxOf(cdp, '.app-container');
+      } finally {
+        await stub.stop().catch(() => undefined);
+      }
     },
   },
   {

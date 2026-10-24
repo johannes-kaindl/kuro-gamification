@@ -218,6 +218,9 @@
 /* Wirt des Kit-Chat-Fensters (buildChatWindow): ohne begrenzte Höhe rollt der Verlauf nicht, die Eingabezeile mit ihm aus dem Bild
    (Regression 2026-08-12, Smoke layout/eingabezeile-sichtbar). Das Fenster füllt den Wirt, den Rest erledigt CHAT_WINDOW_CSS unten. */
 .kuro-chat-host { height: 100%; }
+/* Die Absätze einer Antwort sind im Kit-Fenster je ein eigener Block (`.okit-stream-block`), und das Kit nimmt dem ersten und letzten Kind den Rand: ohne
+   diese Regel klebten sie ohne Abstand aneinander (Befund an den Master, Welle 26). Entfällt, sobald das Kit den Abstand zwischen Blöcken selbst setzt. */
+.kuro-chat .okit-stream-block + .okit-stream-block { margin-top: var(--size-4-3); }
 
 /* ── Streaming-Antwortbereich (obsidian-kit@0.67.1, STREAM_AREA_CSS) ──
    Laut Kit-Vertrag kopiert, nicht importiert — wortgleich, der Test tests/kit-css.test.ts wacht darüber. */

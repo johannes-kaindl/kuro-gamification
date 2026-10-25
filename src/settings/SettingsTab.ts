@@ -21,6 +21,7 @@ import { DEFAULT_SETTINGS } from '../types';
 import { clampInt } from '../vendor/kit/num';
 import { copyToClipboard } from '../vendor/kit-obsidian/clipboard';
 import { githubHelpUrls, helpSettingDefinition } from '../vendor/kit-obsidian/help-setting';
+import { linkSettingDefinitions } from '../vendor/kit-obsidian/link-settings';
 import type { Lang, LogLevel } from '../types';
 import { t } from '../i18n';
 import { ExportDataModal, ImportDataModal } from '../modals/DataIoModal';
@@ -658,6 +659,18 @@ export class KuroSettingsTab extends PluginSettingTab {
           render: (setting) => this._renderContextPreview(this._hostFor(setting), lang) },
         { name: t('set.chatPersona.name', lang), desc: t('set.chatPersona.desc', lang),
           control: { type: 'text', key: 'chatPersonaOverride' } },
+        // UI-STANDARD §8 „Links und Bilder in Antworten“: zwei Schalter aus dem Kit, beide aus; das Chat-Fenster liest sie je Antwort (Getter).
+        ...linkSettingDefinitions({
+          allowObsidianLinks: this.plugin.data.settings.chatAllowObsidianLinks,
+          allowLocalImages: this.plugin.data.settings.chatAllowLocalImages,
+          strings: { lang },
+          onChange: async (key, value) => {
+            const s = this.plugin.data.settings;
+            if (key === 'allowObsidianLinks') s.chatAllowObsidianLinks = value;
+            else s.chatAllowLocalImages = value;
+            await this._save();
+          },
+        }),
       ],
     };
   }

@@ -139,6 +139,8 @@ describe('DataStore.merge — chat & notes', () => {
     expect('chatModel' in s).toBe(false);
     expect(s.chatDailyContext).toBe('tasks');
     expect(s.chatPersonaOverride).toBe('');
+    expect(s.chatAllowObsidianLinks).toBe(false);
+    expect(s.chatAllowLocalImages).toBe(false);
   });
 
   it('preserves user-overridden chat settings', () => {

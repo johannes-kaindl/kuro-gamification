@@ -6,6 +6,7 @@
    ========================================================== */
 import { KuroChatPanel, type ChatPanelDeps } from '../src/views/KuroChatPanel';
 import type { DailyExtract } from '../src/llm/kuroContext';
+import * as chatWindow from '../src/vendor/kit-obsidian/chat-window';
 import type { ChatSendHandlers, ChatSendResult } from '../src/vendor/kit-obsidian/chat-window';
 import { EMPTY_CHAT, type ChatHistory } from '../src/vendor/kit/chat-history';
 import { makeFakeEl } from './vendor/kit/obsidian-mock';
@@ -28,6 +29,7 @@ function setup(opts: {
   command?: (text: string) => boolean;
   info?: () => DailyExtract;
   initial?: ChatHistory;
+  lang?: 'en' | 'de';
 } = {}) {
   const flag = { ok: opts.endpoint ?? true };
   const send = jest.fn<ReturnType<Send>, Parameters<Send>>(opts.send ?? (async (_m, h) => { h.onToken('Hi'); return { ok: true, content: 'Antwort' }; }));
@@ -45,11 +47,12 @@ function setup(opts: {
     handleCommand: opts.command ?? (() => false),
     contextInfo: () => info.current(),
     hasEndpoint: () => flag.ok,
+    linkOptions: () => ({ allowObsidianLinks: false, allowLocalImages: false }),
     openSettings: jest.fn(),
     renderMarkdown: jest.fn(async (el: HTMLElement, md: string) => { el.setText(md); }),
   };
   const host = makeFakeEl();
-  const panel = new KuroChatPanel(host as never, 'en', deps, { domGuard: false });
+  const panel = new KuroChatPanel(host as never, opts.lang ?? 'en', deps, { domGuard: false });
   panel.build();
   return { panel, host, deps, flag, send, models, setModel, history, info };
 }
@@ -161,6 +164,57 @@ describe('KuroChatPanel (Kit-Fenster)', () => {
       s.panel.refresh();
       expect(all(s.host, '.okit-chat-empty').some((e) => !e.hasClass('okit-chat-hidden'))).toBe(true);
       expect(all(s.host, '.okit-model-bar').length).toBe(0);
+    });
+  });
+
+  describe('Linkschutz (Kit-Option domGuard)', () => {
+    it('das Fenster bekommt einen Getter, der die Einstellung je Antwort liest (ein Umschalten wirkt ohne Neuaufbau)', () => {
+      const real = chatWindow.buildChatWindow;
+      let seen: chatWindow.ChatWindowOptions['domGuard'];
+      const spy = jest.spyOn(chatWindow, 'buildChatWindow').mockImplementation((parent, o) => {
+        seen = o.domGuard;
+        // Das Fake-DOM trägt keinen MutationObserver: das echte Fenster ohne Wächter bauen.
+        return real(parent, { ...o, domGuard: false });
+      });
+      try {
+        const flags = { obsidian: false, images: false };
+        const host = makeFakeEl();
+        const panel = new KuroChatPanel(host as never, 'en', {
+          ...setup().deps,
+          linkOptions: () => ({ allowObsidianLinks: flags.obsidian, allowLocalImages: flags.images }),
+        });
+        panel.build();
+        expect(typeof seen).toBe('function');
+        const get = seen as () => unknown;
+        expect(get()).toEqual({ allowObsidianLinks: false, allowLocalImages: false });
+        flags.obsidian = true;
+        expect(get()).toEqual({ allowObsidianLinks: true, allowLocalImages: false });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe('Namenszeile (Kit-Option labels)', () => {
+    it('die Frage trägt „You“, die Antwort „Kuro“ — als Name im Turn, in der Sprache des Wirts', async () => {
+      const s = setup();
+      await s.panel.submit('Frage');
+      // Das Fake-DOM kennt keinen Nachfahren-Selektor mit zusammengesetzter Klasse: die Namen in Dokumentreihenfolge (Frage, dann Antwort).
+      expect(all(s.host, '.okit-chat-name').map((n) => n.textContent)).toEqual(['You', 'Kuro']);
+    });
+
+    it('auf Deutsch heißt die Frage „Du“', async () => {
+      const s = setup({ lang: 'de' });
+      await s.panel.submit('Frage');
+      expect(all(s.host, '.okit-chat-name').map((n) => n.textContent)).toEqual(['Du', 'Kuro']);
+    });
+
+    it('der Name steht nicht im Verlauf, der ans Modell geht', async () => {
+      const s = setup();
+      await s.panel.submit('erste Frage');
+      await s.panel.submit('zweite Frage');
+      const second = s.send.mock.calls[1]![0];
+      expect(second.map((m) => m.content)).toEqual(['erste Frage', 'Antwort', 'zweite Frage']);
     });
   });
 

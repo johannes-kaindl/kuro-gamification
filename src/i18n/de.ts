@@ -293,6 +293,8 @@ export const de: Record<string, string> = {
   'chat.tab.status': 'Status',
   'chat.tab.chat': 'Chat',
   'chat.placeholder': 'Frag Kuro …',
+  'chat.you': 'Du',
+  'chat.kuro': 'Kuro',
   'chat.remembered': 'Gemerkt: {note}',
   'chat.notesFull': 'Merkzettel voll ({max} Einträge) — lösche einen Eintrag in den Einstellungen.',
   'chat.contextToggle': 'Kuro sieht gerade: {tasks} Aufgaben, {habits} Habits',

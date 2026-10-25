@@ -106,6 +106,8 @@ const PUNKTE = [
   'chat/escape-bricht-ab',
   'chat/fehlerzeile-bei-http-fehler',
   'chat/linkschutz-skript-schemata',
+  'chat/linkschutz-schalter-obsidian-links',
+  'chat/namenszeile-frage-und-antwort',
   'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
   'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
   'modellzeile/gesperrt-waehrend-des-laufs',
@@ -688,14 +690,12 @@ const FENSTER_NAMEN = [
   'chat/escape-bricht-ab',
   'chat/fehlerzeile-bei-http-fehler',
   'chat/linkschutz-skript-schemata',
+  'chat/linkschutz-schalter-obsidian-links',
+  'chat/namenszeile-frage-und-antwort',
   'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
   'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
   'modellzeile/gesperrt-waehrend-des-laufs',
 ] as const;
-
-/** Der Punkt bleibt rot, bis das Kit den Schutz hat (Entscheidung des Masters, Welle 26): kein Eigenbau neben dem Fenster, keine Ausnahme. Der Stand
- *  gegenüber 1.15.0 ist unverändert (dieselbe Kette `neutralizeModelMarkdown` + `MarkdownRenderer.render`, gemessen am Tag 1.15.0). */
-const BEKANNTER_BEFUND_LINKSCHUTZ = '[bekannter Befund, Kit-Task Welle 27: „Linkschutz in Modellantworten — domGuard kappt gefährliche Link-Ziele, damit das Kit-Chatfenster keine Lücke hat“; rot bis das Kit den Schutz hat]';
 
 const LINKS_ANTWORT = '[a-js](javascript:alert(1)) [b-data](data:text/html,x) [c-obs](obsidian://open?vault=x) [d-file](file:///etc/passwd) [e-app](app://obsidian.md/x) [f-ok](https://example.org/ok)';
 
@@ -815,7 +815,33 @@ async function sektionFenster(cdp: Cdp): Promise<void> {
     record(
       'chat/linkschutz-skript-schemata',
       alleDa && gekappt.every((x) => x.link?.h === null || x.link?.h === undefined) && von('f-ok')?.h === 'https://example.org/ok',
-      `${BEKANNTER_BEFUND_LINKSCHUTZ} Anker im Antworttext: ${links.map((l) => `${l.t} -> ${String(l.h)}`).join('; ') || '(keine)'} · alle fünf Anker da: ${String(alleDa)}`,
+      `Anker im Antworttext: ${links.map((l) => `${l.t} -> ${String(l.h)}`).join('; ') || '(keine)'} · alle fünf Anker da: ${String(alleDa)}`,
+    );
+
+    // Namenszeile (Kit-Option labels): „You“ an der Frage, „Kuro“ an der Antwort — sichtbar, nicht nur im DOM (Zweitinstanz läuft auf Englisch).
+    const namen = await cdp.evaluate<{ frage: string; antwort: string; sichtbar: boolean }>(`
+      const f = ${VIEW_EL}.querySelector(".okit-chat-turn.is-user .okit-chat-name");
+      const a = ${VIEW_EL}.querySelector(".okit-chat-turn.is-assistant .okit-chat-name");
+      return { frage: f ? f.textContent : "", antwort: a ? a.textContent : "", sichtbar: Boolean(f) && Boolean(a) && f.offsetHeight > 0 && a.offsetHeight > 0 };
+    `);
+    record(
+      'chat/namenszeile-frage-und-antwort',
+      namen.frage === 'You' && namen.antwort === 'Kuro' && namen.sichtbar,
+      `Frage „${namen.frage}“, Antwort „${namen.antwort}“, ${namen.sichtbar ? 'beide sichtbar' : 'nicht sichtbar'}`,
+    );
+
+    // Schalter „obsidian://-Links erlauben“: wirkt auf die nächste Antwort, ohne das Fenster neu zu bauen; die Skript-Schemata bleiben gekappt.
+    await setSetting(cdp, 'chatAllowObsidianLinks', true);
+    await chatNeu(cdp);
+    await chatFrage(cdp, 'Links bitte, mit Schalter');
+    const mitSchalter = await cdp.evaluate<Array<{ t: string; h: string | null }>>(`
+      return [...${VIEW_EL}.querySelectorAll(".okit-chat-turn.is-assistant .okit-stream-block a")].map((a) => ({ t: a.textContent || "", h: a.getAttribute("href") }));
+    `);
+    const mit = (t: string): string | null | undefined => mitSchalter.find((l) => l.t === t)?.h;
+    record(
+      'chat/linkschutz-schalter-obsidian-links',
+      typeof mit('c-obs') === 'string' && (mit('c-obs') ?? '').startsWith('obsidian://') && ['a-js', 'b-data', 'd-file', 'e-app'].every((t) => mit(t) === null),
+      `Anker mit Schalter: ${mitSchalter.map((l) => `${l.t} -> ${String(l.h)}`).join('; ') || '(keine)'}`,
     );
   } catch (e) {
     if (istAbgebrochen()) throw e;
@@ -824,6 +850,7 @@ async function sektionFenster(cdp: Cdp): Promise<void> {
     if (!istAbgebrochen()) {
       await cdp.evaluate(`${PLUGIN_EXPR}.data.kuroNotes = ${JSON.stringify(notizenVorher)}; await ${PLUGIN_EXPR}.persist(); ${CHAT_LEEREN} return true;`).catch(() => undefined);
       await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]).catch(() => undefined);
+      await setSetting(cdp, 'chatAllowObsidianLinks', false).catch(() => undefined);
     }
     if (stub) await stub.stop().catch(() => undefined);
   }

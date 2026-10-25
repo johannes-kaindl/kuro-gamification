@@ -56,6 +56,7 @@ function window_(p: any) {
     handleCommand: (t) => p.handleChatCommand(t),
     contextInfo: () => ({ tasks: [], habits: [], numbers: [], raw: null, mode: 'none' }),
     hasEndpoint: () => p.hasChatEndpointSource(),
+    linkOptions: () => ({ allowObsidianLinks: false, allowLocalImages: false }),
     openSettings: () => {},
     renderMarkdown: async (el, md) => { el.setText(md); },
   }, { domGuard: false });

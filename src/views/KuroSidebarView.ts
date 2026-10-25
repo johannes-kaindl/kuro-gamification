@@ -112,6 +112,10 @@ export class KuroSidebarView extends ItemView {
           handleCommand: (text) => plugin.handleChatCommand(text),
           contextInfo: () => buildDailyExtract(plugin.lastDailyText, plugin.data.settings),
           hasEndpoint: () => plugin.hasChatEndpointSource(),
+          linkOptions: () => ({
+            allowObsidianLinks: plugin.data.settings.chatAllowObsidianLinks,
+            allowLocalImages: plugin.data.settings.chatAllowLocalImages,
+          }),
           openSettings: () => plugin.openOwnSettings(),
           // Die View ist die Component, an der die gerenderten Blöcke hängen: schließt sie, räumt
           // Obsidian deren Listener und eingebettete Kinder mit ab. Neutralisiert wird im Kit-Fenster.

@@ -38,6 +38,8 @@ export interface ChatPanelDeps {
   contextInfo(): DailyExtract;
   /** Gibt es eine Quelle für Chat-Endpunkte (Manager oder lokale Zeile)? Ohne zeigt das Fenster den Einrichtungs-Hinweis. */
   hasEndpoint(): boolean;
+  /** Linkschutz der Antworten (Einstellungen „Links und Bilder in Antworten“); das Fenster liest ihn je Antwort, ein Umschalten wirkt ohne Neuaufbau. */
+  linkOptions(): { allowObsidianLinks: boolean; allowLocalImages: boolean };
   openSettings(): void;
   /** Rendert Markdown in ein Element (Obsidians `MarkdownRenderer` — braucht `App` und eine Component, beides gehört der View). */
   renderMarkdown(el: HTMLElement, markdown: string): Promise<void>;
@@ -77,9 +79,11 @@ export class KuroChatPanel {
     this.win = buildChatWindow(this.host, {
       cls: 'kuro-chat',
       strings: { lang: this.lang, placeholder: t('chat.placeholder', this.lang) },
-      send: (messages, h) => this.send(messages, h),
+      // Der Name gehört zur Figur, also dem Wirt: das Kit bringt keine Texte dafür mit.
+      labels: { user: t('chat.you', this.lang), assistant: t('chat.kuro', this.lang) },
+      send: (messages, h) => d.send(messages, h),
       render: (el, markdown) => d.renderMarkdown(el, markdown),
-      header: (el) => { this.drawHeader(el); },
+      header: (el) => this.drawHeader(el),
       beforeSubmit: (text) => this.beforeSubmit(text),
       empty: {
         when: () => !this.endpointOk,
@@ -88,24 +92,11 @@ export class KuroChatPanel {
         cta: { label: t('chat.setup.openSettings', this.lang), onClick: () => { d.openSettings(); } },
       },
       initial: d.initial,
-      onChange: (h) => {
-        d.onChange(h);
-        // Die Zeile sperrt sich während eines Laufs und gibt sich danach frei.
-        this.bar?.update();
-      },
-      ...(this.opts.domGuard === undefined ? {} : { domGuard: this.opts.domGuard }),
+      onChange: (h) => { d.onChange(h); },
+      // Die Zeile sperrt sich während eines Laufs und gibt sich danach frei.
+      onRunChange: () => { this.bar?.update(); },
+      domGuard: this.opts.domGuard ?? (() => d.linkOptions()),
     });
-  }
-
-  /** Läuft eine Antwort? Das Kit-Fenster hat kein `running()`, aber `startAnswer` läuft vor `send`, also zeigt der Verlauf den Lauf. */
-  private running(): boolean {
-    return this.win?.history().entries.some((e) => e.kind === 'assistant' && e.state === 'streaming') ?? false;
-  }
-
-  private send(messages: readonly ChatModelMessage[], h: ChatSendHandlers): Promise<ChatSendResult> {
-    // `startAnswer` ist vor `send` gelaufen: ab hier ist der Lauf im Verlauf sichtbar, die Zeile sperrt sich.
-    this.bar?.update();
-    return this.deps.send(messages, h);
   }
 
   private beforeSubmit(text: string): boolean {
@@ -115,23 +106,26 @@ export class KuroChatPanel {
     return false;
   }
 
-  private drawHeader(el: HTMLElement): void {
-    // `refresh()` ruft den Einschub erneut; die alte Zeile gibt das Kit nicht frei (kein Abmelde-Hook), also hier.
-    this.bar?.destroy();
-    this.bar = null;
+  /** Das Kit ruft die Rückgabe vor der nächsten Zeichnung des Kopfs und bei `destroy()`: die Zeile gibt sich dort frei. */
+  private drawHeader(el: HTMLElement): () => void {
     this.ctxSummaryEl = null;
     this.ctxBodyEl = null;
     // Im Leerzustand blendet das Kit den Kopf nicht aus: keinen bauen.
-    if (!this.endpointOk) return;
-    this.bar = buildModelBar({
+    if (!this.endpointOk) return () => {};
+    const bar = buildModelBar({
       app: this.deps.app,
       containerEl: el,
       llm: this.deps.llm,
       label: t('chat.tab.chat', this.lang),
       strings: { lang: this.lang },
-      disabled: () => this.running(),
+      disabled: () => this.win?.running() ?? false,
     });
+    this.bar = bar;
     this.drawContextLine(el);
+    return () => {
+      bar.destroy();
+      if (this.bar === bar) this.bar = null;
+    };
   }
 
   private contextLabel(info: DailyExtract): string {

@@ -201,6 +201,10 @@ export interface KuroSettings {
   /** Zahlenfelder im Kopf der Tagesnotiz ("aufgaben, offen=Offene Aufgaben"): der Chat-Kontext zeigt sie, die XP zählen sie wie erledigte Aufgaben. Leer = aus. */
   dailyNumberFields: string;
   chatPersonaOverride: string;
+  /** Antworten dürfen `obsidian://`-Links tragen (Kit-Wächter kappt sie sonst). Off-by-default: ein Link kann Obsidian-Aktionen auslösen. */
+  chatAllowObsidianLinks: boolean;
+  /** Antworten dürfen Bilder aus dem Vault zeigen. Entfernte Bilder bleiben immer gesperrt. */
+  chatAllowLocalImages: boolean;
 }
 
 export interface KuroPluginData {
@@ -338,6 +342,8 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   chatDailyContext: 'tasks',
   dailyNumberFields: '',
   chatPersonaOverride: '',
+  chatAllowObsidianLinks: false,
+  chatAllowLocalImages: false,
 };
 
 export const DEFAULT_PLUGIN_DATA: KuroPluginData = {

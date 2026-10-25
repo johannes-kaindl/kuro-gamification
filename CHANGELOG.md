@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.17.0] — 2026-10-25
+
 ### Added
 
 - **The names are back in the chat.** Each question carries the name "You" ("Du" in German) and each answer "Kuro", above the text, as in the old chat (obsidian-kit 0.70.0).

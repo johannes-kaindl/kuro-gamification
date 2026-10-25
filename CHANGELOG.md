@@ -5,6 +5,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **The names are back in the chat.** Each question carries the name "You" ("Du" in German) and each answer "Kuro", above the text, as in the old chat (obsidian-kit 0.70.0).
+- **Two switches for links and images in answers**, under Settings → Kuro chat: "Allow obsidian:// links" and "Show local images from the vault". Both are off.
+
+### Changed
+
+- **Links in answers are checked.** A link that could run a script or open a file (`javascript:`, `data:`, `vbscript:`, `file:`, `app:`) never works. An `obsidian://` link loses its target until you turn on the switch; it still looks like a link, but a click does nothing.
+- **The question looks like the answer.** It has the same type size as the answer (it was larger) and a thin border, so it stands out in a narrow sidebar (obsidian-kit 0.70.0).
+- **A network error names its technical reason.** The error line adds the message in brackets, with keys and tokens masked and cut to one line; a time-out names the seconds as a whole number.
+
 ### Fixed
 
 - **Two side panels no longer swap their chats.** With two Kuro panels open (the tab's "Split right"), switching the chat on or off in the settings rebuilt both panels from the history of the panel that spoke last, and the other panel lost its own round. Each panel now keeps its own conversation through that rebuild; a panel opened later still starts from the latest history.

@@ -332,6 +332,13 @@ export default class KuroPlugin extends Plugin {
     }
   }
 
+  /** Einen Verlauf von außen setzen (Treiber, Aufnahmen): jedes offene Blatt übernimmt ihn beim nächsten Bau (`syncChatUI()`).
+   *  Ein Blatt führt sonst seinen eigenen Verlauf; `chatHistory` allein setzt nur den Startstand neuer Blätter. */
+  setChatHistory(history: ChatHistory): void {
+    this.chatHistory = history;
+    for (const view of this.chatViews()) view.adoptHistory(history);
+  }
+
   /** Offene Sidebar-Views, deren Chat-Tab neu gezeichnet werden soll. */
   private chatViews(): KuroSidebarView[] {
     const out: KuroSidebarView[] = [];

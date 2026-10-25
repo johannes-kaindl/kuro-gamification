@@ -35,7 +35,7 @@
  *    ausgerechnet.
  * 2. **Der Chat-Verlauf wird gesetzt, der Rest nicht.** Ein Modell liefert bei jedem Lauf
  *    anderen Text; zwei Aufnahmen sollen dasselbe Bild ergeben. Gesetzt sind nur die
- *    Nachrichten (`chatHistory` des Plugins, danach `syncChatUI()`) — gerendert wird über das
+ *    Nachrichten (`setChatHistory` des Plugins, danach `syncChatUI()`) — gerendert wird über das
  *    echte Chat-Fenster des Kits, und Modellzeile, Kontext-Ausklapper und Layout sind damit echt.
  *    Die Modellzeile fragt einen LLM-Stub mit zwei Namen, nie einen echten Server.
  *
@@ -269,7 +269,7 @@ const SHOTS: Shot[] = [
         ].map((z, i) => (z.kind === 'user' ? { ...z, id: i + 1 } : { ...z, id: i + 1, reasoning: '', state: 'done' }));
         await cdp.evaluate(`
           const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
-          p.chatHistory = { entries: ${JSON.stringify(zeilen)}, nextId: ${zeilen.length + 1} };
+          p.setChatHistory({ entries: ${JSON.stringify(zeilen)}, nextId: ${zeilen.length + 1} });
           p.syncChatUI();
           await new Promise((r) => setTimeout(r, 900));
           const view = ${VIEW_EL};

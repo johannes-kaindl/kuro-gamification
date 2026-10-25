@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two side panels no longer swap their chats.** With two Kuro panels open (the tab's "Split right"), switching the chat on or off in the settings rebuilt both panels from the history of the panel that spoke last, and the other panel lost its own round. Each panel now keeps its own conversation through that rebuild; a panel opened later still starts from the latest history.
+
 ## [1.16.0] — 2026-10-24
 
 ### Added

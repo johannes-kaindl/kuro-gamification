@@ -109,6 +109,7 @@ const PUNKTE = [
   'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
   'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
   'modellzeile/gesperrt-waehrend-des-laufs',
+  'blaetter/eigener-verlauf-nach-chat-schalter',
   'kontext/zeile-folgt-der-notiz',
   'manager/einstellungen-zeigen-den-manager-abschnitt',
   'manager/lauf-nutzt-den-manager-endpunkt',
@@ -249,14 +250,14 @@ async function chatFrage(cdp: Cdp, frage: string): Promise<boolean> {
   return chatWarteAufEnde(cdp);
 }
 
-/** Einen Verlauf als Daten setzen (chat-history ist reines JSON) und die Ansicht neu bauen: das Fenster zeichnet ihn über seinen Produktionsweg
+/** Einen Verlauf als Daten setzen (chat-history ist reines JSON; `setChatHistory`, weil jedes Blatt sonst seinen eigenen behält) und die Ansicht neu bauen: das Fenster zeichnet ihn über seinen Produktionsweg
  *  (`initial`), danach steht der Chat-Tab vorn. Einträge: `{ nutzer: "…" }` oder `{ antwort: "…" }`. */
 async function setzeVerlauf(cdp: Cdp, zeilen: Array<{ nutzer: string } | { antwort: string }>): Promise<void> {
   const entries = zeilen.map((z, i) => 'nutzer' in z
     ? { kind: 'user', id: i + 1, text: z.nutzer }
     : { kind: 'assistant', id: i + 1, text: z.antwort, reasoning: '', state: 'done' });
   await cdp.evaluate(`
-    ${PLUGIN_EXPR}.chatHistory = { entries: ${JSON.stringify(entries)}, nextId: ${entries.length + 1} };
+    ${PLUGIN_EXPR}.setChatHistory({ entries: ${JSON.stringify(entries)}, nextId: ${entries.length + 1} });
     ${PLUGIN_EXPR}.syncChatUI();
     await new Promise((r) => setTimeout(r, 700));
     return true;
@@ -825,6 +826,87 @@ async function sektionFenster(cdp: Cdp): Promise<void> {
       await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]).catch(() => undefined);
     }
     if (stub) await stub.stop().catch(() => undefined);
+  }
+}
+
+/* ------------------- 9c · Zwei Blätter, je ein Chat (Welle 27: Entscheidung Johannes 2026-10-25, Variante B) */
+
+/** Gemessen in Welle 27 (Pin 0.67.1): zwei `kuro-status-view`-Blätter (`workspace.duplicateLeaf`), Frage in A, Frage in B, dann den Chat-Schalter
+ *  aus- und wieder einschalten (`syncChatUI()` baut jede Ansicht neu): B zeigte danach den Verlauf von A, die eigene Runde war weg. Jedes Blatt führt
+ *  sein eigenes Gespräch; der Neubau nimmt den Stand des Blatts, nicht `plugin.chatHistory` (der Verlauf des zuletzt schreibenden). */
+async function sektionBlaetter(cdp: Cdp): Promise<void> {
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  const BLATT = (i: number): string => `app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[${i}]?.view.containerEl`;
+  const runden = (i: number): Promise<string[]> => cdp.evaluate<string[]>(`
+    const c = ${BLATT(i)};
+    return c ? Array.from(c.querySelectorAll(".okit-chat-turn")).map((t) => (t.classList.contains("is-user") ? "U:" : "A:") + t.textContent.trim().replace(/\\s+/g, " ").slice(0, 30)) : [];
+  `);
+  const frageIn = async (i: number, text: string): Promise<boolean> => {
+    const ok = await cdp.evaluate<boolean>(`
+      const c = ${BLATT(i)}; const input = c?.querySelector(".okit-chat-input"); const send = c?.querySelector(".okit-chat-send");
+      if (!input || !send) return false;
+      input.value = ${JSON.stringify(text)}; input.dispatchEvent(new Event("input", { bubbles: true })); send.click(); return true;
+    `);
+    if (!ok) return false;
+    const fertig = await pollUntil<boolean>(cdp, `const s = ${BLATT(i)}?.querySelector(".okit-chat-send"); return s && s.textContent === "Send" ? true : null;`, 15_000, 150).catch(() => null);
+    await new Promise<void>((r) => { setTimeout(r, 500); });
+    return fertig === true;
+  };
+  const chatTabIn = (): Promise<unknown> => cdp.evaluate(`
+    for (const l of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) { const tabs = l.view.containerEl.querySelectorAll(".okit-hub-tab"); if (tabs[1]) tabs[1].click(); }
+    await new Promise((r) => setTimeout(r, 400)); return true;
+  `);
+  const schalter = (an: boolean): Promise<boolean> => cdp.evaluate<boolean>(`
+    if (!app.setting) return false;
+    await app.setting.open(); await app.setting.openTabById(${JSON.stringify(PLUGIN_ID)});
+    await new Promise((r) => setTimeout(r, 500));
+    const tab = app.setting.activeTab;
+    if (!tab || typeof tab.setControlValue !== "function") return false;
+    await tab.setControlValue("enableChat", ${String(an)});
+    await new Promise((r) => setTimeout(r, 800));
+    app.setting.close();
+    return true;
+  `);
+  const NAME = 'blaetter/eigener-verlauf-nach-chat-schalter';
+  try {
+    await removeFakeManager(cdp);
+    stub = await startLlmStub({ models: ['modell-a'], antwort: (a) => ({ text: `echo: ${echoText(a.json)}` }) });
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: 'modell-a' }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await setSetting(cdp, 'enableChat', true);
+    await cdp.evaluate(`${PLUGIN_EXPR}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await chatNeu(cdp);
+    await cdp.evaluate(`
+      const l = app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})[0];
+      await app.workspace.duplicateLeaf(l, "split", "vertical");
+      await new Promise((r) => setTimeout(r, 1000)); return true;
+    `);
+    await chatTabIn();
+    const zwei = await cdp.evaluate<number>(`return app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)}).length;`);
+    if (zwei !== 2) { unmeasured(NAME, `nach duplicateLeaf stehen ${zwei} Blätter im Arbeitsbereich, nicht zwei`); return; }
+    const a1 = await frageIn(0, 'Frage-A1');
+    const b1 = await frageIn(1, 'Frage-B1');
+    if (!a1 || !b1) { unmeasured(NAME, `Frage in A ${String(a1)}, in B ${String(b1)}: die Antwort kam nicht zu Ende`); return; }
+    const vorher = { a: await runden(0), b: await runden(1) };
+    const aus = await schalter(false);
+    const an = await schalter(true);
+    await chatTabIn();
+    if (!aus || !an) { unmeasured(NAME, 'der Chat-Schalter liess sich nicht über die Einstellungen umlegen'); return; }
+    const nachher = { a: await runden(0), b: await runden(1) };
+    const hat = (r: string[], t: string): boolean => r.some((x) => x.includes(t));
+    // Nicht vakuum: vor dem Umlegen muss jedes Blatt seine eigene Runde tragen, sonst misst „danach“ nichts.
+    const vorbedingung = hat(vorher.a, 'Frage-A1') && hat(vorher.b, 'Frage-B1') && !hat(vorher.a, 'Frage-B1') && !hat(vorher.b, 'Frage-A1');
+    if (!vorbedingung) { unmeasured(NAME, `schon vor dem Umlegen stimmen die Blätter nicht (A ${JSON.stringify(vorher.a)}, B ${JSON.stringify(vorher.b)})`); return; }
+    record(
+      NAME,
+      hat(nachher.a, 'Frage-A1') && !hat(nachher.a, 'Frage-B1') && hat(nachher.b, 'Frage-B1') && !hat(nachher.b, 'Frage-A1'),
+      `nach Schalter aus und an: A ${JSON.stringify(nachher.a)} · B ${JSON.stringify(nachher.b)} (vorher A ${vorher.a.length} Zeilen, B ${vorher.b.length})`,
+    );
+  } finally {
+    await stub?.stop();
+    await rebuildSidebar(cdp).catch(() => undefined);
   }
 }
 
@@ -2111,6 +2193,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 9b · Chat-Fenster und Modellzeile');
     await sektionFenster(cdp);
+    console.log('');
+    console.log('── 9c · Zwei Blätter, je ein Chat');
+    await sektionBlaetter(cdp);
     console.log('');
     console.log('── 10 · Kontextzeile folgt der Tagesnotiz');
     await sektionKontextSync(cdp);

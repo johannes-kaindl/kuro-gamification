@@ -42,6 +42,7 @@ den zuletzt geladenen Stand und meldet ihn als Ergebnis für den gerade gebauten
 | 6 · Sprache | Platzhalter englisch · kein Text aus der deutschen Tabelle im Chat-Panel | 12 |
 | 7 · Destruktive Knöpfe | destruktiv markierte Knöpfe vorhanden · farblich abgesetzt (computed style, nicht Klasse) | 13 |
 | 9b · Chat-Fenster und Modellzeile | Modellzeile (Dropdown aus den Modellen des Endpunkts, Wechsel erreicht die nächste Anfrage, Sperre im Lauf) · Escape bricht ab · Fehlerzeile mit Begründung des Servers bei HTTP-Fehler · „merk dir“ geht nicht ans Modell · Linkschutz (**bekannter Befund, rot**, s. u.) | — |
+| 9c · Zwei Blätter, je ein Chat | zwei Blätter (`workspace.duplicateLeaf`), Frage in A, Frage in B, Chat-Schalter in den Einstellungen aus und an: jedes Blatt behält seine eigene Runde (Welle 27, Variante B) | — (neu in Welle 27) |
 
 **Bewusst nicht automatisiert** — steht im Protokoll als `übersprungen` (der Ton) bzw. `nichts gemessen` (ohne geladenes Modell), damit die Lücke
 nicht wie Abdeckung aussieht:

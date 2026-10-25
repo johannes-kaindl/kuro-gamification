@@ -147,6 +147,84 @@ describe('KuroSidebarView tabs (Kit-Hub)', () => {
     expect((panel as any).deps.initial).toBe(plugin.chatHistory);
   });
 
+  describe('two leaves, one chat each (syncChatUI rebuilds every view from its own state)', () => {
+    // Gemessen wird, WELCHER Verlauf dem Panel beim Neubau mitgegeben wird (Identität), nicht sein Inhalt: das Fake-DOM
+    // rendert keine Einträge. Jeder Aufruf liefert einen eigenen Verlauf; die Marke steht in `nextId`.
+    let marke = 100;
+    const round = (_id: number, _text: string) => ({ entries: [] as never[], nextId: ++marke });
+    const initialOf = (view: KuroSidebarView) => (view as any).chatPanel.deps.initial;
+    /** Was das Kit-Fenster beim Sprechen tut: `onChange` des Panels meldet den neuen Verlauf. */
+    const say = (view: KuroSidebarView, h: unknown) => (view as any).chatPanel.deps.onChange(h);
+
+    it('keeps the round of each leaf when both are rebuilt (measured loss: B showed the history of A)', async () => {
+      const plugin = makePlugin(true);
+      const a = new KuroSidebarView({} as never, plugin as never);
+      const b = new KuroSidebarView({} as never, plugin as never);
+      await a.onOpen();
+      await b.onOpen();
+      const histA = round(1, 'Frage-A1');
+      const histB = round(1, 'Frage-B1');
+      say(a, histA);
+      say(b, histB);
+      // `plugin.chatHistory` hält nur den Verlauf des zuletzt schreibenden Blatts.
+      expect(plugin.chatHistory).toBe(histB);
+      await a.onOpen();
+      await b.onOpen();
+      expect(initialOf(a)).toBe(histA);
+      expect(initialOf(b)).toBe(histB);
+    });
+
+    it('keeps the round of a leaf across the chat switch (off, then on)', async () => {
+      const plugin = makePlugin(true);
+      const a = new KuroSidebarView({} as never, plugin as never);
+      const b = new KuroSidebarView({} as never, plugin as never);
+      await a.onOpen();
+      await b.onOpen();
+      const histB = round(1, 'Frage-B1');
+      say(b, histB);
+      say(a, round(1, 'Frage-A1'));
+      plugin.data.settings.enableChat = false;
+      await a.onOpen();
+      await b.onOpen();
+      plugin.data.settings.enableChat = true;
+      await a.onOpen();
+      await b.onOpen();
+      expect(initialOf(b)).toBe(histB);
+    });
+
+    it('lets a leaf that never spoke keep the state it started with', async () => {
+      const plugin = makePlugin(true);
+      const a = new KuroSidebarView({} as never, plugin as never);
+      const b = new KuroSidebarView({} as never, plugin as never);
+      await a.onOpen();
+      await b.onOpen();
+      say(a, round(1, 'Frage-A1'));
+      await b.onOpen();
+      expect(initialOf(b)).toBe(EMPTY_CHAT);
+    });
+
+    it('starts a new leaf from the history the plugin holds', async () => {
+      const plugin = makePlugin(true);
+      const a = new KuroSidebarView({} as never, plugin as never);
+      await a.onOpen();
+      say(a, round(1, 'Frage-A1'));
+      const later = new KuroSidebarView({} as never, plugin as never);
+      await later.onOpen();
+      expect(initialOf(later)).toBe(plugin.chatHistory);
+    });
+
+    it('adoptHistory replaces the own state, so a history set from outside shows after the next rebuild', async () => {
+      const plugin = makePlugin(true);
+      const a = new KuroSidebarView({} as never, plugin as never);
+      await a.onOpen();
+      say(a, round(1, 'Frage-A1'));
+      const fremd = round(1, 'von aussen');
+      a.adoptHistory(fremd);
+      await a.onOpen();
+      expect(initialOf(a)).toBe(fremd);
+    });
+  });
+
   it('clears everything on close and destroys the chat panel once', async () => {
     const view = await openView(true);
     const destroy = jest.spyOn((view as any).chatPanel, 'destroy');

@@ -15,6 +15,7 @@ import type KuroPlugin from '../main';
 import { KuroStatusRenderer } from './KuroStatusRenderer';
 import { KuroChatPanel } from './KuroChatPanel';
 import { buildDailyExtract } from '../llm/kuroContext';
+import type { ChatHistory } from '../vendor/kit/chat-history';
 import { buildHubInto, type HubController, type HubPanel } from '../vendor/kit-obsidian/hub';
 import { t } from '../i18n';
 import type { Lang } from '../types';
@@ -31,6 +32,10 @@ export class KuroSidebarView extends ItemView {
 
   private hub: HubController<KuroTab> | null = null;
   private chatPanel: KuroChatPanel | null = null;
+  /** Der Verlauf DIESES Blatts. `syncChatUI()` baut jede Ansicht neu (`onOpen()`), und jedes Blatt führt sein eigenes Gespräch
+   *  (Entscheidung Johannes 2026-10-25): der Neubau nimmt diesen Stand, nicht `plugin.chatHistory`, das nur den Verlauf des zuletzt
+   *  schreibenden Blatts hält. `null`, bis das Blatt zum ersten Mal baut: dann gilt der Startstand des Plugins. */
+  private ownHistory: ChatHistory | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: KuroPlugin) {
     super(leaf);
@@ -96,11 +101,13 @@ export class KuroSidebarView extends ItemView {
       mount: (el) => {
         this.chatBodyEl = el.createDiv({ cls: 'kuro-view-body kuro-chat-body' });
         const plugin = this.plugin;
+        // Das erste Mal baut das Blatt aus dem Startstand des Plugins und merkt ihn sich als seinen eigenen.
+        this.ownHistory ??= plugin.chatHistory;
         this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, {
           app: this.app,
           llm: plugin.llm,
-          initial: plugin.chatHistory,
-          onChange: (h) => { plugin.chatHistory = h; },
+          initial: this.ownHistory,
+          onChange: (h) => { this.ownHistory = h; plugin.chatHistory = h; },
           send: (messages, h) => plugin.sendChat(messages, h),
           handleCommand: (text) => plugin.handleChatCommand(text),
           contextInfo: () => buildDailyExtract(plugin.lastDailyText, plugin.data.settings),
@@ -125,6 +132,11 @@ export class KuroSidebarView extends ItemView {
     this.statusBodyEl = null;
     this.chatBodyEl = null;
     this.chatPanel = null;
+  }
+
+  /** Einen von außen gesetzten Verlauf übernehmen (Plugin: `setChatHistory`); der nächste Bau zeigt ihn. */
+  adoptHistory(history: ChatHistory): void {
+    this.ownHistory = history;
   }
 
   /** Chat-Fenster an den Stand von Endpunkt und Modell anpassen (Einrichtungs-Hinweis ↔ Chat, Modellzeile). */

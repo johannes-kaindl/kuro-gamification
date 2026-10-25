@@ -52,3 +52,21 @@ describe('KuroPlugin.refreshStatus — Chat-Kontext', () => {
     expect(calls.chat).toBe(0);
   });
 });
+
+describe('KuroPlugin.setChatHistory — ein Verlauf von außen', () => {
+  it('setzt den Startstand und lässt jedes offene Blatt ihn übernehmen', async () => {
+    const adopted: unknown[] = [];
+    const views = [0, 1].map(() => {
+      const v = Object.create(KuroSidebarView.prototype) as KuroSidebarView;
+      v.adoptHistory = (h) => { adopted.push(h); };
+      return { view: v };
+    });
+    const plugin: any = new (KuroPlugin as any)();
+    plugin.app = makeFakeApp(views);
+    await plugin.onload();
+    const verlauf = { entries: [], nextId: 7 };
+    plugin.setChatHistory(verlauf);
+    expect(plugin.chatHistory).toBe(verlauf);
+    expect(adopted).toEqual([verlauf, verlauf]);
+  });
+});

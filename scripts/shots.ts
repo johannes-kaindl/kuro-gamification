@@ -259,11 +259,11 @@ const SHOTS: Shot[] = [
         if (!(await sidebarBereit(cdp))) return null;
         const zeilen = [
           { kind: 'user', text: 'I have three things left today and no idea where to start.' },
-          { kind: 'assistant', text: "Then don't pick the biggest one. Take the task you could finish in ten minutes and let the panel show you the progress — momentum first, order later.\n\nWhich of the three is the smallest?" },
+          { kind: 'assistant', text: "Then don't pick the biggest one. Take the one you could finish in ten minutes. Which of the three is the smallest?" },
           { kind: 'user', text: 'Booking the venue, probably.' },
           { kind: 'assistant', text: 'Start there. The other two are still there afterwards, and you will have moved.' },
           { kind: 'user', text: 'Done. Booked it.' },
-          { kind: 'assistant', text: 'Good. That is one of three, and it was the one you were avoiding.\n\nThe landing page copy is next: open it, write the first sentence, and stop there if you want to. Starting counts.' },
+          { kind: 'assistant', text: 'Good. That is one of three, and it was the one you were avoiding. The landing page copy is next: write the first sentence.' },
           { kind: 'user', text: 'Okay, first sentence only.' },
           { kind: 'assistant', text: 'First sentence only. I will be here when you are back.' },
         ].map((z, i) => (z.kind === 'user' ? { ...z, id: i + 1 } : { ...z, id: i + 1, reasoning: '', state: 'done' }));
@@ -287,6 +287,14 @@ const SHOTS: Shot[] = [
           8000,
         );
         if (!da) return null;
+        // Das Gespräch beginnt an einer Nachrichtengrenze: ein angeschnittener Name am oberen Rand sähe im Store-Bild wie ein Fehler aus (Master, Welle 27).
+        // Die Texte oben sind so gekürzt, dass der Verlauf in den Ausschnitt passt; läuft er über (Schrift, Breite, ein Kit-Update), gibt es kein Bild statt eines
+        // angeschnittenen.
+        const passt = await cdp.evaluate<{ ueberlauf: number }>(`
+          const log = ${VIEW_EL}?.querySelector(".okit-chat-log");
+          return { ueberlauf: log ? log.scrollHeight - log.clientHeight : 9999 };
+        `);
+        if (passt.ueberlauf > 1) return null;
         // Das ganze Fenster, nicht nur die Leiste: der Ausschnitt allein kam auf H/B 2.7 und sprengte die `feature`-Grenze von 1.6 — und ein
         // hochkantiger Streifen lässt offen, wo der Chat im Fenster sitzt. Die Notiz daneben erklärt das Plugin besser.
         await sidebarBox(cdp);

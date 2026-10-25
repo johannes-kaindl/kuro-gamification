@@ -55,7 +55,7 @@ Level, Gesamt-XP, Streak und Tagesstand im Bild hat Kuro daraus selbst ausgerech
 Wert im Treiber ist gesetzt. Feste Datumsangaben wären am Tag nach dem Commit eine
 abgerissene Streak — das Bild dokumentierte dann den Aufnahmetag statt das Plugin.
 
-**2. Der Chat-Verlauf wird gesetzt, gerendert wird echt.** Die acht Nachrichten in `chat.png` stehen im Rezept als `chat-history`-Daten. Ein Modell liefert bei jedem Lauf anderen Text, und zwei Aufnahmen sollen dasselbe Bild ergeben. Gesetzt sind nur die Nachrichten (`plugin.chatHistory`, danach `syncChatUI()`) — der Weg dorthin ist der Produktionspfad (das Kit-Fenster bekommt sie als `initial`), und Modellzeile, Kontext-Ausklapper und Layout im Bild sind damit echt.
+**2. Der Chat-Verlauf wird gesetzt, gerendert wird echt.** Die acht Nachrichten in `chat.png` stehen im Rezept als `chat-history`-Daten. Ein Modell liefert bei jedem Lauf anderen Text, und zwei Aufnahmen sollen dasselbe Bild ergeben. Gesetzt sind nur die Nachrichten (`plugin.chatHistory`, danach `syncChatUI()`) — der Weg dorthin ist der Produktionspfad (das Kit-Fenster bekommt sie als `initial`), und Modellzeile, Kontext-Ausklapper und Layout im Bild sind damit echt. Das Gespräch ist so lang, dass es ohne Rollen in den Ausschnitt passt und mit einer Nachrichtengrenze beginnt (ein angeschnittener Name am oberen Rand sähe im Store-Bild wie ein Fehler aus); das Rezept prüft den Überlauf des Verlaufs und liefert bei einem Überlauf kein Bild statt eines angeschnittenen.
 
 ## Was der Treiber am Wirt ändert (und warum)
 

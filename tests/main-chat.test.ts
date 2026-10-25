@@ -147,7 +147,7 @@ describe('Fehlerzeilen im Fenster (Wortlaut des Kits)', () => {
     expect(w.host.textContent).toContain(part);
   });
 
-  it('Fristfehler nennen die Sekunden aus dem Kit-Detail statt einer festen Zahl', async () => {
+  it('Fristfehler nennen die Frist in ganzen Sekunden statt einer festen Zahl', async () => {
     const p = await makePlugin();
     p.logger = { error: () => {}, info: () => {} };
     p.data.settings.chatEndpoints = [{ url: 'http://x' }];
@@ -160,8 +160,8 @@ describe('Fehlerzeilen im Fenster (Wortlaut des Kits)', () => {
     useTransport(p, silent, { timeouts: { firstChunkMs: 1500 } });
     const w = window_(p);
     await w.panel.submit('Frage');
-    // Das Fenster nennt die Frist aus dem Detail des Kit-Clients („no data for 1.5s“) und rundet sie nicht mehr auf ganze Sekunden.
-    expect(w.host.textContent).toContain('1.5 s');
+    // Seit Kit 0.70.0 rundet das Fenster die Frist auf ganze Sekunden (mindestens 1); ein Detail steht bei einem Fristfehler nicht mehr dabei.
+    expect(w.host.textContent).toContain('for 2 s');
     expect(w.host.textContent).not.toContain('600');
   });
 

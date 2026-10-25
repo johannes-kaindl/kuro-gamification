@@ -1,4 +1,4 @@
-// vendored from obsidian-kit@0.67.1, src/obsidian/moment.ts — do not hand-edit; re-vendor via tools/sync-kit.sh
+// vendored from obsidian-kit@0.70.0, src/obsidian/moment.ts — do not hand-edit; re-vendor via tools/sync-kit.sh
 import { moment } from "obsidian";
 
 /** Das, was an einem `moment`-Wert gebraucht wird. Bewusst klein: wer mehr braucht (`add`, `diff` …), erweitert diese Schnittstelle hier,

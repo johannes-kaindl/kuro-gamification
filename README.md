@@ -185,7 +185,7 @@ The snippet styles `pre.kuro-status`, `pre.kuro-loot`, and the `[!kuro]`, `[!lev
 
 <img src="https://raw.githubusercontent.com/johannes-kaindl/kuro-gamification/main/docs/images/chat.png" width="600" alt="Companion chat in the Kuro sidebar">
 
-<sub>The companion chat in the sidebar: the model row on top, the context disclosure showing exactly what gets sent.</sub>
+<sub>The companion chat in the sidebar: the context disclosure showing exactly what gets sent on top, the model row with New, past chats and reload under the input.</sub>
 
 Kuro can talk to you: ask what to start with, say you're stuck, or think out loud about the
 day. It is **off by default** — while `Enable chat` is off, the plugin makes no network
@@ -198,7 +198,9 @@ preset provider and no cloud default; it is meant for a local server such as
 
 If you have the **LLM Endpoint Manager** plugin installed, the chat takes its endpoints and model from there instead, and the settings show the manager's endpoint choice in place of the list. An endpoint of the manager that uses the **Claude API** works too; no extra setting is needed.
 
-**Using the chat.** The input is a multi-line field: <kbd>Enter</kbd> sends, <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line, <kbd>Esc</kbd> stops a running answer. **New** clears the conversation and stops a running answer; every question and answer has a copy button, and a failed answer can be sent again. The **model row** above the conversation shows which model the chat uses and switches it: the models of the active endpoint, *Automatic* (the endpoint's default model), a reload button and, with the LLM Endpoint Manager, *Other endpoint …*, which opens the manager's settings. The row is locked while an answer is running. Each question carries the name *You* and each answer *Kuro*. Links in answers are checked: links that could run a script or open a file never work, and `obsidian://` links and images from your vault stay off until you allow them with the two switches *Allow obsidian:// links* and *Show local images from the vault* under **Settings → 💬 Kuro chat**.
+**Using the chat.** The input is a multi-line field: <kbd>Enter</kbd> sends, <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line, <kbd>Esc</kbd> stops a running answer. Under the input, one line carries **New** (an icon; it is locked while the conversation is empty or an answer is running), **Past chats** (see below), the **model row** and, on a phone with the keyboard open, it moves next to the input to leave room for the answer. The model row shows which model the chat uses and switches it: the models of the active endpoint, *Automatic* (the endpoint's default model), a reload button and, with the LLM Endpoint Manager, *Other endpoint …*, which opens the manager's settings; hover the dropdown for the full model name. The row is locked while an answer is running. Every question and answer has a copy button, and a failed answer can be sent again. Each question carries the name *You* and each answer *Kuro*. On a phone, New, Past chats and Reload are 44 × 44 px touch targets. Links in answers are checked: links that could run a script or open a file never work, and `obsidian://` links stay off until you allow them with the switch *Allow obsidian:// links* under **Settings → 💬 Kuro chat**. Images from your vault are shown as text in the chat.
+
+**Past chats (optional, off by default).** By default a conversation is gone when you close Obsidian. Under **Settings → Past chats** you set a folder in your vault and how many chats to keep; with a number above 0, each finished round is saved as one `.json` file per conversation in that folder, **New** saves and clears without asking (with *0* it asks first, because nothing is saved), and the history button next to New opens the list: load a conversation, save it as a note, or delete it for good. The commands *Start new chat* and *Open past chats…* work while the Chat tab is open. The files contain your questions and Kuro's answers as plain text, so they sync and back up with your vault.
 
 An API key you enter for a local endpoint is stored in **Obsidian's keychain**, not in the plugin's `data.json`. Before a question is sent, keys, tokens, `Bearer` headers and private-key blocks in your text are replaced by placeholders; the answer shows your original again. The chat waits up to 10 minutes for the first data (a model that is still loading), then up to 2 minutes of silence. Pictures, executable code blocks and HTML in an answer are shown as plain text, not rendered.
 
@@ -214,8 +216,8 @@ The default deliberately leaves journal prose out of it. Settings → 💬 Kuro 
 same preview behind a disclosure triangle — both render through the same function that
 builds the prompt, so the preview cannot drift from reality.
 
-**Notes (📌).** Kuro has no memory of past conversations by design — the history is not
-saved and is gone when Obsidian closes. What does persist is a short list of sentences you
+**Notes (📌).** Kuro has no memory of past conversations by design — unless you switch on Past chats, the history is not
+saved and is gone when Obsidian closes, and even a saved chat only reaches the model again if you load it yourself and keep writing. What does persist is a short list of sentences you
 ask it to remember: *"Don't remind me about streaks unprompted."* Add them by writing
 `remember: …` in the chat, or directly in Settings → 📌 Notes, where you can edit and delete
 them at any time. The list holds 20 entries; when it's full the add button is disabled

@@ -5,6 +5,23 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Added
+
+- **Past chats (optional, off by default).** Under Settings → Past chats you pick a folder in your vault and how many chats to keep. With a number above 0, each finished round is saved as one `.json` file per conversation, a history button next to New opens the list (load a conversation, save it as a note, delete it for good), and New saves and clears without asking. With 0 (the default) nothing is saved and New asks before it discards the conversation. A stored value that is not a number leaves the history off (obsidian-kit 0.73.0).
+- **Two commands for the chat:** "Start new chat" and "Open past chats…". They show up in the command palette only while the Chat tab is open.
+
+### Changed
+
+- **The chat row sits under the input.** The model row is one line without the visible label "Chat" and now stands under the conversation, next to the input; hover the dropdown for the full model name. New is an icon instead of the text button, and it is locked while the conversation is empty or an answer is running. The context line ("Kuro currently sees …") stays above the conversation (obsidian-kit 0.73.0, 0.74.0).
+- **More room for the answer on a phone.** Below 640 px window height, for example with the keyboard open, the input and Send share one line and New, past chats and the model row the next, so more of the answer stays visible (measured in the 390 × 508 emulation: 3.6 lines instead of 0.5). The status line shows on a phone only while an answer is running. New, past chats and Reload are 44 × 44 px touch targets (they were 30 × 26) (obsidian-kit 0.74.0).
+- **The question has a clearer border, and a blocked link looks like plain text.** A link that was cut (a `javascript:` link, an `obsidian://` link without the switch) has no colour, underline or arrow any more (obsidian-kit 0.72.0).
+- **A stored thinking level "off" behaves differently on some models.** For a model that cannot turn thinking off (gpt-oss) the request now carries the lowest level it has, `low`, instead of `minimal`. With the Claude API, "off" sends the model's own default level (more thinking, time and cost per answer until you lower the level), and Opus 4.6, Sonnet 4.6 and Opus 4.5 no longer receive `temperature`, `top_p` and `top_k` (code-kit 0.39.0 and 0.40.0).
+- **Updated building blocks:** obsidian-kit 0.74.0 and code-kit 0.40.0.
+
+### Removed
+
+- **The switch "Show local images from the vault" is gone.** It never had an effect: the chat window shows images from your vault as text, with the switch off and on. A stored value is dropped on load. "Allow obsidian:// links" stays.
+
 ## [1.17.0] — 2026-10-25
 
 ### Added

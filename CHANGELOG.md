@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.18.0] — 2026-11-01
+
 ### Added
 
 - **Past chats (optional, off by default).** Under Settings → Past chats you pick a folder in your vault and how many chats to keep. With a number above 0, each finished round is saved as one `.json` file per conversation, a history button next to New opens the list (load a conversation, save it as a note, delete it for good), and New saves and clears without asking. With 0 (the default) nothing is saved and New asks before it discards the conversation. A stored value that is not a number leaves the history off (obsidian-kit 0.73.0).

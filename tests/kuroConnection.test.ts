@@ -16,6 +16,8 @@ const MODEL_OF: Record<string, string> = {
   'qwen3.8': 'qwen3.8-27b', 'qwen3.6': 'qwen3.6-35b-a3b', gemma4: 'gemma-4-26b-a4b', 'gpt-oss': 'gpt-oss-20b',
 };
 
+/* gpt-oss kann das Denken nicht abschalten: seit code-kit 0.39.0 klemmt `resolveRequestParams` mit `model` im Aufruf ein gespeichertes `off`
+   auf die Stufenliste des Modells (`resolveThinkingLevel`, Entscheidung Johannes 2026-10-27), also `low` statt `minimal`. */
 const EXPECTED: Row[] = [
   ['qwen3.8', 'lmstudio', 'off', {'temperature':0.7,'top_p':0.8,'top_k':20,'min_p':0,'reasoning_effort':'none','max_tokens':1024}],
   ['qwen3.8', 'lmstudio', 'medium', {'temperature':0.7,'top_p':0.95,'top_k':20,'min_p':0,'reasoning_effort':'medium','max_tokens':2048}],
@@ -35,11 +37,11 @@ const EXPECTED: Row[] = [
   ['gemma4', 'openwebui', 'medium', {'temperature':0.7,'top_p':0.95,'top_k':64,'reasoning_effort':'medium','max_tokens':2048}],
   ['gemma4', 'unknown', 'off', {'temperature':0.7,'top_p':0.95,'reasoning_effort':'none','max_tokens':1024}],
   ['gemma4', 'unknown', 'medium', {'temperature':0.7,'top_p':0.95,'reasoning_effort':'medium','max_tokens':2048}],
-  ['gpt-oss', 'lmstudio', 'off', {'temperature':0.7,'top_p':1,'reasoning_effort':'minimal','max_tokens':1024}],
+  ['gpt-oss', 'lmstudio', 'off', {'temperature':0.7,'top_p':1,'reasoning_effort':'low','max_tokens':1024}],
   ['gpt-oss', 'lmstudio', 'medium', {'temperature':0.7,'top_p':1,'reasoning_effort':'medium','max_tokens':2048}],
-  ['gpt-oss', 'openwebui', 'off', {'temperature':0.7,'top_p':1,'reasoning_effort':'minimal','max_tokens':1024}],
+  ['gpt-oss', 'openwebui', 'off', {'temperature':0.7,'top_p':1,'reasoning_effort':'low','max_tokens':1024}],
   ['gpt-oss', 'openwebui', 'medium', {'temperature':0.7,'top_p':1,'reasoning_effort':'medium','max_tokens':2048}],
-  ['gpt-oss', 'unknown', 'off', {'temperature':0.7,'top_p':1,'reasoning_effort':'minimal','max_tokens':1024}],
+  ['gpt-oss', 'unknown', 'off', {'temperature':0.7,'top_p':1,'reasoning_effort':'low','max_tokens':1024}],
   ['gpt-oss', 'unknown', 'medium', {'temperature':0.7,'top_p':1,'reasoning_effort':'medium','max_tokens':2048}],
   [null, 'lmstudio', 'off', {'temperature':0.7,'reasoning_effort':'none','max_tokens':1024}],
   [null, 'lmstudio', 'medium', {'temperature':0.7,'reasoning_effort':'medium','max_tokens':1024}],

@@ -2,7 +2,7 @@
    Kuro Gamification — main plugin entrypoint.
    ========================================================== */
 import {
-  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice,
+  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice, normalizePath,
 } from 'obsidian';
 
 import {
@@ -38,6 +38,8 @@ import { splitChatMessages } from './llm/chatRequest';
 import { EMPTY_CHAT, type ChatHistory, type ChatModelMessage } from './vendor/kit/chat-history';
 import type { ChatSendHandlers, ChatSendResult } from './vendor/kit-obsidian/chat-window';
 import { kuroConnectionOptions } from './llm/kuroConnection';
+import { createChatArchive, type ChatArchive } from './vendor/kit-obsidian/chat-archive';
+import { clampChatKeep } from './vendor/kit-obsidian/chat-archive-settings';
 import { createLlmConnection, type LlmConnection } from './vendor/kit-obsidian/llm-connection';
 import { buildContext } from './llm/kuroContext';
 import { buildMessages, resolvePersona } from './llm/kuroPrompt';
@@ -61,6 +63,9 @@ export default class KuroPlugin extends Plugin {
   /** Die ganze LLM-Anbindung: Endpunkt-Quelle (Manager oder lokale Liste mit Schlüsselbund), Modellliste,
    *  Anfrage-Parameter, Client, Prüfung der Antwort und die Settings-Abschnitte (obsidian-kit 0.51.2). */
   public llm!: LlmConnection;
+  /** Der Verlauf vergangener Chats: eine `.json` je Gespräch im Vault-Ordner der Einstellung `chatFolder` (Getter, damit eine Änderung ohne
+   *  Neuaufbau wirkt). Alle Blätter schreiben in denselben Ordner, jedes Gespräch in seine eigene Datei. Aufbewahrung 0 (Vorgabe) = aus. */
+  public archive!: ChatArchive;
 
   private statusBarEl: HTMLElement | null = null;
   private debouncedRefresh!: () => void;
@@ -84,6 +89,22 @@ export default class KuroPlugin extends Plugin {
     }
 
     if (this.dataStore.lastLegacyModelMigrated) await this.dataStore.save(this.data);
+
+    // `clampChatKeep` liegt im Kit-Modul mit `obsidian`-Import und kann deshalb nicht in den DataStore. Ein Wert, der keine Zahl ist, wird die
+    // Vorgabe dieses Plugins (0, Verlauf aus), nicht die des Kits (50): ein kaputter Eintrag schaltet den Verlauf nie ein.
+    const st = this.data.settings;
+    st.chatKeep = typeof st.chatKeep === 'number' && Number.isFinite(st.chatKeep) ? clampChatKeep(st.chatKeep) : 0;
+    if (typeof st.chatFolder !== 'string') st.chatFolder = '';
+    this.archive = createChatArchive({
+      adapter: this.app.vault.adapter,
+      folder: () => this.data.settings.chatFolder,
+      defaultFolder: `${this.manifest.name}/Chats`,
+      keep: () => this.data.settings.chatKeep,
+      plugin: this.manifest.id,
+      configDir: this.app.vault.configDir,
+      normalizePath,
+      onError: (message) => { new Notice(message); },
+    });
 
     this.llm = createLlmConnection(kuroConnectionOptions({
       app: this.app,
@@ -358,6 +379,16 @@ export default class KuroPlugin extends Plugin {
    *  Fenster neu (Einrichtungs-Hinweis ↔ Chat), sonst zieht die Modellzeile nach. `models`: auch die Modell-Liste neu laden. */
   syncChat(opts: { models?: boolean } = {}): void {
     for (const view of this.chatViews()) view.refreshChat(opts);
+  }
+
+  /** Die Aufbewahrung des Verlaufs hat sich geändert (Einstellung): der Verlauf-Knopf jedes offenen Chat-Fensters folgt. */
+  syncChatArchive(): void {
+    for (const view of this.chatViews()) view.refreshChatArchive();
+  }
+
+  /** Die Ansicht, auf die „Start new chat“ und „Open past chats…“ wirken: die erste mit offenem Chat-Tab, sonst `null` (dann gibt es die Befehle nicht). */
+  activeChatView(): KuroSidebarView | null {
+    return this.chatViews().find((v) => v.chatTabOpen()) ?? null;
   }
 
   /**

@@ -203,8 +203,10 @@ export interface KuroSettings {
   chatPersonaOverride: string;
   /** Antworten dürfen `obsidian://`-Links tragen (Kit-Wächter kappt sie sonst). Off-by-default: ein Link kann Obsidian-Aktionen auslösen. */
   chatAllowObsidianLinks: boolean;
-  /** Antworten dürfen Bilder aus dem Vault zeigen. Entfernte Bilder bleiben immer gesperrt. */
-  chatAllowLocalImages: boolean;
+  /** Ordner des Verlaufs vergangener Chats (Vault-relativ). Leer = Vorgabe `<Plugin-Name>/Chats`. */
+  chatFolder: string;
+  /** Wie viele vergangene Chats der Verlauf behält. 0 = aus (Vorgabe dieses Plugins; die 50 des Kits gelten hier nicht). */
+  chatKeep: number;
 }
 
 export interface KuroPluginData {
@@ -343,7 +345,8 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   dailyNumberFields: '',
   chatPersonaOverride: '',
   chatAllowObsidianLinks: false,
-  chatAllowLocalImages: false,
+  chatFolder: '',
+  chatKeep: 0,
 };
 
 export const DEFAULT_PLUGIN_DATA: KuroPluginData = {

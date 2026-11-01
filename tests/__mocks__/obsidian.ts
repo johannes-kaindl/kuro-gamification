@@ -46,6 +46,19 @@ export class Modal {
   close() {}
 }
 
+/** `SuggestModal<T>` — das Kit-Chat-Fenster importiert den Verlaufs-Dialog (`chat-archive-dialog`), der davon erbt.
+ *  Ohne die Klasse bricht jeder Import von `KuroChatPanel` mit „Class extends value undefined“. */
+export class SuggestModal<T> extends Modal {
+  inputEl: any = makeFakeEl();
+  limit = 100;
+  emptyStateText = '';
+  setPlaceholder(_s: string): this { return this; }
+  setInstructions(_i: unknown): this { return this; }
+  getSuggestions(_q: string): T[] | Promise<T[]> { return []; }
+  renderSuggestion(_v: T, _el: any): void {}
+  onChooseSuggestion(_v: T, _e: unknown): void {}
+}
+
 export class Notice {
   /** Mitschrift aller gezeigten Notices — additiv, kein Bestandstest liest sie.
    *  Gebraucht von tests/vendor-kit.test.ts: der Kit-Clipboard-Vertrag ist genau
@@ -77,7 +90,7 @@ export class Setting {
 export class PluginSettingTab {
   app: any;
   containerEl: any = makeFakeEl();
-  constructor(_app: any, _plugin: any) {}
+  constructor(app: any, _plugin: any) { this.app = app; }
   display(): void {}
 }
 

@@ -140,7 +140,13 @@ describe('DataStore.merge — chat & notes', () => {
     expect(s.chatDailyContext).toBe('tasks');
     expect(s.chatPersonaOverride).toBe('');
     expect(s.chatAllowObsidianLinks).toBe(false);
-    expect(s.chatAllowLocalImages).toBe(false);
+    expect(s.chatFolder).toBe('');
+    expect(s.chatKeep).toBe(0);
+  });
+
+  it('verwirft den gestrichenen Schalter „Lokale Bilder anzeigen“ still (wirkte im Chat nie)', () => {
+    const merged = ds.merge({ settings: { ...DEFAULT_SETTINGS, chatAllowLocalImages: true } as never });
+    expect('chatAllowLocalImages' in merged.settings).toBe(false);
   });
 
   it('preserves user-overridden chat settings', () => {

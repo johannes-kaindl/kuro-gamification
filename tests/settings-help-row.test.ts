@@ -4,11 +4,12 @@
    ========================================================== */
 import { KuroSettingsTab } from '../src/settings/SettingsTab';
 import { DEFAULT_PLUGIN_DATA } from '../src/types';
+import { fakeApp } from './helpers/archive';
 
 function makeTab(lang: 'en' | 'de') {
   const data = JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA));
   data.settings.language = lang;
-  return new KuroSettingsTab({} as any, { app: {}, data, manifest: { version: '0.0.0' } } as any);
+  return new KuroSettingsTab(fakeApp as any, { app: fakeApp, data, manifest: { version: '0.0.0' } } as any);
 }
 
 /** Faengt Name, Beschreibung, Knopftext und die Klick-Handler der Zeile ab. */

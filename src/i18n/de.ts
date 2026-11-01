@@ -81,6 +81,8 @@ export const de: Record<string, string> = {
   /* Commands */
   'cmd.openStatus': 'Status-Sidebar öffnen',
   'cmd.refresh': 'Status neu berechnen',
+  'cmd.newChat': 'Neues Gespräch beginnen',
+  'cmd.pastChats': 'Vergangene Chats öffnen…',
   'cmd.redeem': 'Loot einlösen…',
   'cmd.showLore': 'Aktuelles Lore-Fragment zeigen',
   'cmd.adjustXp': 'XP manuell anpassen…',

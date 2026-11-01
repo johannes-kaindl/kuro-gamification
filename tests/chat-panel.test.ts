@@ -30,6 +30,8 @@ function setup(opts: {
   info?: () => DailyExtract;
   initial?: ChatHistory;
   lang?: 'en' | 'de';
+  /** Aufbewahrung des Verlaufs (Kit-Speicher); Vorgabe dieses Plugins: 0, aus. */
+  keep?: number;
 } = {}) {
   const flag = { ok: opts.endpoint ?? true };
   const send = jest.fn<ReturnType<Send>, Parameters<Send>>(opts.send ?? (async (_m, h) => { h.onToken('Hi'); return { ok: true, content: 'Antwort' }; }));
@@ -37,24 +39,34 @@ function setup(opts: {
   const setModel = jest.fn(async (_m: string) => {});
   const llm = { models, setModel, modelInUse: () => 'm1', source: () => ({ family: null, model: 'm1', sentModel: 'm1' }) };
   const history: { last: ChatHistory | null } = { last: null };
+  const keep = { current: opts.keep ?? 0 };
+  const archive = {
+    enabled: () => keep.current > 0,
+    save: jest.fn(async () => ({ name: 'x.json' })),
+    list: jest.fn(async () => ({ entries: [], unreadable: 0 })),
+    load: jest.fn(async () => null),
+    remove: jest.fn(async () => false),
+    exportNote: jest.fn(async () => null),
+  };
   const info = { current: opts.info ?? (() => extract()) };
   const deps: ChatPanelDeps = {
     app: { plugins: { plugins: {} } } as never,
     llm: llm as never,
+    archive: archive as never,
     initial: opts.initial ?? EMPTY_CHAT,
     onChange: (h) => { history.last = h; },
     send,
     handleCommand: opts.command ?? (() => false),
     contextInfo: () => info.current(),
     hasEndpoint: () => flag.ok,
-    linkOptions: () => ({ allowObsidianLinks: false, allowLocalImages: false }),
+    linkOptions: () => ({ allowObsidianLinks: false }),
     openSettings: jest.fn(),
     renderMarkdown: jest.fn(async (el: HTMLElement, md: string) => { el.setText(md); }),
   };
   const host = makeFakeEl();
   const panel = new KuroChatPanel(host as never, opts.lang ?? 'en', deps, { domGuard: false });
   panel.build();
-  return { panel, host, deps, flag, send, models, setModel, history, info };
+  return { panel, host, deps, flag, send, models, setModel, history, info, archive, keep };
 }
 
 const all = (host: any, sel: string): any[] => host.querySelectorAll(sel) as any[];
@@ -219,12 +231,31 @@ describe('KuroChatPanel (Kit-Fenster)', () => {
   });
 
   describe('Modellzeile', () => {
-    it('steht im Kopf des Fensters, mit dem Namen „Chat“, ohne Denk-Steuerung', () => {
+    it('steht im Composer (direktes Kind), heißt „Modell für Chat“, ohne sichtbare Beschriftung und ohne Denk-Steuerung', () => {
       const s = setup();
-      const header = all(s.host, '.okit-chat-header')[0];
-      expect(header.querySelectorAll('.okit-model-bar').length).toBe(1);
-      expect(header.querySelector('.okit-model-bar-label').textContent).toBe('Chat');
+      const bars = all(s.host, '.okit-model-bar');
+      expect(bars.length).toBe(1);
+      expect(bars[0].parentNode.hasClass('okit-chat-composer')).toBe(true);
+      expect(all(s.host, '.okit-model-bar-label').length).toBe(0);
+      expect(all(s.host, '.okit-model-bar-select')[0].getAttribute('aria-label')).toBe('Model for Chat');
       expect(all(s.host, '.okit-thinking-control').length).toBe(0);
+    });
+
+    it('steht nach mehrfachem Neuzeichnen von Kopf und Composer genau einmal im Composer', () => {
+      const s = setup();
+      s.flag.ok = false;
+      s.panel.refresh();
+      s.flag.ok = true;
+      s.panel.refresh();
+      s.flag.ok = false;
+      s.panel.refresh();
+      s.flag.ok = true;
+      s.panel.refresh();
+      const bars = all(s.host, '.okit-model-bar');
+      expect(bars.length).toBe(1);
+      expect(bars[0].parentNode.hasClass('okit-chat-composer')).toBe(true);
+      // Das Fake-DOM kennt keine Nachfahren-Selektoren: der Einschub ist über das Elternelement zu prüfen, nicht über einen Pfad.
+      expect(bars[0].parentNode.hasClass('okit-chat-composer-extra')).toBe(false);
     });
 
     it('ein Wechsel im Dropdown ruft setModel der Verbindung', async () => {
@@ -273,6 +304,13 @@ describe('KuroChatPanel (Kit-Fenster)', () => {
       expect(all(s.host, '.kuro-chat-context-body')[0].textContent).toContain('Steuer');
     });
 
+    it('die Kontextzeile steht im Kopf des Fensters, nicht im Composer', () => {
+      const s = setup();
+      const ctx = all(s.host, '.kuro-chat-context');
+      expect(ctx.length).toBe(1);
+      expect(ctx[0].parentNode.hasClass('okit-chat-header')).toBe(true);
+    });
+
     it('refreshContext() schreibt Zeile und Auszug neu, ohne das Fenster oder die Zeile neu zu bauen', () => {
       const s = setup();
       const details = all(s.host, '.kuro-chat-context')[0];
@@ -288,6 +326,52 @@ describe('KuroChatPanel (Kit-Fenster)', () => {
       const s = setup({ endpoint: false });
       expect(() => { s.panel.refreshContext(); }).not.toThrow();
       expect(all(s.host, '.kuro-chat-context').length).toBe(0);
+    });
+  });
+
+  describe('Verlauf vergangener Chats (Kit-Option archive)', () => {
+    const archiveBtn = (host: any): any => all(host, '.okit-chat-archive')[0];
+
+    it('ist als Vorgabe aus: der Verlauf-Knopf ist da, aber verborgen, und Neu legt nichts ab', async () => {
+      const s = setup();
+      expect(archiveBtn(s.host).hasClass('okit-chat-hidden')).toBe(true);
+      await s.panel.submit('Frage');
+      expect(s.archive.save).not.toHaveBeenCalled();
+    });
+
+    it('mit Aufbewahrung über 0 zeigt refreshArchive() den Knopf, ohne das Fenster neu zu bauen', () => {
+      const s = setup();
+      const input = all(s.host, '.okit-chat-input')[0];
+      s.keep.current = 20;
+      s.panel.refreshArchive();
+      expect(archiveBtn(s.host).hasClass('okit-chat-hidden')).toBe(false);
+      expect(all(s.host, '.okit-chat-input')[0]).toBe(input);
+    });
+
+    it('mit Verlauf legt jede abgeschlossene Runde das Gespräch ab', async () => {
+      const s = setup({ keep: 20 });
+      await s.panel.submit('Frage');
+      await waitFor(() => { expect(s.archive.save).toHaveBeenCalled(); });
+    });
+
+    it('newChat() leert das Gespräch wie der Neu-Knopf und lässt einen laufenden Lauf in Ruhe', async () => {
+      let release: (r: ChatSendResult) => void = () => {};
+      const s = setup({ send: () => new Promise((resolve) => { release = resolve; }) });
+      const pending = s.panel.submit('Frage');
+      await waitFor(() => { expect(s.send).toHaveBeenCalled(); });
+      s.panel.newChat();
+      expect(s.panel.history()?.entries.length).toBeGreaterThan(0);
+      release({ ok: true, content: 'fertig' });
+      await pending;
+      expect(s.panel.history()?.entries.length).toBe(2);
+      s.panel.newChat();
+      expect(s.panel.history()?.entries.length).toBe(0);
+    });
+
+    it('openArchive() ohne Verlauf tut nichts (kein Dialog, kein Wurf)', () => {
+      const s = setup();
+      expect(() => { s.panel.openArchive(); }).not.toThrow();
+      expect(s.archive.list).not.toHaveBeenCalled();
     });
   });
 

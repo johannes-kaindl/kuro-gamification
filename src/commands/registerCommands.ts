@@ -21,6 +21,29 @@ export function registerCommands(plugin: KuroPlugin): void {
     callback: () => plugin.activateSidebar(),
   });
 
+  // UI-STANDARD § 11: Verb plus Gegenstand, Auslassungspunkte hinter dem Dialog; beide nur bei offenem Chat-Tab (`checkCallback`).
+  plugin.addCommand({
+    id: 'new-chat',
+    name: t('cmd.newChat', lang()),
+    checkCallback: (checking) => {
+      const view = plugin.activeChatView();
+      if (view === null) return false;
+      if (!checking) view.newChat();
+      return true;
+    },
+  });
+
+  plugin.addCommand({
+    id: 'open-past-chats',
+    name: t('cmd.pastChats', lang()),
+    checkCallback: (checking) => {
+      const view = plugin.activeChatView();
+      if (view === null) return false;
+      if (!checking) view.openArchive();
+      return true;
+    },
+  });
+
   plugin.addCommand({
     id: 'refresh',
     name: t('cmd.refresh', lang()),

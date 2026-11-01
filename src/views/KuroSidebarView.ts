@@ -106,16 +106,14 @@ export class KuroSidebarView extends ItemView {
         this.chatPanel = new KuroChatPanel(this.chatBodyEl, lang, {
           app: this.app,
           llm: plugin.llm,
+          archive: plugin.archive,
           initial: this.ownHistory,
           onChange: (h) => { this.ownHistory = h; plugin.chatHistory = h; },
           send: (messages, h) => plugin.sendChat(messages, h),
           handleCommand: (text) => plugin.handleChatCommand(text),
           contextInfo: () => buildDailyExtract(plugin.lastDailyText, plugin.data.settings),
           hasEndpoint: () => plugin.hasChatEndpointSource(),
-          linkOptions: () => ({
-            allowObsidianLinks: plugin.data.settings.chatAllowObsidianLinks,
-            allowLocalImages: plugin.data.settings.chatAllowLocalImages,
-          }),
+          linkOptions: () => ({ allowObsidianLinks: plugin.data.settings.chatAllowObsidianLinks }),
           openSettings: () => plugin.openOwnSettings(),
           // Die View ist die Component, an der die gerenderten Blöcke hängen: schließt sie, räumt
           // Obsidian deren Listener und eingebettete Kinder mit ab. Neutralisiert wird im Kit-Fenster.
@@ -146,6 +144,26 @@ export class KuroSidebarView extends ItemView {
   /** Chat-Fenster an den Stand von Endpunkt und Modell anpassen (Einrichtungs-Hinweis ↔ Chat, Modellzeile). */
   refreshChat(opts: { models?: boolean } = {}): void {
     this.chatPanel?.refresh(opts);
+  }
+
+  /** Offen und sichtbar: das Chat-Fenster steht da und der Chat-Tab ist der aktive (nur dann wirken die Befehle des Chats). */
+  chatTabOpen(): boolean {
+    return this.chatPanel !== null && this.activeTab === 'chat';
+  }
+
+  /** Befehl „Start new chat“. */
+  newChat(): void {
+    this.chatPanel?.newChat();
+  }
+
+  /** Befehl „Open past chats…“. */
+  openArchive(): void {
+    this.chatPanel?.openArchive();
+  }
+
+  /** Die Aufbewahrung des Verlaufs hat sich geändert: der Verlauf-Knopf folgt. */
+  refreshChatArchive(): void {
+    this.chatPanel?.refreshArchive();
   }
 
   /** Kontextzeile nachziehen, nachdem `plugin.lastDailyText` neu gelesen wurde. */

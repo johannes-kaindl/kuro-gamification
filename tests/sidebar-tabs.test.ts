@@ -11,6 +11,7 @@ import { KuroSidebarView } from '../src/views/KuroSidebarView';
 import { DEFAULT_PLUGIN_DATA } from '../src/types';
 import { EMPTY_CHAT } from '../src/vendor/kit/chat-history';
 import { installWindowTimers } from './vendor/kit/window-timers';
+import { fakeArchive } from './helpers/archive';
 
 // Das Kit-Fenster nimmt seine Uhr aus `window` (Renderer); die Testumgebung ist Node.
 let restoreWindow: () => void = () => {};
@@ -36,6 +37,7 @@ const makePlugin = (enableChat: boolean, over: Record<string, unknown> = {}) => 
     modelInUse: () => 'm1',
     source: () => ({ family: null, model: 'm1', sentModel: 'm1' }),
   },
+  archive: fakeArchive(),
   chatHistory: EMPTY_CHAT,
   lastDailyText: null,
   hasChatEndpointSource: () => !!(over.chatEndpoints as unknown[] | undefined)?.length,

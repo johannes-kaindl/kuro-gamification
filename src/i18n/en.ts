@@ -74,6 +74,8 @@ export const en: Record<string, string> = {
 
   'cmd.openStatus': 'Open status sidebar',
   'cmd.refresh': 'Recompute status',
+  'cmd.newChat': 'Start new chat',
+  'cmd.pastChats': 'Open past chats…',
   'cmd.redeem': 'Redeem loot…',
   'cmd.showLore': 'Show current lore fragment',
   'cmd.adjustXp': 'Adjust XP manually…',

@@ -5,8 +5,15 @@
 
    Hier steht nur, was Kuro selbst sagt: die Kontextzeile, der
    Einrichtungs-Hinweis und das Anbinden von Senden, Verlauf und
-   „merk dir“. Verlauf, Eingabe, Abbruch, Fehlerzeile, Kopieren und
-   Markdown (Neutralisierung, Stream-Schreiber) trägt das Kit.
+   „merk dir“. Verlauf, Eingabe, Abbruch, Fehlerzeile, Kopieren,
+   der Verlauf vergangener Chats und Markdown (Neutralisierung,
+   Stream-Schreiber) trägt das Kit.
+
+   Aufbau seit Kit 0.74.0: die Kontextzeile steht im Einschub `header`
+   über dem Gespräch, die Modellzeile im Einschub `composer` als
+   DIREKTES Kind (das Fenster hebt sie von dort in den Composer; in
+   einem Wrapper bliebe sie liegen, und der kompakte Composer griffe
+   nicht).
 
    Die Kontext-Zeile ruft dieselbe Funktion wie der Prompt-Bau
    (renderDailyExtract) — eine nachgebaute Vorschau würde driften
@@ -17,6 +24,7 @@ import type { Lang } from '../types';
 import { t } from '../i18n';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
 import type { ChatHistory, ChatModelMessage } from '../vendor/kit/chat-history';
+import type { ChatArchive } from '../vendor/kit-obsidian/chat-archive';
 import {
   buildChatWindow,
   type ChatSendHandlers,
@@ -29,6 +37,8 @@ export interface ChatPanelDeps {
   app: App;
   /** Teilmenge der Verbindung, die die Modellzeile braucht (Modelle, Wechsel, laufendes Modell). */
   llm: ModelBarConnection;
+  /** Der Verlauf vergangener Chats (Kit-Speicher): eine `.json` je Gespräch im Ordner der Einstellung, Aufbewahrung 0 = aus. */
+  archive: ChatArchive;
   /** Der Verlauf lebt im Plugin (Speicher, nie auf Platte); das Fenster bekommt ihn beim Bau zurück. */
   initial: ChatHistory;
   onChange(history: ChatHistory): void;
@@ -38,8 +48,8 @@ export interface ChatPanelDeps {
   contextInfo(): DailyExtract;
   /** Gibt es eine Quelle für Chat-Endpunkte (Manager oder lokale Zeile)? Ohne zeigt das Fenster den Einrichtungs-Hinweis. */
   hasEndpoint(): boolean;
-  /** Linkschutz der Antworten (Einstellungen „Links und Bilder in Antworten“); das Fenster liest ihn je Antwort, ein Umschalten wirkt ohne Neuaufbau. */
-  linkOptions(): { allowObsidianLinks: boolean; allowLocalImages: boolean };
+  /** Linkschutz der Antworten (Einstellung „obsidian://-Links erlauben“); das Fenster liest ihn je Antwort, ein Umschalten wirkt ohne Neuaufbau. */
+  linkOptions(): { allowObsidianLinks: boolean };
   openSettings(): void;
   /** Rendert Markdown in ein Element (Obsidians `MarkdownRenderer` — braucht `App` und eine Component, beides gehört der View). */
   renderMarkdown(el: HTMLElement, markdown: string): Promise<void>;
@@ -84,6 +94,7 @@ export class KuroChatPanel {
       send: (messages, h) => d.send(messages, h),
       render: (el, markdown) => d.renderMarkdown(el, markdown),
       header: (el) => this.drawHeader(el),
+      composer: (el) => this.drawComposer(el),
       beforeSubmit: (text) => this.beforeSubmit(text),
       empty: {
         when: () => !this.endpointOk,
@@ -95,7 +106,9 @@ export class KuroChatPanel {
       onChange: (h) => { d.onChange(h); },
       // Die Zeile sperrt sich während eines Laufs und gibt sich danach frei.
       onRunChange: () => { this.bar?.update(); },
-      domGuard: this.opts.domGuard ?? (() => d.linkOptions()),
+      // Lokale Bilder bleiben aus: im Chat-Fenster waren sie schon vorher Text (Kit-MIGRATION 0.70.0), der Schalter dafür ist gestrichen.
+      domGuard: this.opts.domGuard ?? (() => ({ ...d.linkOptions(), allowLocalImages: false })),
+      archive: { store: d.archive, app: d.app, model: () => d.llm.modelInUse() },
     });
   }
 
@@ -106,11 +119,19 @@ export class KuroChatPanel {
     return false;
   }
 
-  /** Das Kit ruft die Rückgabe vor der nächsten Zeichnung des Kopfs und bei `destroy()`: die Zeile gibt sich dort frei. */
-  private drawHeader(el: HTMLElement): () => void {
+  /** Der Kopf trägt nur die Kontextzeile: sie hat keine Abmeldung und kein Netz, jede Zeichnung des Kopfs ist billig. */
+  private drawHeader(el: HTMLElement): void {
     this.ctxSummaryEl = null;
     this.ctxBodyEl = null;
     // Im Leerzustand blendet das Kit den Kopf nicht aus: keinen bauen.
+    if (!this.endpointOk) return;
+    this.drawContextLine(el);
+  }
+
+  /** Die Modellzeile, als direktes Kind des Einschubs (das Fenster hebt sie in den Composer). Das Kit ruft die Rückgabe vor der nächsten
+   *  Zeichnung des Einschubs und bei `destroy()`: die Zeile gibt sich dort frei. Der Einschub zeichnet nur bei `win.refresh()` neu,
+   *  also bei einem Wechsel des Endpunkt-Zustands; die Kontextzeile im Kopf lädt dabei keine Modell-Liste. */
+  private drawComposer(el: HTMLElement): () => void {
     if (!this.endpointOk) return () => {};
     const bar = buildModelBar({
       app: this.deps.app,
@@ -121,7 +142,6 @@ export class KuroChatPanel {
       disabled: () => this.win?.running() ?? false,
     });
     this.bar = bar;
-    this.drawContextLine(el);
     return () => {
       bar.destroy();
       if (this.bar === bar) this.bar = null;
@@ -198,6 +218,22 @@ export class KuroChatPanel {
 
   abort(): void {
     this.win?.abort();
+  }
+
+  /** Befehl „Start new chat“: dasselbe wie der Neu-Knopf des Fensters (mit Verlauf legt es ab, ohne leert es). Gesperrt im Lauf. */
+  newChat(): void {
+    if (this.win === null || this.win.running()) return;
+    this.win.clear();
+  }
+
+  /** Befehl „Open past chats…“. Ohne Verlauf, im Lauf und im Leerzustand tut das Fenster nichts. */
+  openArchive(): void {
+    this.win?.openArchive();
+  }
+
+  /** Nach einer geänderten Aufbewahrung folgt der Verlauf-Knopf des Fensters (`refresh()` zeichnet Kopf und Einschub, nie das Textfeld). */
+  refreshArchive(): void {
+    this.win?.refresh();
   }
 
   history(): ChatHistory | null {

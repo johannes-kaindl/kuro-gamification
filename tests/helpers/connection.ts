@@ -10,13 +10,13 @@ import type { BackendId } from '../../src/vendor/kit/sampling-profiles';
 
 export async function makePlugin(manager: unknown = null): Promise<any> {
   const app = {
-    vault: { on: () => ({}) },
+    vault: { on: () => ({}), configDir: '.obsidian', adapter: {} },
     workspace: { onLayoutReady: () => {}, getLeavesOfType: () => [], getRightLeaf: () => null, revealLeaf: () => {} },
     plugins: { plugins: manager ? { 'llm-endpoint-manager': { api: manager } } : {} },
   };
   const plugin: any = new (KuroPlugin as any)();
   plugin.app = app;
-  plugin.manifest = { id: 'kuro-gamification', version: '0' };
+  plugin.manifest = { id: 'kuro-gamification', name: 'Kuro Gamification', version: '0' };
   await plugin.onload();
   return plugin;
 }

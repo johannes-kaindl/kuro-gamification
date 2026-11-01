@@ -56,8 +56,10 @@ export class DataStore {
     // `chatModel` (globales Modell, bis 1.9.0) wandert einmal auf jede Zeile ohne eigenes Modell und
     // wird hier aus `rest` herausgenommen: `...rest` hätte es sonst in jedes Speichern mitgetragen,
     // und die Migration füllte eine bewusst geleerte Zeile bei jedem Start wieder auf.
-    const { chatSuppressThinking: _legacy, chatModel: legacyModel, ...rest } = raw as Partial<KuroSettings> & {
-      chatSuppressThinking?: unknown; chatModel?: unknown;
+    // `chatAllowLocalImages` (Schalter „Lokale Bilder anzeigen“, bis 1.17.0) wirkte im Chat nie (Kit-Fenster zeigt Bilder als Text) und ist
+    // gestrichen: der gespeicherte Wert wird still verworfen, damit saveData ihn nicht als Leiche weiterschreibt.
+    const { chatSuppressThinking: _legacy, chatModel: legacyModel, chatAllowLocalImages: _images, ...rest } = raw as Partial<KuroSettings> & {
+      chatSuppressThinking?: unknown; chatModel?: unknown; chatAllowLocalImages?: unknown;
     };
     this.lastLegacyModelMigrated = legacyModel !== undefined;
     return {

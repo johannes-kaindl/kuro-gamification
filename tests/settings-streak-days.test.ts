@@ -3,16 +3,17 @@
 import { KuroSettingsTab } from '../src/settings/SettingsTab';
 import { DEFAULT_PLUGIN_DATA, DEFAULT_SETTINGS } from '../src/types';
 import { markedDates } from '../src/utils/taskNotesBridge';
+import { fakeApp } from './helpers/archive';
 
 function makeTab() {
   const plugin = {
-    app: {},
+    app: fakeApp,
     data: JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA)),
     manifest: { version: '0.0.0' },
     persist: jest.fn().mockResolvedValue(undefined),
     refreshStatus: jest.fn().mockResolvedValue(undefined),
   };
-  return { plugin, tab: new KuroSettingsTab({} as any, plugin as any) };
+  return { plugin, tab: new KuroSettingsTab(fakeApp as any, plugin as any) };
 }
 
 describe('Streak working-day settings', () => {

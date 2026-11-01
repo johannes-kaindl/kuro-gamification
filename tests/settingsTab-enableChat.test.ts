@@ -11,10 +11,11 @@
    ========================================================== */
 import { KuroSettingsTab } from '../src/settings/SettingsTab';
 import { DEFAULT_PLUGIN_DATA } from '../src/types';
+import { fakeApp } from './helpers/archive';
 
 function makeFakePlugin() {
   return {
-    app: {},
+    app: fakeApp,
     data: JSON.parse(JSON.stringify(DEFAULT_PLUGIN_DATA)),
     persist: jest.fn().mockResolvedValue(undefined),
     refreshStatus: jest.fn().mockResolvedValue(undefined),
@@ -25,7 +26,7 @@ function makeFakePlugin() {
 describe('KuroSettingsTab.setControlValue — enableChat', () => {
   it('actually flips the setting (was silently dropped by the switch default)', async () => {
     const plugin = makeFakePlugin();
-    const tab = new KuroSettingsTab({} as any, plugin as any);
+    const tab = new KuroSettingsTab(fakeApp as any, plugin as any);
 
     await tab.setControlValue('enableChat', true);
 
@@ -34,7 +35,7 @@ describe('KuroSettingsTab.setControlValue — enableChat', () => {
 
   it('persists the change', async () => {
     const plugin = makeFakePlugin();
-    const tab = new KuroSettingsTab({} as any, plugin as any);
+    const tab = new KuroSettingsTab(fakeApp as any, plugin as any);
 
     await tab.setControlValue('enableChat', true);
 
@@ -43,7 +44,7 @@ describe('KuroSettingsTab.setControlValue — enableChat', () => {
 
   it('rebuilds any open sidebar tab bar — onOpen() only reads enableChat once', async () => {
     const plugin = makeFakePlugin();
-    const tab = new KuroSettingsTab({} as any, plugin as any);
+    const tab = new KuroSettingsTab(fakeApp as any, plugin as any);
 
     await tab.setControlValue('enableChat', true);
 

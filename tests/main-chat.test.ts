@@ -12,6 +12,7 @@ import type { ChatSendHandlers } from '../src/vendor/kit-obsidian/chat-window';
 import { Notice } from 'obsidian';
 import { makePlugin, recordingTransport, sse, useTransport } from './helpers/connection';
 import { makeFakeEl } from './vendor/kit/obsidian-mock';
+import { fakeArchive } from './helpers/archive';
 import { installWindowTimers } from './vendor/kit/window-timers';
 import type { SseTransport } from '../src/vendor/kit-obsidian/chat-client';
 
@@ -50,13 +51,14 @@ function window_(p: any) {
     app: p.app,
     // Die Modellzeile fragt die Verbindung nach der Modell-Liste (Netz, Fristen-Timer); getestet wird sie in chat-panel.test.ts.
     llm: { models: async () => ({ models: [], reachable: true }), setModel: async () => {}, modelInUse: () => '', source: () => ({ family: null, model: '', sentModel: '' }) } as never,
+    archive: fakeArchive(),
     initial: EMPTY_CHAT,
     onChange: (h) => { history = h; },
     send: (m, h) => p.sendChat(m, h),
     handleCommand: (t) => p.handleChatCommand(t),
     contextInfo: () => ({ tasks: [], habits: [], numbers: [], raw: null, mode: 'none' }),
     hasEndpoint: () => p.hasChatEndpointSource(),
-    linkOptions: () => ({ allowObsidianLinks: false, allowLocalImages: false }),
+    linkOptions: () => ({ allowObsidianLinks: false }),
     openSettings: () => {},
     renderMarkdown: async (el, md) => { el.setText(md); },
   }, { domGuard: false });

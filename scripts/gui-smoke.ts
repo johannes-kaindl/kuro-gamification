@@ -111,6 +111,10 @@ const PUNKTE = [
   'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
   'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
   'modellzeile/gesperrt-waehrend-des-laufs',
+  'modellzeile/steht-im-composer-als-direktes-kind',
+  'verlauf/neu-fragt-zurueck-bei-aufbewahrung-0',
+  'verlauf/legt-ab-und-der-dialog-zeigt-das-gespraech',
+  'befehle/chat-befehle-nur-bei-offenem-chat-tab',
   'blaetter/eigener-verlauf-nach-chat-schalter',
   'kontext/zeile-folgt-der-notiz',
   'manager/einstellungen-zeigen-den-manager-abschnitt',
@@ -209,19 +213,34 @@ const PLUGIN_EXPR = `app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}]`;
 /* Selektoren des Kit-Fensters (obsidian-kit `chat-window`): `.okit-chat-input|send|log|turn|new|header|empty`. Der Treiber tippt ins Feld und klickt
    „Senden“ gegen den Stub-Endpunkt (CORE-TEST-15: das echte Fenster wird gemessen, nicht ein Test-API am Plugin). */
 
-/** Ausdruck: Verlauf leeren wie ein Nutzer („Neu“ des Fensters bricht einen laufenden Lauf ab) und den Verlauf im Plugin leer setzen. */
-const CHAT_LEEREN = `(() => { const b = ${VIEW_EL}?.querySelector(".okit-chat-new"); if (b) b.click(); ${PLUGIN_EXPR}.chatHistory = { entries: [], nextId: 1 }; })();`;
+/** Ausdruck (mit `await`, nur in einem `cdp.evaluate`): Verlauf leeren wie ein Nutzer. Seit Kit 0.73.0 ist „Neu“ bei leerem Gespräch und im Lauf gesperrt
+ *  (ein Lauf endet mit Escape), und bei Aufbewahrung 0 fragt es zurück: die Rückfrage bestätigt der letzte Knopf (Welle 29). */
+const CHAT_LEEREN = `await (async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const v = ${VIEW_EL};
+  let b = v?.querySelector(".okit-chat-new");
+  if (b && b.disabled) {
+    v.querySelector(".okit-chat-input")?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await sleep(600);
+    b = v.querySelector(".okit-chat-new");
+  }
+  if (b && !b.disabled) {
+    b.click();
+    await sleep(300);
+    const bs = document.querySelectorAll(".modal-container .modal-button-container button");
+    if (bs.length > 0) { bs[bs.length - 1].click(); await sleep(300); }
+  }
+  ${PLUGIN_EXPR}.chatHistory = { entries: [], nextId: 1 };
+})();`;
 
 /** Ausdruck: die letzte Antwort des Verlaufs im Plugin hat ihren Lauf beendet (und es gibt mindestens eine). */
 const CHAT_ANTWORT_ENDE = `(() => { const a = ${PLUGIN_EXPR}.chatHistory.entries.filter((x) => x.kind === "assistant"); const l = a[a.length - 1]; return l !== undefined && l.state !== "streaming"; })()`;
 
-/** „Neu“ klicken. `false`, wenn kein Fenster im Chat-Tab steht. */
+/** Das Gespräch leeren wie ein Nutzer (Neu, bei Aufbewahrung 0 mit bestätigter Rückfrage). `false`, wenn kein Fenster im Chat-Tab steht. */
 async function chatNeu(cdp: Cdp): Promise<boolean> {
   return cdp.evaluate<boolean>(`
-    const b = ${VIEW_EL}?.querySelector(".okit-chat-new");
-    if (!b) return false;
-    b.click();
-    ${PLUGIN_EXPR}.chatHistory = { entries: [], nextId: 1 };
+    if (!${VIEW_EL}?.querySelector(".okit-chat-new")) return false;
+    ${CHAT_LEEREN}
     await new Promise((r) => setTimeout(r, 250));
     return true;
   `);
@@ -715,19 +734,19 @@ async function sektionFenster(cdp: Cdp): Promise<void> {
     await chatNeu(cdp);
 
     // Modellzeile: Dropdown mit Automatisch und beiden Modellen, das gewählte Modell steht da.
-    const zeile = await pollUntil<{ optionen: string[]; wert: string; label: string } | null>(
+    const zeile = await pollUntil<{ optionen: string[]; wert: string; label: string; sichtbar: boolean } | null>(
       cdp,
       `const sel = ${VIEW_EL}?.querySelector(".okit-model-bar-select");
        if (!sel || sel.options.length < 3) return null;
        return { optionen: [...sel.options].map((o) => o.textContent.trim()), wert: sel.value,
-                label: ${VIEW_EL}.querySelector(".okit-model-bar-label")?.textContent ?? "" };`,
+                label: sel.getAttribute("aria-label") ?? "", sichtbar: Boolean(${VIEW_EL}.querySelector(".okit-model-bar-label")) };`,
       8000,
       200,
     ).catch(() => null);
     record(
       'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
-      zeile !== null && zeile.optionen.length === 3 && zeile.optionen.includes('modell-a') && zeile.optionen.includes('modell-b') && zeile.wert === 'modell-a' && zeile.label === 'Chat',
-      zeile === null ? 'keine Modellzeile mit mindestens drei Einträgen im Chat-Tab' : `Beschriftung „${zeile.label}“, Einträge ${zeile.optionen.join(' · ')}, gewählt ${zeile.wert}`,
+      zeile !== null && zeile.optionen.length === 3 && zeile.optionen.includes('modell-a') && zeile.optionen.includes('modell-b') && zeile.wert === 'modell-a' && zeile.label === 'Model for Chat' && !zeile.sichtbar,
+      zeile === null ? 'keine Modellzeile mit mindestens drei Einträgen im Chat-Tab' : `Name „${zeile.label}“ (ohne sichtbare Beschriftung: ${String(!zeile.sichtbar)}), Einträge ${zeile.optionen.join(' · ')}, gewählt ${zeile.wert}`,
     );
 
     // Wechsel wirkt: die Wahl landet in der Zeile des Endpunkts und in der nächsten Anfrage.
@@ -851,6 +870,128 @@ async function sektionFenster(cdp: Cdp): Promise<void> {
       await cdp.evaluate(`${PLUGIN_EXPR}.data.kuroNotes = ${JSON.stringify(notizenVorher)}; await ${PLUGIN_EXPR}.persist(); ${CHAT_LEEREN} return true;`).catch(() => undefined);
       await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]).catch(() => undefined);
       await setSetting(cdp, 'chatAllowObsidianLinks', false).catch(() => undefined);
+    }
+    if (stub) await stub.stop().catch(() => undefined);
+  }
+}
+
+/* ---------------- 9d · Chat-Zeile, Verlauf vergangener Chats, Befehle (Welle 29, Kit 0.73.0/0.74.0) */
+
+/** Was seit Kit 0.74.0 anders ist und im Fake-DOM unsichtbar bleibt: die Modellzeile steht als direktes Kind im Composer (das Fenster hebt sie aus dem
+ *  Einschub), Neu fragt bei Aufbewahrung 0 (Vorgabe) zurück, mit Aufbewahrung über 0 legt es ab, ohne zu fragen, und der Verlauf-Dialog zeigt das Gespräch;
+ *  „Start new chat“ und „Open past chats…“ gibt es nur bei offenem Chat-Tab. Aufgeräumt wird im `finally`: Aufbewahrung zurück auf 0, die Dateien des Laufs weg. */
+const VERLAUF_NAMEN = [
+  'modellzeile/steht-im-composer-als-direktes-kind',
+  'verlauf/neu-fragt-zurueck-bei-aufbewahrung-0',
+  'verlauf/legt-ab-und-der-dialog-zeigt-das-gespraech',
+  'befehle/chat-befehle-nur-bei-offenem-chat-tab',
+] as const;
+
+async function sektionVerlauf(cdp: Cdp): Promise<void> {
+  let stub: Awaited<ReturnType<typeof startLlmStub>> | null = null;
+  const ordner = await cdp.evaluate<string>(`return ${PLUGIN_EXPR}.manifest.name + "/Chats";`);
+  const archivDateien = (): Promise<{ json: number; md: number }> => cdp.evaluate(`
+    if (!(await app.vault.adapter.exists(${JSON.stringify(ordner)}))) return { json: 0, md: 0 };
+    const l = await app.vault.adapter.list(${JSON.stringify(ordner)});
+    return { json: l.files.filter((x) => x.endsWith(".json")).length, md: l.files.filter((x) => x.endsWith(".md")).length };
+  `);
+  const aufbewahrung = (n: number): Promise<unknown> => cdp.evaluate(`
+    ${PLUGIN_EXPR}.data.settings.chatKeep = ${n}; await ${PLUGIN_EXPR}.persist(); ${PLUGIN_EXPR}.syncChatArchive();
+    await new Promise((r) => setTimeout(r, 400)); return true;
+  `);
+  const dialogKnoepfe = (): Promise<number> => cdp.evaluate<number>(`return document.querySelectorAll(".modal-container .modal-button-container button").length;`);
+  const ordnerLeeren = (): Promise<unknown> => cdp.evaluate(`
+    if (await app.vault.adapter.exists(${JSON.stringify(ordner)})) await app.vault.adapter.rmdir(${JSON.stringify(ordner)}, true);
+    return true;
+  `);
+  try {
+    await removeFakeManager(cdp);
+    stub = await startLlmStub({ models: ['modell-a'], standard: { stuecke: ['Antwort ', 'vom Stub'] } });
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: 'modell-a' }]);
+    await setSetting(cdp, 'chatChoice', {});
+    await setSetting(cdp, 'enableChat', true);
+    await ordnerLeeren();
+    await cdp.evaluate(`${PLUGIN_EXPR}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await aufbewahrung(0);
+    await chatNeu(cdp);
+
+    // (1) Modellzeile: genau eine, direktes Kind des Composers, weder im Kopf noch im Einschub.
+    const lage = await cdp.evaluate<{ anzahl: number; eltern: string; imKopf: boolean; imEinschub: boolean }>(`
+      const v = ${VIEW_EL}; const bars = v.querySelectorAll(".okit-model-bar"); const bar = bars[0];
+      return { anzahl: bars.length, eltern: bar?.parentElement?.className ?? "",
+               imKopf: Boolean(v.querySelector(".okit-chat-header .okit-model-bar")), imEinschub: Boolean(v.querySelector(".okit-chat-composer-extra .okit-model-bar")) };
+    `);
+    record(
+      'modellzeile/steht-im-composer-als-direktes-kind',
+      lage.anzahl === 1 && lage.eltern.split(' ').includes('okit-chat-composer') && !lage.imKopf && !lage.imEinschub,
+      `${lage.anzahl} Modellzeile(n), Elternelement „${lage.eltern}“, im Kopf ${String(lage.imKopf)}, im Einschub ${String(lage.imEinschub)}`,
+    );
+
+    // (2) Neu bei Aufbewahrung 0: fragt zurück. Abbrechen lässt das Gespräch, Bestätigen leert es und legt nichts ab.
+    await chatFrage(cdp, 'Verlauf-Probe null');
+    const neuFrei = await cdp.evaluate<boolean>(`const b = ${VIEW_EL}.querySelector(".okit-chat-new"); return Boolean(b) && !b.disabled;`);
+    const knopfVerborgen = await cdp.evaluate<boolean>(`const b = ${VIEW_EL}.querySelector(".okit-chat-archive"); return !b || b.classList.contains("okit-chat-hidden");`);
+    await cdp.evaluate(`${VIEW_EL}.querySelector(".okit-chat-new").click(); await new Promise((r) => setTimeout(r, 500)); return true;`);
+    const knoepfe = await dialogKnoepfe();
+    if (knoepfe > 0) await cdp.evaluate(`document.querySelector(".modal-container .modal-button-container button").click(); await new Promise((r) => setTimeout(r, 400)); return true;`);
+    const nachAbbruch = await cdp.evaluate<number>(`return ${VIEW_EL}.querySelectorAll(".okit-chat-turn").length;`);
+    await cdp.evaluate(`${VIEW_EL}.querySelector(".okit-chat-new").click(); await new Promise((r) => setTimeout(r, 500)); return true;`);
+    if ((await dialogKnoepfe()) > 0) await cdp.evaluate(`const bs = document.querySelectorAll(".modal-container .modal-button-container button"); bs[bs.length - 1].click(); await new Promise((r) => setTimeout(r, 400)); return true;`);
+    const nachBestaetigung = await cdp.evaluate<number>(`return ${VIEW_EL}.querySelectorAll(".okit-chat-turn").length;`);
+    const dateienNull = await archivDateien();
+    record(
+      'verlauf/neu-fragt-zurueck-bei-aufbewahrung-0',
+      neuFrei && knopfVerborgen && knoepfe >= 2 && nachAbbruch >= 2 && nachBestaetigung === 0 && dateienNull.json === 0,
+      `Neu frei ${String(neuFrei)}, Verlauf-Knopf verborgen ${String(knopfVerborgen)}, Rückfrage mit ${knoepfe} Knöpfen, Runden nach Abbrechen ${nachAbbruch}, nach Bestätigen ${nachBestaetigung}, Dateien ${dateienNull.json}`,
+    );
+
+    // (3) Aufbewahrung 10: Knopf da, Neu legt ab ohne Rückfrage, die Datei trägt die Frage, der Dialog listet das Gespräch.
+    await aufbewahrung(10);
+    await chatFrage(cdp, 'Verlauf-Probe zehn');
+    const datei = await pollUntil<{ json: number }>(cdp, `
+      const l = await app.vault.adapter.exists(${JSON.stringify(ordner)}) ? await app.vault.adapter.list(${JSON.stringify(ordner)}) : { files: [] };
+      const j = l.files.filter((x) => x.endsWith(".json")); return j.length === 1 ? { json: j.length } : null;`, 8000, 200).catch(() => null);
+    const text = await cdp.evaluate<string>(`
+      const l = await app.vault.adapter.list(${JSON.stringify(ordner)}).catch(() => ({ files: [] })); const j = l.files.filter((x) => x.endsWith(".json"))[0];
+      return j ? await app.vault.adapter.read(j) : "";`);
+    const knopfDa = await cdp.evaluate<boolean>(`const b = ${VIEW_EL}.querySelector(".okit-chat-archive"); return Boolean(b) && !b.classList.contains("okit-chat-hidden") && !b.disabled;`);
+    await cdp.evaluate(`${VIEW_EL}.querySelector(".okit-chat-new").click(); await new Promise((r) => setTimeout(r, 600)); return true;`);
+    const ohneFrage = (await dialogKnoepfe()) === 0;
+    const geleert = await cdp.evaluate<number>(`return ${VIEW_EL}.querySelectorAll(".okit-chat-turn").length;`);
+    const nachNeu = await archivDateien();
+    await cdp.evaluate(`${VIEW_EL}.querySelector(".okit-chat-archive").click(); await new Promise((r) => setTimeout(r, 600)); return true;`);
+    const zeilen = await pollUntil<{ n: number; titel: string }>(cdp, `
+      const r = document.querySelectorAll(".okit-chat-archive-row"); return r.length > 0 ? { n: r.length, titel: r[0].querySelector(".okit-chat-archive-title")?.textContent ?? "" } : null;`, 8000, 200).catch(() => null);
+    await cdp.evaluate(`document.activeElement?.blur?.(); document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await new Promise((r) => setTimeout(r, 300)); return true;`);
+    record(
+      'verlauf/legt-ab-und-der-dialog-zeigt-das-gespraech',
+      datei !== null && text.includes('Verlauf-Probe zehn') && !text.includes('sk-') && knopfDa && ohneFrage && geleert === 0 && nachNeu.json === 1 && zeilen !== null && zeilen.n === 1 && zeilen.titel.includes('Verlauf-Probe zehn'),
+      `Datei nach der Runde ${datei === null ? 'FEHLT' : 'da'}, Frage in der Datei ${String(text.includes('Verlauf-Probe zehn'))}, Knopf da ${String(knopfDa)}, Neu ohne Rückfrage ${String(ohneFrage)}, Fenster danach ${geleert} Runden, Dateien ${nachNeu.json}, Dialog ${zeilen === null ? 'ohne Zeile' : `${zeilen.n} Zeile „${zeilen.titel}“`}`,
+    );
+
+    // (4) Befehle: bei offenem Chat-Tab angeboten, bei offenem Status-Tab nicht.
+    const befehle = `["${PLUGIN_ID}:new-chat", "${PLUGIN_ID}:open-past-chats"]`;
+    const imChat = await cdp.evaluate<boolean[]>(`return ${befehle}.map((id) => app.commands.commands[id]?.checkCallback?.(true) === true);`);
+    await cdp.evaluate(`${VIEW_EL}.querySelectorAll(".okit-hub-tab")[0].click(); await new Promise((r) => setTimeout(r, 400)); return true;`);
+    const imStatus = await cdp.evaluate<boolean[]>(`return ${befehle}.map((id) => app.commands.commands[id] === undefined ? null : app.commands.commands[id].checkCallback?.(true) === true);`);
+    const namen = await cdp.evaluate<string[]>(`return ${befehle}.map((id) => app.commands.commands[id]?.name ?? "");`);
+    await oeffneChatTab(cdp);
+    record(
+      'befehle/chat-befehle-nur-bei-offenem-chat-tab',
+      imChat.every((x) => x) && imStatus.every((x) => x === false) && namen[0] === 'Kuro Gamification: Start new chat' && namen[1] === 'Kuro Gamification: Open past chats…',
+      `Chat-Tab offen: ${imChat.join('/')}, Status-Tab offen: ${imStatus.join('/')}, Namen „${namen.join('“, „')}“`,
+    );
+  } catch (e) {
+    if (istAbgebrochen()) throw e;
+    for (const n of VERLAUF_NAMEN) if (!aufgezeichnet(n)) unmeasured(n, `Messung abgebrochen: ${(e as Error).message}`);
+  } finally {
+    if (!istAbgebrochen()) {
+      await aufbewahrung(0).catch(() => undefined);
+      await ordnerLeeren().catch(() => undefined);
+      await cdp.evaluate(`${CHAT_LEEREN} return true;`).catch(() => undefined);
+      await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]).catch(() => undefined);
     }
     if (stub) await stub.stop().catch(() => undefined);
   }
@@ -2220,6 +2361,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 9b · Chat-Fenster und Modellzeile');
     await sektionFenster(cdp);
+    console.log('');
+    console.log('── 9d · Chat-Zeile, Verlauf vergangener Chats, Befehle (Kit 0.74.0)');
+    await sektionVerlauf(cdp);
     console.log('');
     console.log('── 9c · Zwei Blätter, je ein Chat');
     await sektionBlaetter(cdp);

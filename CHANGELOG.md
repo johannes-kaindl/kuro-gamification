@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.19.0] — 2026-11-03
+
 ### Changed
 
 - **The chat on a phone: no empty strip above the keyboard.** With the keyboard open, the gap between Send and the keyboard is gone, and the floating navigation bar no longer covers the bottom row of the chat (main area only).

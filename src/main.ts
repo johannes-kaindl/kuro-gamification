@@ -2,7 +2,7 @@
    Kuro Gamification — main plugin entrypoint.
    ========================================================== */
 import {
-  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice, normalizePath,
+  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice, normalizePath, Platform,
 } from 'obsidian';
 
 import {
@@ -144,7 +144,8 @@ export default class KuroPlugin extends Plugin {
     this.addSettingTab(new KuroSettingsTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
-      if (this.data.settings.openSidebarOnStartup) void this.activateSidebar();
+      // Auf dem Handy öffnet der Start keinen Tab im Hauptbereich (aufdringlich, Entscheidung Master Welle 30); Ribbon, Befehl und Statusleiste öffnen ihn ausdrücklich.
+      if (this.data.settings.openSidebarOnStartup && !Platform.isMobile) void this.activateSidebar();
       void this.refreshStatus(true);
       this.scheduleMidnightTick();
       // Das Kit hängt das Abo nach, wenn der Manager erst später erscheint (seit 0.61.0); der Rückruf kommt dann einmal.

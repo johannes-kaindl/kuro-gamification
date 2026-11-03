@@ -70,3 +70,35 @@ describe('KuroPlugin — sidebar-on-startup gate', () => {
     expect(activateSidebar).not.toHaveBeenCalled();
   });
 });
+
+/* Handy (Welle 30): der Start öffnet auf einem Mobilgerät keinen Tab im Hauptbereich — ein Tab bei jedem Start wäre aufdringlich. Das ausdrückliche Öffnen
+   (Ribbon, Befehl, Statusleiste) bleibt; das prüft tests/main-sidebar-leaf.test.ts. */
+import { Platform } from 'obsidian';
+
+describe('KuroPlugin — Start auf dem Handy', () => {
+  afterEach(() => { (Platform as { isMobile: boolean }).isMobile = false; });
+
+  it('öffnet auf dem Handy auch mit openSidebarOnStartup keinen Tab', async () => {
+    (Platform as { isMobile: boolean }).isMobile = true;
+    const { app, activateSidebar } = await boot({
+      onboardingShown: true,
+      settings: { enableSidebar: true, openSidebarOnStartup: true },
+    });
+
+    app.__fireLayoutReady();
+
+    expect(activateSidebar).not.toHaveBeenCalled();
+  });
+
+  it('Gegenprobe: derselbe Zustand am Desktop öffnet die Seitenleiste', async () => {
+    (Platform as { isMobile: boolean }).isMobile = false;
+    const { app, activateSidebar } = await boot({
+      onboardingShown: true,
+      settings: { enableSidebar: true, openSidebarOnStartup: true },
+    });
+
+    app.__fireLayoutReady();
+
+    expect(activateSidebar).toHaveBeenCalledTimes(1);
+  });
+});

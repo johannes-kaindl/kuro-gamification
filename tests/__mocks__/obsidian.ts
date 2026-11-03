@@ -105,6 +105,8 @@ import momentLib from 'moment';
 export const moment = momentLib;
 export const setIcon = (_el: any, _name: string) => {};
 export const normalizePath = (s: string) => s;
+/** Mutables `Platform` wie im Kit-Mock: ein Test setzt `Platform.isMobile`, ein `afterEach` stellt es zurück. */
+export const Platform = { isMobile: false, isDesktop: true, isMobileApp: false, isDesktopApp: true };
 /** Tests overwrite this with their own jest.fn() per case (no shared jest dep in this mock file). */
 export let requestUrl: (req: any) => Promise<any> = () => Promise.reject(new Error('requestUrl not mocked'));
 export function __setMockRequestUrl(fn: (req: any) => Promise<any>): void { requestUrl = fn; }

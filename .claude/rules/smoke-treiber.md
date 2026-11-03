@@ -22,3 +22,5 @@ Gotchas zu `scripts/gui-smoke.ts` und `scripts/shots.ts`; die allgemeinen Treibe
   ⚠️ **Die Versionszeile im Protokoll ist kein Herkunftsbeleg:** `enablePlugin` lädt den Code
   neu, das Manifest nicht (Obsidian liest es beim Vault-Start) — gemessen 1.3.0 im Speicher
   gegen 1.4.0 auf Platte. Der sha1-Vergleich ist die einzige Aussage.
+- **Die Mobil-Lage lässt sich im Smoke nicht umschalten, nur in `npm run chat-layout`.** `Platform.isMobile` ist im Renderer nicht erreichbar (`require("obsidian")` wirft „Cannot find module“, nicht `undefined`), und `app.emulateMobile(true)` lädt Obsidian neu (ein Smoke-Lauf verlöre seine Sitzung). Was nur am Handy gilt (Ort der Ansicht als Tab, Host-Abstand, Werkzeugleiste), prüft der Smoke deshalb mit der Klasse `is-mobile` am Body (Regel, nicht Layout) und `chat-layout` am Bild (Ausgabe „Ort“, „Host-Abstand“, `--geraet` für den Hauptbereich). Ein Smoke-Punkt, der `Platform` ansetzt, bricht den Lauf ab (Welle 30, Abbruch im ersten Lauf von Abschnitt 4c).
+

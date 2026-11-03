@@ -4,6 +4,10 @@
    rechten Seitenleiste, auf dem Handy als Tab im Hauptbereich
    (`KuroPlugin.activateSidebar`).
 
+   Wo die Ansicht baut: in `contentEl` (dem `.view-content` des Blatts), nicht in
+   `containerEl`. Nur dort findet `markChatHost` des Kit-Fensters seinen Host und
+   setzt auf dem Handy im Hauptbereich den Abstand zur schwebenden Leiste (Welle 30).
+
    Werkzeugleiste und Chat-Tab: „Neu berechnen“ und „Loot einlösen“
    gehören zum Status. Die Leiste liegt ausserhalb des Hubs, deshalb
    trägt die Wurzel `is-chat-tab`, solange der Chat-Tab offen ist
@@ -62,10 +66,10 @@ export class KuroSidebarView extends ItemView {
     // syncChatUI ruft onOpen() auf einer schon offenen View erneut: das alte Chat-Panel
     // (Timer, Stream) muss vorher weg, sonst bleibt es verwaist.
     this.teardown();
-    this.containerEl.empty();
+    this.contentEl.empty();
     const lang = this.plugin.data.settings.language;
     const chatOn = this.plugin.data.settings.enableChat;
-    const root = this.containerEl.createDiv({ cls: 'kuro-view-root' });
+    const root = this.contentEl.createDiv({ cls: 'kuro-view-root' });
     this.rootEl = root;
 
     /* toolbar */
@@ -94,7 +98,7 @@ export class KuroSidebarView extends ItemView {
 
   async onClose(): Promise<void> {
     this.teardown();
-    this.containerEl.empty();
+    this.contentEl.empty();
   }
 
   /** Beide Panels bleiben für die Lebensdauer der View gemountet (Kit-Vertrag „mount-once“). */

@@ -2,7 +2,7 @@
    Kuro Gamification — main plugin entrypoint.
    ========================================================== */
 import {
-  Plugin, type WorkspaceLeaf, type TAbstractFile, TFile, debounce, Notice, normalizePath, Platform,
+  Plugin, type TAbstractFile, TFile, debounce, Notice, normalizePath, Platform,
 } from 'obsidian';
 
 import {
@@ -40,6 +40,7 @@ import type { ChatSendHandlers, ChatSendResult } from './vendor/kit-obsidian/cha
 import { kuroConnectionOptions } from './llm/kuroConnection';
 import { createChatArchive, type ChatArchive } from './vendor/kit-obsidian/chat-archive';
 import { clampChatKeep } from './vendor/kit-obsidian/chat-archive-settings';
+import { openChatLeaf } from './vendor/kit-obsidian/chat-leaf';
 import { createLlmConnection, type LlmConnection } from './vendor/kit-obsidian/llm-connection';
 import { buildContext } from './llm/kuroContext';
 import { buildMessages, resolvePersona } from './llm/kuroPrompt';
@@ -465,13 +466,8 @@ export default class KuroPlugin extends Plugin {
   /* ── Sidebar lifecycle ────────────────────────────────── */
   async activateSidebar(): Promise<void> {
     if (!this.data.settings.enableSidebar) return;
-    const { workspace } = this.app;
-    let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(VIEW_TYPE_KURO)[0] ?? null;
-    if (!leaf) {
-      leaf = workspace.getRightLeaf(false);
-      if (leaf) await leaf.setViewState({ type: VIEW_TYPE_KURO, active: true });
-    }
-    if (leaf) await workspace.revealLeaf(leaf);
+    // Wo das Blatt öffnet, entscheidet das Kit (seit 0.77.0): Desktop rechte Seitenleiste, Handy und Tablet ein Tab im Hauptbereich; ein in der Schublade gespeichertes Blatt wandert dorthin.
+    await openChatLeaf(this.app.workspace, VIEW_TYPE_KURO);
   }
 
   syncSidebar(): void {

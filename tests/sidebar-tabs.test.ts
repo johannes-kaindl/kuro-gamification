@@ -238,6 +238,34 @@ describe('KuroSidebarView tabs (Kit-Hub)', () => {
   });
 });
 
+/* Wo die Ansicht baut (Welle 30, Kit 0.76.1): `markChatHost` sucht den `.view-content`-Vorfahren des Chats; baut die Ansicht in `containerEl`, gibt es ihn nicht, und der Kit-Abstand
+   zur schwebenden Leiste am Handy greift nie (still, ohne Warnung). */
+describe('KuroSidebarView — baut in contentEl', () => {
+  it('die Wurzel liegt in contentEl, containerEl bleibt unberührt', async () => {
+    const view = await openView(true);
+    expect((view.contentEl as any).children).toContain(view.rootEl);
+    expect((view.containerEl as any).children).toHaveLength(0);
+  });
+
+  it('onClose leert contentEl', async () => {
+    const view = await openView(true);
+    await view.onClose();
+    expect((view.contentEl as any).children).toHaveLength(0);
+  });
+
+  it('ein geschlossenes Blatt gibt den Verlauf ab, ein neues Blatt (Tab statt Schublade) übernimmt ihn', async () => {
+    const plugin = makePlugin(true);
+    const drawer = new KuroSidebarView({} as never, plugin as never);
+    await drawer.onOpen();
+    const round = { entries: [] as never[], nextId: 777 };
+    (drawer as any).chatPanel.deps.onChange(round);
+    await drawer.onClose();
+    const tab = new KuroSidebarView({} as never, plugin as never);
+    await tab.onOpen();
+    expect((tab as any).chatPanel.deps.initial).toBe(round);
+  });
+});
+
 /* Werkzeugleiste im Chat-Tab (Welle 30, Entscheidung Johannes 2026-11-02): „Neu berechnen“ und „Loot einlösen“ gehören zum Status. Die Wurzel trägt `is-chat-tab`,
    solange der Chat-Tab offen ist; ausgeblendet wird die Leiste von einer `.is-mobile`-Regel in der styles.css (am Desktop bleibt sie). Die Klasse folgt dem Tab in beide
    Richtungen — eine Klasse, die nur gesetzt, aber nie genommen wird, versteckte die Leiste auch im Status. */

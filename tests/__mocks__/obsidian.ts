@@ -97,6 +97,8 @@ export class PluginSettingTab {
 export class ItemView {
   app: any;
   containerEl: any = makeFakeEl();
+  /** Wie in Obsidian: das `.view-content` des Blatts, hier ein eigenes Fake-Element. */
+  contentEl: any = makeFakeEl();
   leaf: any;
   constructor(leaf: any) { this.leaf = leaf; }
 }

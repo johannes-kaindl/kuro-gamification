@@ -90,6 +90,11 @@ const PUNKTE = [
   'werkzeugleiste/handy-chat-tab-ausgeblendet',
   'werkzeugleiste/handy-status-tab-sichtbar',
   'werkzeugleiste/desktop-chat-tab-sichtbar',
+  'handy-tab/desktop-bleibt-in-der-seitenleiste',
+  'handy-tab/schubladenblatt-wandert-in-den-hauptbereich',
+  'handy-tab/neues-blatt-im-hauptbereich',
+  'ansicht/wurzel-im-view-content',
+  'ansicht/chat-host-markiert',
   'kontext/ausklapper-vorhanden',
   'kontext/vorschau-gleich-ausklapper',
   'sprache/platzhalter-englisch',
@@ -552,6 +557,69 @@ async function sektionWerkzeugleiste(cdp: Cdp): Promise<void> {
     await cdp.evaluate(`document.body.classList.${warMobil ? 'add' : 'remove'}("is-mobile"); return true;`);
     await klickeTab(1);
   }
+}
+
+/* ------------------------------------ 4c · Handy-Tab (Welle 30, Kit 0.77.0) */
+
+/** Wo die Ansicht aufgeht, gemessen am echten Workspace: `Platform.isMobile` wird für die Dauer der Messung gesetzt (der Kit-Aufruf `openChatLeaf` liest es bei jedem Aufruf) und im `finally` zurückgesetzt;
+ *  danach steht die Ansicht wie vorher in der Seitenleiste. Die Aufnahme am Handy selbst bleibt ungemessen (WKWebView). */
+async function sektionHandyTab(cdp: Cdp): Promise<void> {
+  const namen = [
+    'handy-tab/desktop-bleibt-in-der-seitenleiste',
+    'handy-tab/schubladenblatt-wandert-in-den-hauptbereich',
+    'handy-tab/neues-blatt-im-hauptbereich',
+  ] as const;
+  const vorhanden = await cdp.evaluate<boolean>(`const P = window.require?.("obsidian")?.Platform; return !!P && typeof P.isMobile === "boolean";`);
+  if (!vorhanden) {
+    for (const n of namen) unmeasured(n, 'Platform ließ sich im Renderer nicht erreichen (require("obsidian"))');
+  } else {
+    const wo = await cdp.evaluate<{ desktop: string; migration: string; neu: string }>(`
+      const P = window.require("obsidian").Platform;
+      const war = P.isMobile;
+      const ws = app.workspace;
+      const plugin = ${PLUGIN_EXPR};
+      const VT = ${JSON.stringify(VIEW_TYPE)};
+      const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+      const ort = () => {
+        const l = ws.getLeavesOfType(VT);
+        if (!l.length) return "keins";
+        const r = l[0].getRoot();
+        return (r === ws.rootSplit ? "haupt" : r === ws.rightSplit ? "rechts" : r === ws.leftSplit ? "links" : "anders") + ":" + l.length;
+      };
+      const zu = async () => { for (const l of ws.getLeavesOfType(VT)) l.detach(); await warte(300); };
+      const out = {};
+      try {
+        P.isMobile = false;
+        await zu();
+        await plugin.activateSidebar(); await warte(600);
+        out.desktop = ort();
+        P.isMobile = true;
+        await plugin.activateSidebar(); await warte(900);
+        out.migration = ort();
+        await zu();
+        await plugin.activateSidebar(); await warte(900);
+        out.neu = ort();
+      } finally {
+        P.isMobile = war;
+        await zu();
+        await plugin.activateSidebar(); await warte(900);
+      }
+      return out;
+    `);
+    record(namen[0], wo.desktop === 'rechts:1', `Desktop, kein Blatt offen: ${wo.desktop} (Soll rechts:1)`);
+    record(namen[1], wo.migration === 'haupt:1', `Handy, Blatt in der Schublade offen: ${wo.migration} (Soll haupt:1, das alte Blatt geschlossen)`);
+    record(namen[2], wo.neu === 'haupt:1', `Handy, kein Blatt offen: ${wo.neu} (Soll haupt:1)`);
+  }
+
+  // Die Ansicht baut in `contentEl`: nur dort findet das Kit-Fenster seinen Host (`markChatHost`), sonst greift der Handy-Abstand nie.
+  const aufbau = await cdp.evaluate<{ wurzelImViewContent: boolean; hostMarkiert: boolean }>(`
+    const view = ${VIEW_EL};
+    const root = view?.querySelector(".kuro-view-root");
+    const vc = root?.closest(".view-content") ?? null;
+    return { wurzelImViewContent: !!vc && vc.parentElement === view, hostMarkiert: !!vc && vc.classList.contains("okit-chat-host") };
+  `);
+  record('ansicht/wurzel-im-view-content', aufbau.wurzelImViewContent, `.kuro-view-root liegt in einem .view-content direkt unter dem Blatt: ${String(aufbau.wurzelImViewContent)}`);
+  record('ansicht/chat-host-markiert', aufbau.hostMarkiert, `.view-content trägt okit-chat-host (markChatHost hat den Host gefunden): ${String(aufbau.hostMarkiert)}`);
 }
 
 /* ------------------------------------------ 5 · Kontext-Ausklapper */
@@ -2390,6 +2458,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 4b · Werkzeugleiste im Chat-Tab (Handy-Regel)');
     await sektionWerkzeugleiste(cdp);
+    console.log('');
+    console.log('── 4c · Handy-Tab und Aufbau der Ansicht');
+    await sektionHandyTab(cdp);
     console.log('');
     console.log('── 5 · Kontext-Ausklapper');
     await sektionKontext(cdp);

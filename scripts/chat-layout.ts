@@ -12,7 +12,7 @@
  * npm run build && OBSIDIAN_PLUGIN_DIR="$STAGING_VAULTS_DIR/kuro-gamification/.obsidian/plugins/kuro-gamification" npm run deploy
  * /Applications/Obsidian.app/Contents/MacOS/Obsidian --user-data-dir="$UD" --remote-debugging-port=<PORT> &      # PID merken
  * python3 ~/.claude/hooks/obsidian-cdp-lock.py acquire --label kuro-gamification --intent "chat-layout <tag>" --exclusive focus --port <PORT> --ttl 300
- * npm run chat-layout -- --port <PORT> --tag nachher [--out /tmp/kuro-w29]
+ * npm run chat-layout -- --port <PORT> --tag nachher [--out /tmp/kuro-w29] [--geraet]   # --geraet: Tastatur wie am iPhone (Container statt Viewport, Variablen gesetzt), nur für den Hauptbereich aussagekräftig
  * python3 ~/.claude/hooks/obsidian-cdp-lock.py release
  * ```
  *
@@ -61,6 +61,12 @@ interface Messung {
   reihenfolge: string[];
   modellzeileSichtbar: boolean;
   tippflaechen: string[];
+  /** Welle 30: Werkzeugleiste (Neu berechnen, Loot einlösen) und Tab-Leiste der Ansicht; `null` = nicht im Layout (ausgeblendet). */
+  werkzeugleiste: Box | null; tabLeiste: Box | null;
+  /** Vorfahren des Chats von innen nach außen mit Höhe und Abstand unten (Befund Welle 30: wer fehlt, etwa `.view-content`, erklärt eine leere Fläche). */
+  kette: string[];
+  /** Wo die Ansicht sitzt: im Hauptbereich (`.mod-root`) oder in einer Seitenleiste, und was der Kit-Host-Abstand daraus macht. */
+  ort: string; floating: boolean; hostMarkiert: boolean; hostPaddingUnten: string;
 }
 
 const MESS_JS = `
@@ -87,17 +93,24 @@ const MESS_JS = `
   }
   const reihe = [["Kontext", teile.kontext], ["Verlauf", r(".okit-chat-log")], ["Modellzeile", teile.modellzeile], ["Eingabe", teile.eingabe], ["Knopfreihe", teile.knopfreihe], ["Statuszeile", teile.statuszeile]]
     .filter(([, b]) => b).sort((a, b) => a[1].y - b[1].y).map(([n, b]) => n + "@" + Math.round(b.y));
+  const appEl = document.querySelector(".app-container"); const appUnten = appEl ? appEl.getBoundingClientRect().bottom : innerHeight;
   const unten = Object.values(teile).filter(Boolean).map((b) => b.bottom);
   const tiefster = unten.length ? Math.max(...unten) : 0;
   const bar = root.querySelector(".okit-model-bar");
   const sichtbar = bar ? getComputedStyle(bar).visibility !== "hidden" && bar.getBoundingClientRect().height > 0 : false;
+  const leaf = root.closest ? root.closest(".workspace-leaf") : null;
+  const ort = leaf ? (leaf.closest(".mod-root") ? "Hauptbereich" : leaf.closest(".mod-right-split") ? "rechte Seitenleiste" : leaf.closest(".mod-left-split") ? "linke Seitenleiste" : "anderswo") : "unbekannt";
+  const host = root.querySelector ? root.querySelector(".view-content") : null;
+  const kette = []; { let e = root.querySelector(".okit-chat"); while (e && e !== document.body) { const b = e.getBoundingClientRect(); kette.push((String(e.className || e.tagName).split(" ").slice(0, 3).join(".")) + " h" + Math.round(b.height) + " pb" + getComputedStyle(e).paddingBottom); e = e.parentElement; if (kette.length > 14) break; } }
   const flaeche = ([n, k]) => teile[k] ? n + " " + teile[k].w + "x" + teile[k].h : n + " —";
   return {
-    viewport: [innerWidth, innerHeight], isMobile: document.body.classList.contains("is-mobile"),
+    viewport: [innerWidth, Math.round(appUnten)], isMobile: document.body.classList.contains("is-mobile"),
     chat: r(".okit-chat"), log: r(".okit-chat-log"), zeilenhoehe: +lh.toFixed(2), logZeilen: lb ? +(lb.height / lh).toFixed(1) : 0,
     ...teile, statustext: (root.querySelector(".okit-chat-status")?.textContent || "").trim(),
-    ueberdeckungen: paare, tiefster, abstandUnten: +(innerHeight - tiefster).toFixed(1), reihenfolge: reihe,
+    ueberdeckungen: paare, tiefster, abstandUnten: +(appUnten - tiefster).toFixed(1), reihenfolge: reihe,
     modellzeileSichtbar: sichtbar,
+    werkzeugleiste: r(".kuro-toolbar"), tabLeiste: r(".okit-hub-tabs"),
+    kette, ort, floating: document.body.classList.contains("is-floating-nav"), hostMarkiert: !!(host && host.classList.contains("okit-chat-host")), hostPaddingUnten: host ? getComputedStyle(host).paddingBottom : "—",
     tippflaechen: [["Neu", "neu"], ["Verlauf", "verlauf"], ["Neu laden", "neuLaden"], ["Senden", "senden"]].map(flaeche),
   };
 `;
@@ -114,6 +127,8 @@ function kurz(m: Messung): string {
     `  Abstand Knopfreihe/Eingabe zum unteren Rand ${m.abstandUnten} px (tiefstes Element bis ${m.tiefster}; Chat ${b(m.chat)})`,
     `  Antwortbereich ${m.log?.h ?? '—'} px = ${m.logZeilen} Zeilen à ${m.zeilenhoehe} px`,
     `  Kontext ${b(m.kontext)} · Modellzeile ${b(m.modellzeile)} (sichtbar ${String(m.modellzeileSichtbar)}) · Eingabe ${b(m.eingabe)} · Knopfreihe ${b(m.knopfreihe)} · Statuszeile „${m.statustext}“ ${b(m.statuszeile)}`,
+    `  Ort: ${m.ort} · schwebende Leiste ${String(m.floating)} · Host markiert ${String(m.hostMarkiert)} · Host-Abstand unten ${m.hostPaddingUnten} · Werkzeugleiste ${b(m.werkzeugleiste)} · Tab-Leiste ${b(m.tabLeiste)}`,
+    `  Vorfahren (innen → außen): ${m.kette.join(' ‹ ')}`,
     `  Tippflächen (Breite×Höhe px): ${m.tippflaechen.join(' · ')}`,
     `  Überdeckungen: ${m.ueberdeckungen.length === 0 ? 'keine' : m.ueberdeckungen.join('; ')}`,
     `  Reihenfolge von oben: ${m.reihenfolge.join(' > ')}`,
@@ -138,6 +153,7 @@ async function main(): Promise<void> {
   const port = Number(flag('--port'));
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('--port <1024-65535> ist Pflicht (9222 gehört der regulären Instanz).');
   const tag = flag('--tag') ?? 'lauf';
+  const geraet = argv.includes('--geraet');
   const out = flag('--out') ?? '/tmp/kuro-w29';
   mkdirSync(out, { recursive: true });
 
@@ -176,7 +192,9 @@ async function main(): Promise<void> {
 
     // Seitenleiste mit dem Chat-Tab öffnen, eine Runde führen.
     await cdp.evaluate(`
-      for (const l of app.workspace.getLeavesOfType(${q(VIEW_TYPE)})) l.detach();
+      // Ein Blatt aus dem Lauf davor weg, damit activateSidebar den Ort neu wählt. Im Hauptbereich wird es leer statt abgehängt: wer die einzige Registerkarte abhängt,
+      // lässt dort keine Tab-Gruppe zurück („No tab group found“).
+      for (const l of app.workspace.getLeavesOfType(${q(VIEW_TYPE)})) { if (l.getRoot() === app.workspace.rootSplit) await l.setViewState({ type: "empty" }); else l.detach(); }
       await app.plugins.plugins[${q(PLUGIN_ID)}].activateSidebar();
       await new Promise((r) => setTimeout(r, 900));
       const v = document.querySelector(".workspace-leaf-content[data-type='${VIEW_TYPE}']");
@@ -198,9 +216,14 @@ async function main(): Promise<void> {
     for (const [schema, name] of [['moonstone', 'hell'], ['obsidian', 'dunkel']] as const) {
       await cdp.evaluate(`app.vault.setConfig("theme", ${q(schema)}); app.updateTheme(); app.workspace.trigger("css-change"); await new Promise((r) => setTimeout(r, 600)); return true;`);
       for (const mitTastatur of [false, true]) {
-        const hoehe = mitTastatur ? HOEHE - TASTATUR : HOEHE;
-        await cdp.send('Emulation.setDeviceMetricsOverride', { width: BREITE, height: hoehe, deviceScaleFactor: 2, mobile: true });
+        // Standard (Welle 29, vergleichbar mit allen früheren Zahlen): der Viewport schrumpft um die Tastatur. Mit `--geraet` wie am iPhone (Master 2026-11-03): `innerHeight` bleibt 844,
+        // der App-Container wird um die Tastatur kleiner und beide Variablen stehen auf ihrer Höhe. Beides zugleich zählte die Tastatur doppelt (Chat dann nur 172 px hoch, gemessen).
+        // Die Schublade (drawer) folgt dem Container nicht (Chat ragt in der `--geraet`-Messung über den unteren Rand): für sie ist nur der Standard aussagekräftig.
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: BREITE, height: geraet ? HOEHE : (mitTastatur ? HOEHE - TASTATUR : HOEHE), deviceScaleFactor: 2, mobile: true });
         await cdp.evaluate(mitTastatur ? `document.querySelector(".okit-chat-input")?.focus(); return true;` : `document.activeElement?.blur?.(); return true;`);
+        // Wie Obsidian am Gerät (gemessen vom Master 2026-11-03): bei offener Tastatur beide Variablen auf die Tastaturhöhe, zu: 0 px und die Safe-Area von 34 px (Muster obsidian-kit/pilot/chat-tastatur.ts).
+        // Auf :root UND body, weil in der Emulation unterhalb von :root eine eigene Definition steht.
+        if (geraet) await cdp.evaluate(`for (const el of [document.documentElement, document.body]) { el.style.setProperty("--keyboard-height", "${mitTastatur ? TASTATUR : 0}px"); el.style.setProperty("--safe-area-inset-bottom", "${mitTastatur ? TASTATUR : 34}px"); } const ac = document.querySelector(".app-container"); if (ac) ac.style.height = ${mitTastatur ? `"${HOEHE - TASTATUR}px"` : '""'}; return true;`);
         await sleep(900);
         const zustand = `${tag}-${name}-${mitTastatur ? 'tastatur' : 'ohne'}`;
         const m = await messe(cdp, zustand);

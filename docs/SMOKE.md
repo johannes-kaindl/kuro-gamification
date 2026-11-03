@@ -38,6 +38,7 @@ den zuletzt geladenen Stand und meldet ihn als Ergebnis für den gerade gebauten
 | 2 · Chat einschalten | Schalter **speichert** (über `setControlValue`, nicht am Zustand vorbei) · Wert steht in `data.json` auf Platte · Tab-Leiste erscheint ohne Sidebar-Neuaufbau (`syncChatUI`) | 2 |
 | 3 · Einrichtungs-Hinweis | Hinweis erscheint bei leerer Endpunkt-Liste · nennt Sektion **und** Beispieladresse | 2 |
 | 4 · Layout | Eingabezeile bleibt im sichtbaren Bereich · Log scrollt intern | 6 |
+| 4b · Werkzeugleiste im Chat-Tab | Handy-Regel: mit `is-mobile` am Body ist die Werkzeugleiste im Chat-Tab `display: none`, im Status-Tab sichtbar; ohne die Klasse (Desktop) bleibt sie auch im Chat-Tab (computed style, nicht die Klasse) | — (neu in Welle 30) |
 | 5 · Kontext | Ausklapper vorhanden · **Settings-Vorschau und Ausklapper zeigen dasselbe** | 10 |
 | 6 · Sprache | Platzhalter englisch · kein Text aus der deutschen Tabelle im Chat-Panel | 12 |
 | 7 · Destruktive Knöpfe | destruktiv markierte Knöpfe vorhanden · farblich abgesetzt (computed style, nicht Klasse) | 13 |

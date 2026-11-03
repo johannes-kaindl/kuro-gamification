@@ -87,6 +87,9 @@ const PUNKTE = [
   'setup/wechselt-nach-eintrag-in-den-chat',
   'layout/eingabezeile-sichtbar',
   'layout/log-scrollt-intern',
+  'werkzeugleiste/handy-chat-tab-ausgeblendet',
+  'werkzeugleiste/handy-status-tab-sichtbar',
+  'werkzeugleiste/desktop-chat-tab-sichtbar',
   'kontext/ausklapper-vorhanden',
   'kontext/vorschau-gleich-ausklapper',
   'sprache/platzhalter-englisch',
@@ -126,6 +129,7 @@ const PUNKTE = [
   'anfrage/body-traegt-die-modus-defaults',
   'anfrage/abschnitt-klappt-auf-und-zeigt-die-felder',
   'anfrage/letzte-anfrage-steht-beim-oeffnen-da',
+  'anfrage/keine-stufenwahl-zeile',
   'anfrage/zwei-bearbeitungen-hintereinander-lassen-ihn-offen',
   'anfrage/body-folgt-den-einstellungen',
   'anfrage/zuruecksetzen-entfernt-die-ueberschreibung',
@@ -517,6 +521,37 @@ async function sektionLayout(cdp: Cdp): Promise<void> {
     (mass.scrollHeight ?? 0) > (mass.clientHeight ?? 0),
     `Log: scrollHeight ${Math.round(mass.scrollHeight ?? 0)} > clientHeight ${Math.round(mass.clientHeight ?? 0)}`,
   );
+}
+
+/* ---------------------- 4b · Werkzeugleiste im Chat-Tab (Welle 30) */
+
+/** „Neu berechnen“ und „Loot einlösen“ gehören zum Status: auf dem Handy blendet die `.is-mobile`-Regel die Leiste im Chat-Tab aus (`is-chat-tab` an der Wurzel).
+ *  Gemessen wird die berechnete Anzeige (computed style, nicht die Klasse). Die Mobil-Lage entsteht hier nur über die Klasse `is-mobile` am Body — das prüft die Regel,
+ *  nicht das Layout am Handy (das misst `npm run chat-layout`). Am Desktop (ohne die Klasse) bleibt die Leiste auch im Chat-Tab. */
+async function sektionWerkzeugleiste(cdp: Cdp): Promise<void> {
+  const lies = (): Promise<string | null> => cdp.evaluate<string | null>(`
+    const tb = ${VIEW_EL}?.querySelector(".kuro-toolbar");
+    return tb ? getComputedStyle(tb).display : null;
+  `);
+  const klickeTab = async (idx: number): Promise<void> => {
+    await cdp.evaluate(`const tabs = ${VIEW_EL}?.querySelectorAll(".okit-hub-tab"); if (tabs?.[${idx}]) tabs[${idx}].click(); await new Promise((r) => setTimeout(r, 300)); return true;`);
+  };
+  const warMobil = await cdp.evaluate<boolean>(`return document.body.classList.contains("is-mobile");`);
+  try {
+    await cdp.evaluate(`document.body.classList.remove("is-mobile"); return true;`);
+    await klickeTab(1);
+    const desktopChat = await lies();
+    record('werkzeugleiste/desktop-chat-tab-sichtbar', desktopChat !== null && desktopChat !== 'none', `Chat-Tab ohne is-mobile: display ${String(desktopChat)} (Soll nicht none)`);
+    await cdp.evaluate(`document.body.classList.add("is-mobile"); return true;`);
+    const handyChat = await lies();
+    record('werkzeugleiste/handy-chat-tab-ausgeblendet', handyChat === 'none', `Chat-Tab mit is-mobile: display ${String(handyChat)} (Soll none)`);
+    await klickeTab(0);
+    const handyStatus = await lies();
+    record('werkzeugleiste/handy-status-tab-sichtbar', handyStatus !== null && handyStatus !== 'none', `Status-Tab mit is-mobile: display ${String(handyStatus)} (Soll nicht none)`);
+  } finally {
+    await cdp.evaluate(`document.body.classList.${warMobil ? 'add' : 'remove'}("is-mobile"); return true;`);
+    await klickeTab(1);
+  }
 }
 
 /* ------------------------------------------ 5 · Kontext-Ausklapper */
@@ -1442,6 +1477,7 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
     'anfrage/body-folgt-den-einstellungen',
     'anfrage/zuruecksetzen-entfernt-die-ueberschreibung',
     'anfrage/letzte-anfrage-steht-beim-oeffnen-da',
+    'anfrage/keine-stufenwahl-zeile',
   ];
   let fake: FakeChat | null = null;
   let ui: SettingsUi | null = null;
@@ -1473,6 +1509,15 @@ async function sektionAnfrage(cdp: Cdp): Promise<void> {
     const nachKlick = await ui.cdp.evaluate<string | null>(`return (${w}).querySelector(".okit-collapsible-header")?.getAttribute("aria-expanded") ?? null;`);
     record(NAMEN[0]!, vorKlick === 'false' && nachKlick === 'true' && (felder ?? 0) >= 2,
       `aria-expanded ${String(vorKlick)} → ${String(nachKlick)}, ${String(felder)} Eingabefelder`);
+
+    // Kit 0.76.0: „Stufenwahl im Chat“ erscheint nur, wo das Plugin `levelPicker` meldet; Kuro hat die Modellzeile und meldet es nie (`levelPickerInChat: false` hier gesetzt, die Kit-Prüfung
+    // „gespeichertes true hält die Zeile nicht am Leben“ liegt im Kit). Gesucht wird der Name der Zeile in der englischen Oberfläche in den Einstellungen des Plugins.
+    // Positive Kontrolle: dieselbe Suche findet die Zeile „Temperature“ aus demselben Abschnitt; ohne sie wäre „0 Treffer“ ein Suchfehler (CORE-TEST-16).
+    const stufenwahl = await ui.cdp.evaluate<{ zeilen: number; stufenwahl: number; kontrolle: number }>(`
+      const tab = (${w}); const namen = [...tab.querySelectorAll(".setting-item-name")].map((e) => e.textContent.trim());
+      return { zeilen: namen.length, stufenwahl: namen.filter((n) => /level picker in chat|stufenwahl im chat/i.test(n)).length, kontrolle: namen.filter((n) => /temperature|temperatur/i.test(n)).length };`);
+    record(NAMEN[6]!, stufenwahl.kontrolle > 0 && stufenwahl.stufenwahl === 0,
+      `${stufenwahl.zeilen} Einstellungszeilen gelesen, „Temperature“ (Kontrolle) ${stufenwahl.kontrolle}×, „Level picker in chat“ ${stufenwahl.stufenwahl}× (Soll 0)`);
 
     const letzte = await ui.cdp.evaluate<string>(`return (${w}).querySelector(".okit-request-last")?.textContent ?? "";`);
     record(NAMEN[5]!, letzte.includes('"temperature": 0.7') && letzte.includes('"reasoning_effort": "none"'),
@@ -2342,6 +2387,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 4 · Layout unter langem Verlauf');
     await sektionLayout(cdp);
+    console.log('');
+    console.log('── 4b · Werkzeugleiste im Chat-Tab (Handy-Regel)');
+    await sektionWerkzeugleiste(cdp);
     console.log('');
     console.log('── 5 · Kontext-Ausklapper');
     await sektionKontext(cdp);

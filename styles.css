@@ -16,6 +16,9 @@
    below has no box to actually scroll WITHIN, so long content (a growing
    chat log) just pushes the input row off-screen instead of scrolling
    internally (reported 2026-08-12, GUI smoke Schritt 6). */
+/* Die Ansicht baut seit Welle 30 in `contentEl` (dem `.view-content`, Voraussetzung für den Kit-Host-Abstand am Handy). Obsidians eigener Innenabstand dort (12px, unten 32px am Desktop) war nie Teil
+   des Kuro-Layouts, die Wurzel trägt ihren eigenen. Höhere Spezifität als `.workspace-leaf-content .view-content`; den unteren Abstand am Handy setzt die Kit-Regel `okit-chat-host` weiter selbst (mehr Klassen). */
+.workspace-leaf-content[data-type='kuro-status-view'] > .view-content { padding: 0; }
 .kuro-view-root { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; height: 100%; box-sizing: border-box; overflow: hidden; }
 /* min-height:0 is the load-bearing part: a flex item's default min-height is
    `auto` (= its content's natural height), which silently defeats flex:1 +

@@ -237,3 +237,39 @@ describe('KuroSidebarView tabs (Kit-Hub)', () => {
     expect(view.hubEl).toBeNull();
   });
 });
+
+/* Werkzeugleiste im Chat-Tab (Welle 30, Entscheidung Johannes 2026-11-02): „Neu berechnen“ und „Loot einlösen“ gehören zum Status. Die Wurzel trägt `is-chat-tab`,
+   solange der Chat-Tab offen ist; ausgeblendet wird die Leiste von einer `.is-mobile`-Regel in der styles.css (am Desktop bleibt sie). Die Klasse folgt dem Tab in beide
+   Richtungen — eine Klasse, die nur gesetzt, aber nie genommen wird, versteckte die Leiste auch im Status. */
+describe('KuroSidebarView — Werkzeugleiste und Chat-Tab', () => {
+  it('die Wurzel trägt is-chat-tab nur, solange der Chat-Tab offen ist', async () => {
+    const view = await openView(true);
+    const root = view.rootEl as any;
+    expect(root.hasClass('is-chat-tab')).toBe(false);
+    view.showTab('chat');
+    expect(root.hasClass('is-chat-tab')).toBe(true);
+    tabBtn(view, 0).click();
+    expect(root.hasClass('is-chat-tab')).toBe(false);
+  });
+
+  it('ohne Chat gibt es keinen Tab, also nie is-chat-tab', async () => {
+    const view = await openView(false);
+    expect((view.rootEl as any).hasClass('is-chat-tab')).toBe(false);
+  });
+
+  it('die Werkzeugleiste bleibt im DOM (die Kopplung läuft über die Klasse, nicht über Entfernen)', async () => {
+    const view = await openView(true);
+    view.showTab('chat');
+    const kinder = (view.rootEl as any).children as any[];
+    expect(kinder.some((c) => c.hasClass('kuro-toolbar'))).toBe(true);
+  });
+
+  it('onOpen auf einer schon offenen Ansicht (syncChatUI) setzt den Zustand zurück: Status-Tab, keine Klasse', async () => {
+    const view = await openView(true);
+    view.showTab('chat');
+    await view.onOpen();
+    expect(view.activeTab).toBe('status');
+    expect((view.rootEl as any).hasClass('is-chat-tab')).toBe(false);
+  });
+});
+

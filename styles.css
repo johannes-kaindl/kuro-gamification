@@ -25,6 +25,8 @@
 .kuro-view-body { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .kuro-toolbar   { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex: 0 0 auto; }
 .kuro-empty     { padding: 12px; opacity: 0.85; }
+/* Auf dem Handy gehört die Werkzeugleiste (Neu berechnen, Loot einlösen) zum Status: im Chat-Tab blendet sie sich aus und gibt dem Chat die Höhe (Welle 30; `is-chat-tab` setzt KuroSidebarView). Am Desktop bleibt sie. */
+.is-mobile .kuro-view-root.is-chat-tab > .kuro-toolbar { display: none; }
 
 /* ── Buttons ──────────────────────────────────────────── */
 .kuro-btn {

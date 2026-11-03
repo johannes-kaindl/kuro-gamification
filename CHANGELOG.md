@@ -10,6 +10,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 - **The chat on a phone: no empty strip above the keyboard.** With the keyboard open, the gap between Send and the keyboard is gone, and the floating navigation bar no longer covers the bottom row of the chat (main area only).
 - **The past-chats button stays hidden while past chats are off (retention 0, the default) on a phone too.** A phone rule used to show it anyway, without a function.
 - **The copy buttons on answers are easier to hit with a thumb** on a phone (larger touch area, same look).
+- **More room for the chat on a phone: the toolbar steps aside.** "Recompute" and "Redeem loot" belong to the status, so they no longer show while the Chat tab is open on a phone (the Status · Chat tab bar stays). With the keyboard open that gives the answer about two more lines (6.0 instead of 3.6 in the 390 × 508 emulation). On desktop nothing changes.
 - **Updated building blocks:** obsidian-kit 0.76.1 (code-kit stays 0.40.0).
 
 ## [1.18.0] — 2026-11-01

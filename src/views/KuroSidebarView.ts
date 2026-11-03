@@ -1,6 +1,15 @@
 /* ==========================================================
-   KuroSidebarView — right-leaf ItemView mit Toolbar, Loot-Knopf
-   und Status-Snapshot; optional mit Chat-Tab.
+   KuroSidebarView — ItemView mit Toolbar, Loot-Knopf und
+   Status-Snapshot; optional mit Chat-Tab. Sitzt am Desktop in der
+   rechten Seitenleiste, auf dem Handy als Tab im Hauptbereich
+   (`KuroPlugin.activateSidebar`).
+
+   Werkzeugleiste und Chat-Tab: „Neu berechnen“ und „Loot einlösen“
+   gehören zum Status. Die Leiste liegt ausserhalb des Hubs, deshalb
+   trägt die Wurzel `is-chat-tab`, solange der Chat-Tab offen ist
+   (`onShow`/`onHide` des Chat-Panels); die `.is-mobile`-Regel der
+   styles.css blendet sie dann aus (Handy: rund 55 px mehr für den
+   Chat). Am Desktop bleibt sie.
 
    Tab-Aufbau (load-bearing): Die Tab-Leiste ist der Kit-Hub
    (buildHubInto, „mount-once“): Status- und Chat-Body existieren
@@ -27,6 +36,8 @@ export type KuroTab = 'status' | 'chat';
 export class KuroSidebarView extends ItemView {
   statusBodyEl: HTMLElement | null = null;
   chatBodyEl: HTMLElement | null = null;
+  /** Wurzel der Ansicht (Werkzeugleiste + Hub bzw. Status); trägt `is-chat-tab`, solange der Chat-Tab offen ist. */
+  rootEl: HTMLElement | null = null;
   /** Wurzel des Hubs (Tab-Leiste + Panels); nur bei aktivem Chat vorhanden. */
   hubEl: HTMLElement | null = null;
 
@@ -55,6 +66,7 @@ export class KuroSidebarView extends ItemView {
     const lang = this.plugin.data.settings.language;
     const chatOn = this.plugin.data.settings.enableChat;
     const root = this.containerEl.createDiv({ cls: 'kuro-view-root' });
+    this.rootEl = root;
 
     /* toolbar */
     const toolbar = root.createDiv({ cls: 'kuro-toolbar' });
@@ -121,6 +133,8 @@ export class KuroSidebarView extends ItemView {
         });
         this.chatPanel.build();
       },
+      onShow: () => { this.rootEl?.addClass('is-chat-tab'); },
+      onHide: () => { this.rootEl?.removeClass('is-chat-tab'); },
       destroy: () => { this.chatPanel?.destroy(); },
     };
     return [status, chat];
@@ -131,6 +145,7 @@ export class KuroSidebarView extends ItemView {
     if (!this.hub) this.chatPanel?.destroy();
     this.hub = null;
     this.hubEl = null;
+    this.rootEl = null;
     this.statusBodyEl = null;
     this.chatBodyEl = null;
     this.chatPanel = null;

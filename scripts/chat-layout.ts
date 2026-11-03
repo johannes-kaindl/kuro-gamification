@@ -67,6 +67,8 @@ interface Messung {
   kette: string[];
   /** Wo die Ansicht sitzt: im Hauptbereich (`.mod-root`) oder in einer Seitenleiste, und was der Kit-Host-Abstand daraus macht. */
   ort: string; floating: boolean; hostMarkiert: boolean; hostPaddingUnten: string;
+  /** Welle 30 (Ansicht in contentEl): Kopfzeile des Blatts (`.view-header`) und der Innenabstand des `.view-content` (alle vier Seiten). */
+  kopfzeile: Box | null; hostPadding: string;
 }
 
 const MESS_JS = `
@@ -111,6 +113,7 @@ const MESS_JS = `
     modellzeileSichtbar: sichtbar,
     werkzeugleiste: r(".kuro-toolbar"), tabLeiste: r(".okit-hub-tabs"),
     kette, ort, floating: document.body.classList.contains("is-floating-nav"), hostMarkiert: !!(host && host.classList.contains("okit-chat-host")), hostPaddingUnten: host ? getComputedStyle(host).paddingBottom : "—",
+    kopfzeile: r(".view-header"), hostPadding: host ? getComputedStyle(host).padding : "—",
     tippflaechen: [["Neu", "neu"], ["Verlauf", "verlauf"], ["Neu laden", "neuLaden"], ["Senden", "senden"]].map(flaeche),
   };
 `;
@@ -128,6 +131,7 @@ function kurz(m: Messung): string {
     `  Antwortbereich ${m.log?.h ?? '—'} px = ${m.logZeilen} Zeilen à ${m.zeilenhoehe} px`,
     `  Kontext ${b(m.kontext)} · Modellzeile ${b(m.modellzeile)} (sichtbar ${String(m.modellzeileSichtbar)}) · Eingabe ${b(m.eingabe)} · Knopfreihe ${b(m.knopfreihe)} · Statuszeile „${m.statustext}“ ${b(m.statuszeile)}`,
     `  Ort: ${m.ort} · schwebende Leiste ${String(m.floating)} · Host markiert ${String(m.hostMarkiert)} · Host-Abstand unten ${m.hostPaddingUnten} · Werkzeugleiste ${b(m.werkzeugleiste)} · Tab-Leiste ${b(m.tabLeiste)}`,
+    `  Kopfzeile des Blatts ${b(m.kopfzeile)} · Innenabstand des view-content ${m.hostPadding}`,
     `  Vorfahren (innen → außen): ${m.kette.join(' ‹ ')}`,
     `  Tippflächen (Breite×Höhe px): ${m.tippflaechen.join(' · ')}`,
     `  Überdeckungen: ${m.ueberdeckungen.length === 0 ? 'keine' : m.ueberdeckungen.join('; ')}`,

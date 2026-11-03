@@ -91,10 +91,9 @@ const PUNKTE = [
   'werkzeugleiste/handy-status-tab-sichtbar',
   'werkzeugleiste/desktop-chat-tab-sichtbar',
   'handy-tab/desktop-bleibt-in-der-seitenleiste',
-  'handy-tab/schubladenblatt-wandert-in-den-hauptbereich',
-  'handy-tab/neues-blatt-im-hauptbereich',
   'ansicht/wurzel-im-view-content',
   'ansicht/chat-host-markiert',
+  'ansicht/innenabstand-wie-vorher',
   'kontext/ausklapper-vorhanden',
   'kontext/vorschau-gleich-ausklapper',
   'sprache/platzhalter-englisch',
@@ -561,55 +560,22 @@ async function sektionWerkzeugleiste(cdp: Cdp): Promise<void> {
 
 /* ------------------------------------ 4c · Handy-Tab (Welle 30, Kit 0.77.0) */
 
-/** Wo die Ansicht aufgeht, gemessen am echten Workspace: `Platform.isMobile` wird für die Dauer der Messung gesetzt (der Kit-Aufruf `openChatLeaf` liest es bei jedem Aufruf) und im `finally` zurückgesetzt;
- *  danach steht die Ansicht wie vorher in der Seitenleiste. Die Aufnahme am Handy selbst bleibt ungemessen (WKWebView). */
+/** Wo die Ansicht am Desktop aufgeht (rechte Seitenleiste), gemessen am echten Workspace. Die Platzierung am Handy misst `npm run chat-layout` (Ausgabe `ort`): `Platform.isMobile` ist aus dem Renderer
+ *  nicht zu erreichen (`require("obsidian")` gibt es dort nicht), und `app.emulateMobile(true)` lädt Obsidian neu, was einen Smoke-Lauf mitten in der Sitzung zerreißen würde. */
 async function sektionHandyTab(cdp: Cdp): Promise<void> {
-  const namen = [
-    'handy-tab/desktop-bleibt-in-der-seitenleiste',
-    'handy-tab/schubladenblatt-wandert-in-den-hauptbereich',
-    'handy-tab/neues-blatt-im-hauptbereich',
-  ] as const;
-  const vorhanden = await cdp.evaluate<boolean>(`const P = window.require?.("obsidian")?.Platform; return !!P && typeof P.isMobile === "boolean";`);
-  if (!vorhanden) {
-    for (const n of namen) unmeasured(n, 'Platform ließ sich im Renderer nicht erreichen (require("obsidian"))');
-  } else {
-    const wo = await cdp.evaluate<{ desktop: string; migration: string; neu: string }>(`
-      const P = window.require("obsidian").Platform;
-      const war = P.isMobile;
-      const ws = app.workspace;
-      const plugin = ${PLUGIN_EXPR};
-      const VT = ${JSON.stringify(VIEW_TYPE)};
-      const warte = (ms) => new Promise((r) => setTimeout(r, ms));
-      const ort = () => {
-        const l = ws.getLeavesOfType(VT);
-        if (!l.length) return "keins";
-        const r = l[0].getRoot();
-        return (r === ws.rootSplit ? "haupt" : r === ws.rightSplit ? "rechts" : r === ws.leftSplit ? "links" : "anders") + ":" + l.length;
-      };
-      const zu = async () => { for (const l of ws.getLeavesOfType(VT)) l.detach(); await warte(300); };
-      const out = {};
-      try {
-        P.isMobile = false;
-        await zu();
-        await plugin.activateSidebar(); await warte(600);
-        out.desktop = ort();
-        P.isMobile = true;
-        await plugin.activateSidebar(); await warte(900);
-        out.migration = ort();
-        await zu();
-        await plugin.activateSidebar(); await warte(900);
-        out.neu = ort();
-      } finally {
-        P.isMobile = war;
-        await zu();
-        await plugin.activateSidebar(); await warte(900);
-      }
-      return out;
-    `);
-    record(namen[0], wo.desktop === 'rechts:1', `Desktop, kein Blatt offen: ${wo.desktop} (Soll rechts:1)`);
-    record(namen[1], wo.migration === 'haupt:1', `Handy, Blatt in der Schublade offen: ${wo.migration} (Soll haupt:1, das alte Blatt geschlossen)`);
-    record(namen[2], wo.neu === 'haupt:1', `Handy, kein Blatt offen: ${wo.neu} (Soll haupt:1)`);
-  }
+  const desktop = await cdp.evaluate<string>(`
+    const ws = app.workspace;
+    const VT = ${JSON.stringify(VIEW_TYPE)};
+    for (const l of ws.getLeavesOfType(VT)) l.detach();
+    await new Promise((r) => setTimeout(r, 300));
+    await ${PLUGIN_EXPR}.activateSidebar();
+    await new Promise((r) => setTimeout(r, 900));
+    const l = ws.getLeavesOfType(VT);
+    if (!l.length) return "keins";
+    const r = l[0].getRoot();
+    return (r === ws.rootSplit ? "haupt" : r === ws.rightSplit ? "rechts" : r === ws.leftSplit ? "links" : "anders") + ":" + l.length;
+  `);
+  record('handy-tab/desktop-bleibt-in-der-seitenleiste', desktop === 'rechts:1', `Desktop, kein Blatt offen: ${desktop} (Soll rechts:1)`);
 
   // Die Ansicht baut in `contentEl`: nur dort findet das Kit-Fenster seinen Host (`markChatHost`), sonst greift der Handy-Abstand nie.
   const aufbau = await cdp.evaluate<{ wurzelImViewContent: boolean; hostMarkiert: boolean }>(`
@@ -619,6 +585,8 @@ async function sektionHandyTab(cdp: Cdp): Promise<void> {
     return { wurzelImViewContent: !!vc && vc.parentElement === view, hostMarkiert: !!vc && vc.classList.contains("okit-chat-host") };
   `);
   record('ansicht/wurzel-im-view-content', aufbau.wurzelImViewContent, `.kuro-view-root liegt in einem .view-content direkt unter dem Blatt: ${String(aufbau.wurzelImViewContent)}`);
+  const innen = await cdp.evaluate<string>(`const vc = ${VIEW_EL}?.querySelector(":scope > .view-content"); if (!vc) return "kein view-content"; const cs = getComputedStyle(vc); return [cs.paddingTop, cs.paddingRight, cs.paddingLeft].join(" ");`);
+  record('ansicht/innenabstand-wie-vorher', innen === '0px 0px 0px', `Innenabstand oben/rechts/links des .view-content: ${innen} (Soll 0px 0px 0px, wie vor der Umstellung auf contentEl; Obsidians 12px würden Breite und Höhe der Seitenleiste kürzen)`);
   record('ansicht/chat-host-markiert', aufbau.hostMarkiert, `.view-content trägt okit-chat-host (markChatHost hat den Host gefunden): ${String(aufbau.hostMarkiert)}`);
 }
 

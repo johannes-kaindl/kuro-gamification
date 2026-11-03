@@ -5,6 +5,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **The chat on a phone: no empty strip above the keyboard.** With the keyboard open, the gap between Send and the keyboard is gone, and the floating navigation bar no longer covers the bottom row of the chat (main area only).
+- **The past-chats button stays hidden while past chats are off (retention 0, the default) on a phone too.** A phone rule used to show it anyway, without a function.
+- **The copy buttons on answers are easier to hit with a thumb** on a phone (larger touch area, same look).
+- **Updated building blocks:** obsidian-kit 0.76.1 (code-kit stays 0.40.0).
+
 ## [1.18.0] — 2026-11-01
 
 ### Added

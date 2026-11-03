@@ -1,9 +1,9 @@
 {
   "source": "obsidian-kit",
   "tag": "0.43.0",
-  "version": "0.74.0",
-  "sha": "fcc2ac0",
+  "version": "0.76.1",
+  "sha": "0135df4",
   "date": "2026-09-26",
-  "vendored": "backend-probe.ts, chat-client.ts, chat-transport.ts, clipboard.ts, clock.ts, collapsible.ts, confirm.ts, dom-guard.ts, embedding-connection.ts, endpoint-list.ts, endpoint-plumbing.ts, endpoint-secrets.ts, endpoint-status-text.ts, endpoint-source.ts, help-setting.ts, hub.ts, link-settings.ts, llm-connection.ts, llm-connection-strings.ts, model-picker.ts, request-section.ts, request-session.ts, secrets.ts, shortcuts-bridge.ts, stable-writer.ts, stream-area.ts, plugin-api.ts, anthropic-transport.ts, daily-notes.ts, moment.ts, chat-window.ts, chat-window-strings.ts, model-bar.ts, model-bar-strings.ts, thinking-control.ts, chat-archive-dialog.ts, chat-archive.ts, chat-archive-strings.ts, run-exclusive.ts, chat-archive-settings.ts, folder-suggest.ts, chat-archive-css.ts",
+  "vendored": "backend-probe.ts, chat-client.ts, chat-transport.ts, clipboard.ts, clock.ts, collapsible.ts, confirm.ts, dom-guard.ts, embedding-connection.ts, endpoint-list.ts, endpoint-plumbing.ts, endpoint-secrets.ts, endpoint-status-text.ts, endpoint-source.ts, help-setting.ts, hub.ts, link-settings.ts, llm-connection.ts, llm-connection-strings.ts, model-picker.ts, request-section.ts, status-indicator.ts, request-session.ts, secrets.ts, shortcuts-bridge.ts, stable-writer.ts, stream-area.ts, plugin-api.ts, anthropic-transport.ts, daily-notes.ts, moment.ts, chat-window.ts, chat-window-strings.ts, chat-host.ts, model-bar.ts, model-bar-strings.ts, thinking-control.ts, chat-archive-dialog.ts, chat-archive.ts, chat-archive-strings.ts, run-exclusive.ts, chat-archive-settings.ts, folder-suggest.ts, chat-archive-css.ts",
   "note": "Verbatim snapshot von obsidian-kit/src/obsidian (plus Herkunfts-Header in Zeile 1). Pins in tools/kit-sync.json, re-vendor via tools/sync-kit.sh (zentrales kit-sync im Dach). Never hand-edit."
 }

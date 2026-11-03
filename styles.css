@@ -224,7 +224,7 @@
    diese Regel klebten sie ohne Abstand aneinander (Befund an den Master, Welle 26). Entfällt, sobald das Kit den Abstand zwischen Blöcken selbst setzt. */
 .kuro-chat .okit-stream-block + .okit-stream-block { margin-top: var(--size-4-3); }
 
-/* uebernommen aus src/vendor/kit-obsidian/stream-area.ts (STREAM_AREA_CSS), obsidian-kit 0.76.1. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich — der Test tests/kit-css.test.ts wacht darüber. */
+/* uebernommen aus src/vendor/kit-obsidian/stream-area.ts (STREAM_AREA_CSS), obsidian-kit 0.77.0. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich — der Test tests/kit-css.test.ts wacht darüber. */
 .okit-stream { display: flex; flex-direction: column; min-height: 0; gap: var(--size-4-2); }
 .okit-stream-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
@@ -426,7 +426,7 @@
 .okit-request-deviation-action { margin-inline-start: var(--size-4-2); }
 .okit-request-deviation { color: var(--text-muted); font-size: var(--font-ui-small); padding-left: var(--size-4-6); }
 
-/* uebernommen aus src/vendor/kit-obsidian/status-indicator.ts (STATUS_INDICATOR_CSS), obsidian-kit 0.76.1. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
+/* uebernommen aus src/vendor/kit-obsidian/status-indicator.ts (STATUS_INDICATOR_CSS), obsidian-kit 0.77.0. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
 .okit-status { display: flex; gap: var(--size-2-2); align-items: center; font-size: var(--font-ui-small); color: var(--text-muted); }
 .okit-status-icon { display: inline-flex; align-items: center; }
 .okit-status-icon svg { width: 14px; height: 14px; }
@@ -437,7 +437,7 @@
 @keyframes okit-status-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .okit-status.is-checking .okit-status-icon svg { animation: none; } }
 
-/* uebernommen aus src/vendor/kit-obsidian/model-bar.ts (MODEL_BAR_CSS), obsidian-kit 0.76.1. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
+/* uebernommen aus src/vendor/kit-obsidian/model-bar.ts (MODEL_BAR_CSS), obsidian-kit 0.77.0. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
 .okit-model-bar { position: relative; width: 100%; min-width: 0; container-type: inline-size; container-name: okit-model-bar; }
 .okit-model-bar-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--size-2-2) var(--size-4-1); min-width: 0; }
 .okit-model-bar-label { flex: 0 0 auto; color: var(--text-muted); font-size: var(--font-ui-small); white-space: nowrap; }
@@ -459,7 +459,7 @@
 @container okit-model-bar (width < 200px) { .okit-model-bar-row { flex-wrap: wrap; } }
 .okit-model-bar-status { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
 
-/* uebernommen aus src/vendor/kit-obsidian/thinking-control.ts (THINKING_CONTROL_CSS), obsidian-kit 0.76.1 — Kuro übergibt kein `thinking`; der Baustein kommt mit der Modellzeile. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
+/* uebernommen aus src/vendor/kit-obsidian/thinking-control.ts (THINKING_CONTROL_CSS), obsidian-kit 0.77.0 — Kuro übergibt kein `thinking`; der Baustein kommt mit der Modellzeile. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
 .okit-thinking-control { display: inline-flex; align-items: center; }
 .okit-thinking-toggle {
   display: inline-flex; align-items: center; gap: var(--size-2-1);
@@ -475,7 +475,7 @@
 .okit-thinking-icon { display: inline-flex; align-items: center; margin-inline-end: var(--size-2-1); color: var(--icon-color); }
 .okit-thinking-icon svg { width: var(--icon-xs); height: var(--icon-xs); }
 
-/* uebernommen aus src/vendor/kit-obsidian/chat-window.ts (CHAT_WINDOW_CSS), obsidian-kit 0.76.1. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
+/* uebernommen aus src/vendor/kit-obsidian/chat-window.ts (CHAT_WINDOW_CSS), obsidian-kit 0.77.0. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
 .okit-chat { display: flex; flex-direction: column; min-height: 0; height: 100%; gap: var(--size-4-2); }
 .okit-chat-header:empty { display: none; }
 .okit-chat-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--size-4-3); }
@@ -571,7 +571,7 @@
    unsichtbar, im echten Renderer blieb der Verlauf unter dem Leerzustand stehen (Pilot, 2026-10-23). */
 .okit-chat .okit-chat-hidden { display: none; }
 
-/* uebernommen aus src/vendor/kit-obsidian/chat-archive-css.ts (CHAT_ARCHIVE_CSS), obsidian-kit 0.76.1. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
+/* uebernommen aus src/vendor/kit-obsidian/chat-archive-css.ts (CHAT_ARCHIVE_CSS), obsidian-kit 0.77.0. Laut Kit-Vertrag kopiert, nicht importiert, wortgleich (tests/kit-css.test.ts). */
 .okit-chat-archive-invalid {
   display: flex;
   align-items: center;

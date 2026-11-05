@@ -26,7 +26,10 @@
         "model-list-cache",
         "num",
         "reasoning",
-        "redact",
+        {
+          "name": "redact",
+          "ref": "0.60.0"
+        },
         "safe-markdown",
         "sampling-profiles",
         "secrets",
@@ -121,7 +124,10 @@
         "anthropic-transport",
         "daily-notes",
         "moment",
-        "chat-window",
+        {
+          "name": "chat-window",
+          "ref": "0.80.3"
+        },
         "chat-window-strings",
         "chat-host",
         "chat-leaf",

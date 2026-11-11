@@ -70,4 +70,8 @@ describe('markedDates', () => {
   it('empty value list marks nothing', () => {
     expect(markedDates(dailies, 'tagestyp', ' , ').size).toBe(0);
   });
+  it('ignores blanks and empty entries in the value list', () => {
+    expect([...markedDates(dailies, 'tagestyp', ' Wochenende ,, Feiertag,')]).toEqual(['2026-04-18', '2026-04-19']);
+    expect(markedDates(dailies, 'tagestyp', '').size).toBe(0);
+  });
 });

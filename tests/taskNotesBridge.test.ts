@@ -153,6 +153,16 @@ describe('taskRuleFromSettings', () => {
       taskStatusField: 'status', taskDoneValues: '6_erledigt_✅, done ,',
     }).doneValues).toEqual(['6_erledigt_✅', 'done']);
   });
+  it('Randfälle der Erledigt-Werte: Leerraum, leere Einträge, nur Trennzeichen, Zeilenumbruch', () => {
+    const done = (taskDoneValues: string) => taskRuleFromSettings({ taskMatchField: 'type', taskMatchValue: 'x', taskStatusField: 'status', taskDoneValues }).doneValues;
+    expect(done('')).toEqual([]);
+    expect(done(' , ,, ')).toEqual([]);
+    expect(done(',')).toEqual([]);
+    expect(done(' a ,,b, ')).toEqual(['a', 'b']);
+    expect(done('a\t,\nb')).toEqual(['a', 'b']);
+    expect(done('eins zwei')).toEqual(['eins zwei']);
+    expect(done('a;b')).toEqual(['a;b']);
+  });
 });
 
 import { subscribeTaskNotes } from '../src/utils/taskNotesBridge';

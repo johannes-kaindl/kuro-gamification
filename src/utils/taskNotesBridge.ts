@@ -11,6 +11,7 @@
    traegt den Frontmatter-Fallback und bleibt unveraendert.
    ========================================================== */
 import type { App } from 'obsidian';
+import { splitList } from '../vendor/kit/split-list';
 
 export type TaskIdentification =
   | { method: 'tag'; tag: string }
@@ -125,7 +126,7 @@ export function taskRuleFromSettings(s: {
     matchField: s.taskMatchField.trim(),
     matchValue: s.taskMatchValue.trim(),
     statusField: s.taskStatusField.trim() || 'status',
-    doneValues: s.taskDoneValues.split(',').map((v) => v.trim()).filter((v) => v !== ''),
+    doneValues: splitList(s.taskDoneValues),
   };
 }
 
@@ -226,7 +227,7 @@ export function markedDates(
   const out = new Set<string>();
   const k = key.trim();
   if (k === '') return out;
-  const wanted = valuesCsv.split(',').map((v) => v.trim()).filter((v) => v !== '');
+  const wanted = splitList(valuesCsv);
   for (const d of dailies) {
     const raw = d.frontmatter[k];
     const value = typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : raw;

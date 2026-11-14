@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.20.0] — 2026-11-14
+
 ### Changed
 
 - **The model row and the model choice now name and bind the endpoint the manager really uses** (before: the first enabled one, even when it was unreachable), and the chat model dropdown lists the models of all endpoints grouped by endpoint (obsidian-kit 0.89.0). A model choice made while the endpoint is switched off or deleted now applies to the automatically chosen endpoint.

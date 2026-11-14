@@ -301,6 +301,9 @@ async function setzeVerlauf(cdp: Cdp, zeilen: Array<{ nutzer: string } | { antwo
 
 /** Statusleiste (Welle 34, Kit `status-bar-item`): Vorgabe AN, der Schalter hängt den Eintrag ab und legt ihn wieder an. Vor allen anderen Sektionen,
  *  weil der Staging-Vault frisch ist (kein gespeicherter Wert) und nur dann „Standard“ gemessen wird. */
+/** Vom Neulade-Schritt gesetzt: der Schlüssel `enableStatusBar` fehlte auf der Platte, unmittelbar bevor das Plugin geladen wurde. */
+let statusleisteAusgangOhneSchluessel = false;
+
 async function sektionStatusleiste(cdp: Cdp): Promise<void> {
   const EL = `document.querySelector(".status-bar .kuro-status-bar-item")`;
   const stand = await cdp.evaluate<{ gespeichert: boolean; vorhanden: boolean; text: string; wert: unknown }>(`
@@ -310,10 +313,11 @@ async function sektionStatusleiste(cdp: Cdp): Promise<void> {
     return { gespeichert: !!roh && !!roh.settings && "enableStatusBar" in roh.settings, vorhanden: !!el, text: el ? el.textContent : "", wert: p.data.settings.enableStatusBar };
   `);
   // Gültigkeit: „Standard“ gilt nur, solange kein Wert gespeichert ist (CORE-TEST-22); sonst messen wir die Wahl, nicht die Vorgabe.
-  if (stand.gespeichert) {
-    unmeasured('statusleiste/standard-an', 'der Staging-Vault trägt schon einen gespeicherten Wert für enableStatusBar: die Vorgabe ist nicht messbar');
+  // „gespeichert“ allein taugt nicht als Wächter: das Plugin schreibt den Wert beim Laden selbst; gültig ist die Messung, wenn der Neulade-Schritt den Schlüssel entfernt hat.
+  if (!statusleisteAusgangOhneSchluessel) {
+    unmeasured('statusleiste/standard-an', `der Schlüssel enableStatusBar ließ sich vor dem Laden nicht entfernen (Platte danach: ${stand.gespeichert ? 'trägt ihn' : 'ohne'}): die Vorgabe ist nicht messbar`);
   } else {
-    record('statusleiste/standard-an', stand.vorhanden && stand.wert === true && /^(Lvl|Kuro)/.test(stand.text), `Eintrag in der Statusleiste: ${String(stand.vorhanden)} · Einstellung ${String(stand.wert)} · Text „${stand.text}“ (Soll: da, true, „Lvl …“ oder „Kuro: …“)`);
+    record('statusleiste/standard-an', stand.vorhanden && stand.wert === true && /^(Lvl|Kuro)/.test(stand.text), `Schlüssel vor dem Laden entfernt · Eintrag in der Statusleiste: ${String(stand.vorhanden)} · Einstellung ${String(stand.wert)} · Text „${stand.text}“ (Soll: da, true, „Lvl …“ oder „Kuro: …“)`);
   }
   const folge = await cdp.evaluate<{ aus: boolean; wieder: boolean; text: string }>(`
     const p = ${PLUGIN_EXPR};
@@ -2456,12 +2460,25 @@ async function main(): Promise<void> {
     // die Dateien, die laufende Instanz behält den alten Code im Speicher. Ohne diesen
     // Schritt misst der Smoke den zuletzt geladenen Stand und meldet ihn als Ergebnis für
     // den gerade gebauten — genau so läuft eine kaputte Version grün durch.
-    const plugin = await cdp.evaluate<{ ok: boolean; version?: string; aufPlatte?: string }>(`
+    const plugin = await cdp.evaluate<{ ok: boolean; version?: string; aufPlatte?: string; schluesselEntfernt?: boolean }>(`
       const id = ${JSON.stringify(PLUGIN_ID)};
       if (app.plugins.plugins[id]) {
         await app.plugins.disablePlugin(id);
         await new Promise((r) => setTimeout(r, 500));
       }
+      // Ausgangszustand für die Standard-Messung der Statusleiste selbst herstellen (CORE-TEST-22): das Plugin schreibt den aufgelösten Wert beim Laden
+      // in seine Einstellungen (refreshStatusBar) und beim ersten Speichern auf die Platte, ein Vorab-Blick auf die Platte misst also das Plugin, nicht den Vault.
+      // Darum fehlt der Schlüssel hier zwischen Ausschalten und Einschalten, und wir wissen, dass er fehlte.
+      let schluesselEntfernt = false;
+      try {
+        const datei = app.vault.configDir + "/plugins/" + id + "/data.json";
+        const roh = JSON.parse(await app.vault.adapter.read(datei));
+        if (roh && roh.settings) {
+          delete roh.settings.enableStatusBar;
+          await app.vault.adapter.write(datei, JSON.stringify(roh, null, 2));
+          schluesselEntfernt = !("enableStatusBar" in JSON.parse(await app.vault.adapter.read(datei)).settings);
+        }
+      } catch { schluesselEntfernt = false; }
       // Restricted Mode und Vertrauensdialog hat bereiteInstanzVor oben erledigt.
       await app.plugins.enablePlugin(id);
       await new Promise((r) => setTimeout(r, 1200));
@@ -2473,8 +2490,9 @@ async function main(): Promise<void> {
         const pfad = app.vault.configDir + "/plugins/" + id + "/manifest.json";
         aufPlatte = JSON.parse(await app.vault.adapter.read(pfad)).version;
       } catch { aufPlatte = undefined; }
-      return { ok: true, version: p.manifest.version, aufPlatte };
+      return { ok: true, version: p.manifest.version, aufPlatte, schluesselEntfernt };
     `);
+    statusleisteAusgangOhneSchluessel = plugin.schluesselEntfernt === true;
     if (!plugin.ok) {
       throw new Error(
         `Plugin ${PLUGIN_ID} ist nicht aktiv. Erst \`npm run deploy\`. Bleibt es danach aus, `

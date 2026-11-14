@@ -37,7 +37,10 @@ function setup(opts: {
   const send = jest.fn<ReturnType<Send>, Parameters<Send>>(opts.send ?? (async (_m, h) => { h.onToken('Hi'); return { ok: true, content: 'Antwort' }; }));
   const models = jest.fn(async () => ({ models: ['m1', 'm2'], reachable: true }));
   const setModel = jest.fn(async (_m: string) => {});
-  const llm = { models, setModel, modelInUse: () => 'm1', source: () => ({ family: null, model: 'm1', sentModel: 'm1' }) };
+  const llm = { models, setModel, modelInUse: () => 'm1', source: () => ({ family: null, model: 'm1', sentModel: 'm1' }),
+    // Seit Kit 0.87.0 Pflicht für die Modellzeile; ohne Manager: keine Gruppen.
+    endpoints: () => [], activeEndpointId: () => undefined, modelsOf: async () => ({ models: [], reachable: false }),
+    choice: () => ({}), setChoice: async () => {}, subscribe: () => () => {} };
   const history: { last: ChatHistory | null } = { last: null };
   const keep = { current: opts.keep ?? 0 };
   const archive = {

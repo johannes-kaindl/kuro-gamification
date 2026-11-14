@@ -4,10 +4,10 @@
   "version": "0.40.0",
   "sha": "97b7277",
   "date": "2026-09-26",
-  "vendored": "backend-probe.ts, capabilities.ts, embeddings-client.ts, endpoint.ts, endpoint_config.ts, endpoint_diagnostics.ts, error_body.ts, model-choice.ts, model-context.ts, local-stamp.ts, model-list-cache.ts, num.ts, reasoning.ts, redact.ts (code-kit@0.60.0, acd3fe7), safe-markdown.ts (code-kit@0.68.0, 70b5b41), sampling-profiles.ts, secrets.ts, sse.ts, stream-blocks.ts, chat-history.ts, think-splitter.ts, timeout.ts, rel-path.ts, anthropic-wire.ts, chat-archive.ts, filename-template.ts, folder-scope.ts (code-kit@0.44.0, ba02b6b), fold-case.ts (code-kit@0.44.0, ba02b6b), split-list.ts (code-kit@0.63.0, ce90bf0), clipboard.ts, link-guard.ts (code-kit@0.68.0, 70b5b41), remote-resources.ts (code-kit@0.68.0, 70b5b41)",
+  "vendored": "backend-probe.ts, capabilities.ts, embeddings-client.ts, endpoint.ts, endpoint_config.ts, endpoint_diagnostics.ts, error_body.ts, model-choice.ts, model-context.ts, local-stamp.ts, model-list-cache.ts, num.ts, reasoning.ts, redact.ts (code-kit@0.60.0, acd3fe7), safe-markdown.ts (code-kit@0.68.0, 70b5b41), sampling-profiles.ts (code-kit@0.68.0, 70b5b41), secrets.ts, sse.ts, stream-blocks.ts, chat-history.ts, think-splitter.ts, timeout.ts, rel-path.ts, anthropic-wire.ts, chat-archive.ts, filename-template.ts, folder-scope.ts (code-kit@0.44.0, ba02b6b), fold-case.ts (code-kit@0.44.0, ba02b6b), split-list.ts (code-kit@0.63.0, ce90bf0), error-message.ts (code-kit@0.68.0, 70b5b41), clipboard.ts, link-guard.ts (code-kit@0.68.0, 70b5b41), remote-resources.ts (code-kit@0.68.0, 70b5b41)",
   "note": "Verbatim snapshot von code-kit/src/ts (plus Herkunfts-Header in Zeile 1). Der Ordner heisst historisch 'kit'; die Quelle ist seit dem code-kit-Split (obsidian-kit@2ab1bb5) code-kit, nicht obsidian-kit. Pins in tools/kit-sync.json, re-vendor via tools/sync-kit.sh (zentrales kit-sync im Dach). Never hand-edit. kit-obsidian/ siehe dortige VENDOR.json.",
   "obsidian_kit_version": "0.77.0",
   "obsidian_kit_sha": "33d1188",
-  "obsidian_kit_vendored": "endpoint-secret-hook.ts, endpoint-source.ts, override-guard.ts",
+  "obsidian_kit_vendored": "endpoint-secret-hook.ts, endpoint-source.ts (obsidian-kit@0.89.0, d7d2edc), override-guard.ts",
   "license": "AGPL-3.0-or-later"
 }

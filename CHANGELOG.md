@@ -7,6 +7,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ### Changed
 
+- **The model row and the model choice now name and bind the endpoint the manager really uses** (before: the first enabled one, even when it was unreachable), and the chat model dropdown lists the models of all endpoints grouped by endpoint (obsidian-kit 0.89.0). A model choice made while the endpoint is switched off or deleted now applies to the automatically chosen endpoint.
+- **gpt-oss models send `reasoning_effort: minimal` again when thinking is off** (code-kit 0.68.0, intended behaviour).
 - **The status bar entry is now on by default.** New installs show "Lvl X · N XP" in the status bar right away; the "Status-bar indicator" switch in the settings turns it off. Nothing changes for existing installs: a saved choice (on or off) is kept, only a missing or invalid value falls back to "on". The entry now uses the shared status bar component of the library (obsidian-kit 0.88.0) and can also be opened with the keyboard (Enter or Space).
 
 ## [1.19.1] — 2026-11-14

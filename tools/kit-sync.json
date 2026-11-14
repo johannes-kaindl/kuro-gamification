@@ -34,7 +34,10 @@
           "name": "safe-markdown",
           "ref": "0.68.0"
         },
-        "sampling-profiles",
+        {
+          "name": "sampling-profiles",
+          "ref": "0.68.0"
+        },
         "secrets",
         "sse",
         "stream-blocks",
@@ -56,6 +59,10 @@
         {
           "name": "split-list",
           "ref": "0.63.0"
+        },
+        {
+          "name": "error-message",
+          "ref": "0.68.0"
         }
       ]
     },
@@ -87,7 +94,10 @@
       "from": "src/pure",
       "modules": [
         "endpoint-secret-hook",
-        "endpoint-source",
+        {
+          "name": "endpoint-source",
+          "ref": "0.89.0"
+        },
         "override-guard"
       ],
       "rewrite": [
@@ -119,18 +129,36 @@
         },
         "embedding-connection",
         "endpoint-list",
-        "endpoint-plumbing",
+        {
+          "name": "endpoint-plumbing",
+          "ref": "0.89.0"
+        },
         "endpoint-secrets",
         "endpoint-status-text",
-        "endpoint-source",
+        {
+          "name": "endpoint-source",
+          "ref": "0.89.0"
+        },
         "help-setting",
         "hub",
         "link-settings",
-        "llm-connection",
-        "llm-connection-strings",
+        {
+          "name": "llm-connection",
+          "ref": "0.89.0"
+        },
+        {
+          "name": "llm-connection-strings",
+          "ref": "0.89.0"
+        },
         "model-picker",
-        "request-section",
-        "status-indicator",
+        {
+          "name": "request-section",
+          "ref": "0.89.0"
+        },
+        {
+          "name": "status-indicator",
+          "ref": "0.89.0"
+        },
         "request-session",
         "secrets",
         "shortcuts-bridge",
@@ -147,9 +175,18 @@
         "chat-window-strings",
         "chat-host",
         "chat-leaf",
-        "model-bar",
-        "model-bar-strings",
-        "thinking-control",
+        {
+          "name": "model-bar",
+          "ref": "0.89.0"
+        },
+        {
+          "name": "model-bar-strings",
+          "ref": "0.89.0"
+        },
+        {
+          "name": "thinking-control",
+          "ref": "0.89.0"
+        },
         "chat-archive-dialog",
         "chat-archive",
         "chat-archive-strings",
@@ -159,7 +196,7 @@
         "chat-archive-css",
         {
           "name": "status-bar-item",
-          "ref": "0.88.0"
+          "ref": "0.89.0"
         }
       ],
       "rewrite": [
@@ -182,7 +219,10 @@
       "source": "obsidian-kit",
       "from": "src/testing",
       "modules": [
-        "kit-css",
+        {
+          "name": "kit-css",
+          "ref": "0.89.0"
+        },
         "obsidian-mock",
         "window-timers"
       ]

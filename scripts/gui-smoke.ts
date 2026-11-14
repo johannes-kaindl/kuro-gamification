@@ -114,6 +114,7 @@ const PUNKTE = [
   'chat/fehlerzeile-bei-http-fehler',
   'chat/linkschutz-skript-schemata',
   'chat/linkschutz-schalter-obsidian-links',
+  'chat/linkschutz-haertung-html',
   'chat/namenszeile-frage-und-antwort',
   'modellzeile/dropdown-zeigt-die-modelle-des-endpunkts',
   'modellzeile/wechsel-wirkt-auf-die-naechste-anfrage',
@@ -761,6 +762,92 @@ async function sektionMarkdown(cdp: Cdp): Promise<void> {
       'markdown/stream-abgeschlossener-absatz-gerendert',
       stream !== null && stream.block === 1 && stream.strong === 1 && stream.tail === 'Zwei',
       stream === null ? 'keine laufende Antwort im Chat' : `${stream.block} Block, ${stream.strong}× <strong>, Tail „${stream.tail}“`,
+    );
+    await chatNeu(cdp);
+  } finally {
+    await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
+    await stub.stop().catch(() => undefined);
+  }
+}
+
+/* ------------------------- 9b2 · Linkschutz-Härtung (Welle 34) */
+
+const HAERTUNG_MARKER = '__kuroOnMarker';
+/** Rohes HTML, das der Test selbst per DOM einsetzt (nie als Modelltext: der wäre maskiert). Ladeziele nur auf `.invalid`. */
+const HAERTUNG_HTML = [
+  `<a href="https://example.org/ok" onclick="window.${HAERTUNG_MARKER} = 1" ping="https://example.invalid/ping">h-ok</a>`,
+  `<p onmouseover="window.${HAERTUNG_MARKER} = 2">h-p</p>`,
+  '<form action="https://example.invalid/form"><button formaction="https://example.invalid/fa">h-form</button></form>',
+].join('');
+
+/** Der Wächter (`dom-guard`, Kit 0.88.0) am echten Fenster. Modelltext erreicht ihn im Betrieb nie (`neutralizeModelMarkdown` maskiert `<`); gemessen wird das Netz dahinter:
+ *  rohes HTML mit `on*`, `ping`, `formaction`, `form` und einem sicheren Link wird per `innerHTML` MITTEN im Strom in den Bereich gesetzt, den der Beobachter des Schreibers überwacht
+ *  (`.okit-stream-body` der laufenden Antwort; er lebt nur bis zum Ende der Antwort). Gegenprobe: dasselbe HTML außerhalb behält alle Marker, sonst ist „gekappt“ nichts wert. */
+async function sektionLinkHaertung(cdp: Cdp): Promise<void> {
+  const name = 'chat/linkschutz-haertung-html';
+  await setSetting(cdp, 'chatEndpoints', [{ url: SMOKE_ENDPOINT_URL }]);
+  await rebuildSidebar(cdp);
+  await oeffneChatTab(cdp);
+  const stub = await startLlmStub({ models: [MANAGER_DEFAULT_MODEL], takt: 150, standard: { stuecke: ['Probe läuft, ', 'bitte warten'], nachlaufMs: 8000 } });
+  try {
+    await cdp.evaluate(`delete window.${HAERTUNG_MARKER}; return true;`);
+    await setSetting(cdp, 'chatEndpoints', [{ url: stub.url, model: MANAGER_DEFAULT_MODEL }]);
+    await cdp.evaluate(`${PLUGIN_EXPR}.llm.invalidate(); return true;`);
+    await rebuildSidebar(cdp);
+    await oeffneChatTab(cdp);
+    await chatNeu(cdp);
+    if (!(await chatSenden(cdp, 'Frage'))) {
+      unmeasured(name, 'kein Eingabefeld oder Senden-Knopf im Chat');
+      return;
+    }
+    type Zahl = { anker: { h: string | null; attrs: string[] } | null; forms: number; formaction: number; on: number; ping: number };
+    const probe = `
+      const HTML = ${JSON.stringify(HAERTUNG_HTML)};
+      const body = ${VIEW_EL}?.querySelector(".okit-chat-turn.is-assistant .okit-stream-body");
+      if (!body || (body.textContent || "").length < 5) return null;
+      const zaehle = (root) => {
+        const all = Array.from(root.querySelectorAll("*"));
+        const anker = all.find((e) => e.localName === "a" && e.textContent === "h-ok");
+        return {
+          anker: anker ? { h: anker.getAttribute("href"), attrs: anker.getAttributeNames().filter((n) => n.startsWith("on") || n === "ping") } : null,
+          forms: all.filter((e) => e.localName === "form").length,
+          formaction: all.filter((e) => e.hasAttribute("formaction")).length,
+          on: all.filter((e) => e.getAttributeNames().some((n) => n.startsWith("on"))).length,
+          ping: all.filter((e) => e.hasAttribute("ping")).length,
+        };
+      };
+      const aussen = document.body.createDiv();
+      aussen.innerHTML = HTML;
+      const gegen = zaehle(aussen);
+      const innen = body.createDiv({ cls: "kuro-haertung-probe" });
+      innen.innerHTML = HTML;
+      await new Promise((r) => setTimeout(r, 800));
+      const mess = zaehle(innen);
+      innen.remove(); aussen.remove();
+      return { gegen, mess, marker: String(window.${HAERTUNG_MARKER}) };`;
+    const d = await pollUntil<{ gegen: Zahl; mess: Zahl; marker: string } | null>(cdp, probe, 8000, 100).catch(() => null);
+    const nachher = stub.zaehler().unterwegs;
+    if (d === null) {
+      unmeasured(name, 'kein Antwortbereich im laufenden Strom gefunden (nach 8 s)');
+      return;
+    }
+    // Gültig nur, wenn der Strom noch lief: danach ist der Beobachter getrennt, „nicht gekappt“ wäre kein Befund über den Wächter.
+    if (nachher === 0) {
+      unmeasured(name, 'der Strom war nach der Probe beendet: der Beobachter war womöglich nicht mehr angehängt');
+      return;
+    }
+    const g = d.gegen;
+    const gegenWirkt = g.forms >= 1 && g.formaction >= 1 && g.on >= 2 && g.ping >= 1 && g.anker !== null && g.anker.attrs.length >= 2;
+    if (!gegenWirkt) {
+      unmeasured(name, `die Gegenprobe außerhalb des Beobachters behielt nicht alle Marker (form ${g.forms}, formaction ${g.formaction}, on* ${g.on}, ping ${g.ping}, Anker ${JSON.stringify(g.anker)})`);
+      return;
+    }
+    const m = d.mess;
+    const anker = m.anker !== null && m.anker.h === 'https://example.org/ok' && m.anker.attrs.length === 0;
+    record(
+      name,
+      anker && m.forms === 0 && m.formaction === 0 && m.on === 0 && m.ping === 0 && d.marker === 'undefined',
+      `im beobachteten Bereich (Strom lief): https-Anker ${m.anker ? `da, href ${String(m.anker.h)}, on*/ping [${m.anker.attrs.join(',')}]` : 'FEHLT'} · form ${m.forms} · formaction ${m.formaction} · on* ${m.on} · ping ${m.ping} · Marker ${d.marker} (verlangt: undefined) · Gegenprobe außerhalb: form ${g.forms}, formaction ${g.formaction}, on* ${g.on}, ping ${g.ping}, Anker-Attribute [${g.anker?.attrs.join(',')}] (alle > 0 verlangt)`,
     );
     await chatNeu(cdp);
   } finally {
@@ -2448,6 +2535,9 @@ async function main(): Promise<void> {
     console.log('');
     console.log('── 9b · Chat-Fenster und Modellzeile');
     await sektionFenster(cdp);
+    console.log('');
+    console.log('── 9b2 · Linkschutz-Härtung (code-kit 0.68.0, dom-guard 0.88.0)');
+    await sektionLinkHaertung(cdp);
     console.log('');
     console.log('── 9d · Chat-Zeile, Verlauf vergangener Chats, Befehle (Kit 0.74.0)');
     await sektionVerlauf(cdp);

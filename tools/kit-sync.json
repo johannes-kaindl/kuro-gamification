@@ -30,7 +30,10 @@
           "name": "redact",
           "ref": "0.60.0"
         },
-        "safe-markdown",
+        {
+          "name": "safe-markdown",
+          "ref": "0.68.0"
+        },
         "sampling-profiles",
         "secrets",
         "sse",
@@ -62,8 +65,14 @@
       "from": "src/ts/web",
       "modules": [
         "clipboard",
-        "link-guard",
-        "remote-resources"
+        {
+          "name": "link-guard",
+          "ref": "0.68.0"
+        },
+        {
+          "name": "remote-resources",
+          "ref": "0.68.0"
+        }
       ],
       "rewrite": [
         [
@@ -104,7 +113,10 @@
         "clock",
         "collapsible",
         "confirm",
-        "dom-guard",
+        {
+          "name": "dom-guard",
+          "ref": "0.88.0"
+        },
         "embedding-connection",
         "endpoint-list",
         "endpoint-plumbing",

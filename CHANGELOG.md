@@ -5,6 +5,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+### Changed
+
+- **The status bar entry is now on by default.** New installs show "Lvl X · N XP" in the status bar right away; the "Status-bar indicator" switch in the settings turns it off. Nothing changes for existing installs: a saved choice (on or off) is kept, only a missing or invalid value falls back to "on". The entry now uses the shared status bar component of the library (obsidian-kit 0.88.0) and can also be opened with the keyboard (Enter or Space).
+
 ## [1.19.1] — 2026-11-14
 
 ### Security

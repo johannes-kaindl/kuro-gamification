@@ -110,7 +110,7 @@ export const de: Record<string, string> = {
   'set.reduceAnim.name': 'Animationen reduzieren',
   'set.reduceAnim.desc': 'Setzt eine CSS-Klasse, die die CRT-Flicker-Animation des CSS-Snippets dämpft.',
   'set.statusBar.name': 'Status-Bar-Anzeige',
-  'set.statusBar.desc': 'Kompaktes „Lvl X · 1234 XP"-Element in Obsidians Status-Bar (off-by-default).',
+  'set.statusBar.desc': 'Kompaktes „Lvl X · 1234 XP"-Element in Obsidians Status-Bar. Ausschalten, wenn die Leiste zu breit wird.',
   'set.notices.name': 'Aktions-Notices',
   'set.notices.desc': 'Bestätigung als Toast-Notice nach Loot-Einlösung etc. (keine Push-Notifications).',
   'set.statusVerbose.name': 'Verbose-Status (Aufschlüsselung)',

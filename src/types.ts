@@ -282,7 +282,7 @@ export const DEFAULT_SETTINGS: KuroSettings = {
   enableLore: true,
   enableSidebar: true,
   openSidebarOnStartup: false,   // off-by-default: don't impose auto-open
-  enableStatusBar: false,   // off-by-default
+  enableStatusBar: true,   // an (Welle 34, Entscheidung Johannes 2026-11-12): ein Update schaltet keine genutzte Anzeige ab, der Eintrag ist passiv
   enableNotices: true,
 
   xpPerCheckbox: 2,

@@ -33,7 +33,8 @@ export class Plugin {
   registerMarkdownCodeBlockProcessor(_a: any, _b: any): void {}
   addCommand(_c: any): void {}
   addRibbonIcon(_a: any, _b: any, _c: any): void {}
-  addStatusBarItem(): any { return { setText() {}, addClass() {}, addEventListener() {}, detach() {} }; }
+  // Ein volles Fake-Element wie in Obsidian (`setText`, `toggleClass`, `remove`, ...) samt `hide()`/`show()`, die Obsidian auf HTMLElement ergänzt: der Kit-Baustein `status-bar-item` ruft sie.
+  addStatusBarItem(): any { const el = makeFakeEl(); el.hide = () => {}; el.show = () => {}; return el; }
   addSettingTab(_t: any): void {}
 }
 

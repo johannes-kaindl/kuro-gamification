@@ -75,6 +75,8 @@ const SMOKE_ENDPOINT_URL = 'http://127.0.0.1:1234';
 /** Soll-Liste aller Prüfpunkte (der Nenner der Bilanz). Ein Name, der hier fehlt, lässt `createBilanz`
  *  werfen; ein Punkt, der nie aufgezeichnet wird, zählt als „nichts gemessen“. */
 const PUNKTE = [
+  'statusleiste/standard-an',
+  'statusleiste/schalter-haengt-ab-und-legt-an',
   'vor/kein-liegen-gebliebener-endpunkt',
   'aus/ansicht-vorhanden',
   'aus/keine-tab-leiste',
@@ -293,6 +295,36 @@ async function setzeVerlauf(cdp: Cdp, zeilen: Array<{ nutzer: string } | { antwo
     return true;
   `);
   await oeffneChatTab(cdp);
+}
+
+/* ------------------------------------------------ 0 · Statusleiste */
+
+/** Statusleiste (Welle 34, Kit `status-bar-item`): Vorgabe AN, der Schalter hängt den Eintrag ab und legt ihn wieder an. Vor allen anderen Sektionen,
+ *  weil der Staging-Vault frisch ist (kein gespeicherter Wert) und nur dann „Standard“ gemessen wird. */
+async function sektionStatusleiste(cdp: Cdp): Promise<void> {
+  const EL = `document.querySelector(".status-bar .kuro-status-bar-item")`;
+  const stand = await cdp.evaluate<{ gespeichert: boolean; vorhanden: boolean; text: string; wert: unknown }>(`
+    const p = ${PLUGIN_EXPR};
+    const roh = await p.loadData();
+    const el = ${EL};
+    return { gespeichert: !!roh && !!roh.settings && "enableStatusBar" in roh.settings, vorhanden: !!el, text: el ? el.textContent : "", wert: p.data.settings.enableStatusBar };
+  `);
+  // Gültigkeit: „Standard“ gilt nur, solange kein Wert gespeichert ist (CORE-TEST-22); sonst messen wir die Wahl, nicht die Vorgabe.
+  if (stand.gespeichert) {
+    unmeasured('statusleiste/standard-an', 'der Staging-Vault trägt schon einen gespeicherten Wert für enableStatusBar: die Vorgabe ist nicht messbar');
+  } else {
+    record('statusleiste/standard-an', stand.vorhanden && stand.wert === true && /^(Lvl|Kuro)/.test(stand.text), `Eintrag in der Statusleiste: ${String(stand.vorhanden)} · Einstellung ${String(stand.wert)} · Text „${stand.text}“ (Soll: da, true, „Lvl …“ oder „Kuro: …“)`);
+  }
+  const folge = await cdp.evaluate<{ aus: boolean; wieder: boolean; text: string }>(`
+    const p = ${PLUGIN_EXPR};
+    const warte = (ms) => new Promise(r => setTimeout(r, ms));
+    p.data.settings.enableStatusBar = false; p.refreshStatusBar(); await warte(200);
+    const aus = !${EL};
+    p.data.settings.enableStatusBar = true; p.refreshStatusBar(); await warte(200);
+    const el = ${EL};
+    return { aus, wieder: !!el, text: el ? el.textContent : "" };
+  `);
+  record('statusleiste/schalter-haengt-ab-und-legt-an', folge.aus && folge.wieder && /^(Lvl|Kuro)/.test(folge.text), `ausgeschaltet: Eintrag weg ${String(folge.aus)} · wieder eingeschaltet: Eintrag da ${String(folge.wieder)}, Text „${folge.text}“`);
 }
 
 /* ---------------------------------------------------- 1 · Aus-Zustand */
@@ -2499,6 +2531,9 @@ async function main(): Promise<void> {
       return JSON.stringify(app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}].data.settings);
     `);
 
+    console.log('── 0 · Statusleiste');
+    await sektionStatusleiste(cdp);
+    console.log('');
     console.log('── 1 · Aus-Zustand');
     await sektionAus(cdp);
     console.log('');

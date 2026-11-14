@@ -42,7 +42,7 @@ Die meisten Gamification-Plugins für Note-Apps sind für neurotypische Gehirne 
 - **Freeze-Tokens absorbieren Lücken.** Ein verpasster Tag bricht den Streak nicht.
 - **Linear-quadratische XP-Kurve.** Kein exponentieller Spike, der Fortschritt hinter Wochenend-Marathons sperrt.
 - **Transparente Berechnung.** Optionale Verbose-Aufschlüsselung zeigt genau, *warum* welches XP entstand.
-- **Jedes eskalierende Feature off-by-default.** Keine Status-Bar-Nervpolizei, kein Toast-Spam, kein Audio.
+- **Jedes eskalierende Feature off-by-default.** Kein Toast-Spam, kein Audio. Der Statusleisten-Eintrag („Lvl X · N XP“) ist passiv und standardmäßig an; in den Einstellungen abschaltbar.
 - **Features einzeln pausierbar.** XP aus Checkboxen? Aus. Streaks? Aus. Lore? Aus. Alle unabhängig.
 - **Deterministische Loot-Auswahl.** Dieselben Optionen bleiben sichtbar, bis du eine einlöst. Kein „Neu laden für bessere Optionen"-Pattern.
 

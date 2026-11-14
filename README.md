@@ -42,7 +42,7 @@ Most gamification plugins for note apps are built for neurotypical brains: hard 
 - **Freeze tokens absorb gaps.** A missed day doesn't break your streak.
 - **Linear-quadratic XP curve.** No exponential spike that gates progress behind weekend marathons.
 - **Transparent calculation.** Optional verbose breakdown shows exactly *why* each XP came from.
-- **Every escalating feature off-by-default.** No status-bar nag, no toast spam, no audio.
+- **Every escalating feature off-by-default.** No toast spam, no audio. The status-bar item ("Lvl X · N XP") is passive and on by default; turn it off in the settings.
 - **Pause individual features.** XP from checkboxes? Off. Streaks? Off. Lore? Off. All independently.
 - **Deterministic loot.** Same options stay until you redeem one. No "reload for better picks" pattern.
 

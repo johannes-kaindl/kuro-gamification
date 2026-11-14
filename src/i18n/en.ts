@@ -101,7 +101,7 @@ export const en: Record<string, string> = {
   'set.reduceAnim.name': 'Reduce animations',
   'set.reduceAnim.desc': 'Adds a CSS class that dampens the CRT flicker animation from the snippet.',
   'set.statusBar.name': 'Status-bar indicator',
-  'set.statusBar.desc': 'Compact "Lvl X · 1234 XP" element in Obsidian status bar (off-by-default).',
+  'set.statusBar.desc': 'Compact "Lvl X · 1234 XP" element in Obsidian status bar. Turn it off if the bar gets too wide.',
   'set.notices.name': 'Action notices',
   'set.notices.desc': 'Toast confirmation after loot redeem etc. (no push notifications).',
   'set.statusVerbose.name': 'Verbose status (breakdown)',

@@ -46,6 +46,7 @@ import { buildContext } from './llm/kuroContext';
 import { buildMessages, resolvePersona } from './llm/kuroPrompt';
 import { addNote, extractNoteFromMessage, MAX_NOTES } from './llm/kuroNotes';
 import { findEndpointManager, onEndpointManagerChanged } from './vendor/kit-obsidian/endpoint-source';
+import { createStatusBarItem, statusBarEnabled, type StatusBarItemHandle } from './vendor/kit-obsidian/status-bar-item';
 import { activePersona } from './utils/packLibrary';
 
 export default class KuroPlugin extends Plugin {
@@ -68,7 +69,8 @@ export default class KuroPlugin extends Plugin {
    *  Neuaufbau wirkt). Alle Blätter schreiben in denselben Ordner, jedes Gespräch in seine eigene Datei. Aufbewahrung 0 (Vorgabe) = aus. */
   public archive!: ChatArchive;
 
-  private statusBarEl: HTMLElement | null = null;
+  /** Der Statusleisten-Eintrag „Lvl X · N XP“ (Kit `status-bar-item`); entsteht in `onload`, sobald die Einstellungen geladen sind. */
+  private statusBar: StatusBarItemHandle | null = null;
   private debouncedRefresh!: () => void;
   private taskNotesUnsubscribe: (() => void) | null = null;
   private managerUnsubscribe: (() => void) | null = null;
@@ -187,8 +189,8 @@ export default class KuroPlugin extends Plugin {
     this.managerUnsubscribe?.();
     this.managerUnsubscribe = null;
     if (this.midnightTimeout !== null) window.clearTimeout(this.midnightTimeout);
-    if (this.statusBarEl) this.statusBarEl.detach();
-    this.statusBarEl = null;
+    this.statusBar?.destroy();
+    this.statusBar = null;
     this.logger.info('plugin unloaded');
   }
 
@@ -506,25 +508,30 @@ export default class KuroPlugin extends Plugin {
 
   /* ── Status-bar element ───────────────────────────────── */
   refreshStatusBar(): void {
-    if (!this.data.settings.enableStatusBar) {
-      if (this.statusBarEl) {
-        this.statusBarEl.detach();
-        this.statusBarEl = null;
-      }
-      return;
+    if (!this.statusBar) {
+      // Ein gespeicherter Boolean gilt (auch `false`), alles andere fällt auf die Vorgabe „an“ (Kit `statusBarEnabled`).
+      this.data.settings.enableStatusBar = statusBarEnabled(this.data.settings.enableStatusBar);
+      this.statusBar = createStatusBarItem({
+        plugin: this,
+        visible: this.data.settings.enableStatusBar,
+        text: null,
+        cls: 'kuro-status-bar-item',
+        // Der Zuhörer hängt am Element und geht mit ihm; ein neu angelegtes Element bekommt einen neuen.
+        onCreate: (el) => {
+          el.setAttribute('role', 'button');
+          el.setAttribute('tabindex', '0');
+          el.addEventListener('click', () => { void this.activateSidebar(); });
+          el.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            void this.activateSidebar();
+          });
+        },
+      });
     }
-    if (!this.statusBarEl) {
-      this.statusBarEl = this.addStatusBarItem();
-      this.statusBarEl.addClass('kuro-status-bar-item');
-      // registerDomEvent auto-cleans on plugin unload — no listener leak on toggle
-      this.registerDomEvent(this.statusBarEl, 'click', () => this.activateSidebar());
-    }
+    this.statusBar.setVisible(this.data.settings.enableStatusBar);
     const snap = this.data.lastSnapshot;
-    if (snap) {
-      this.statusBarEl.setText(`Lvl ${snap.currentLevel.level} · ${fmtNum(snap.totalXp)} XP`);
-    } else {
-      this.statusBarEl.setText('Kuro: …');
-    }
+    this.statusBar.set(snap ? `Lvl ${snap.currentLevel.level} · ${fmtNum(snap.totalXp)} XP` : 'Kuro: …');
   }
 
   /* ── Mid-night refresh ────────────────────────────────── */

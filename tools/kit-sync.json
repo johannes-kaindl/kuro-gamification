@@ -156,7 +156,11 @@
         "run-exclusive",
         "chat-archive-settings",
         "folder-suggest",
-        "chat-archive-css"
+        "chat-archive-css",
+        {
+          "name": "status-bar-item",
+          "ref": "0.88.0"
+        }
       ],
       "rewrite": [
         [

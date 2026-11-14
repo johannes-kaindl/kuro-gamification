@@ -32,6 +32,10 @@ Entscheidung Johannes 2026-11-02: auf jedem Mobilgerät (`Platform.isMobile`, Ha
 
 **Die Ansicht baut in `contentEl`, nicht in `containerEl`.** Der Kit-Host-Abstand (`markChatHost`, Klasse `okit-chat-host` am `.view-content`) greift nur, wenn es ein `.view-content` gibt; vorher leerte die Ansicht `containerEl` samt Kopfzeile und `.view-content` und baute die Wurzel direkt hinein, `markChatHost` tat dann still nichts. Folge für die Optik: am Handy-Tab steht Obsidians Kopfzeile des Blatts (44,5 px, Titel „Kuro Status“) über der Ansicht, das ist die übliche Obsidian-Gestalt und kostet rund zwei Zeilen; am Desktop-Seitenleiste bleibt sie unsichtbar. Obsidians Innenabstand des `.view-content` (12 px, unten 32 px am Desktop) setzt eine Kuro-Regel auf 0, weil die Wurzel ihren eigenen trägt und die Seitenleiste sonst schmaler und kürzer würde; die Kit-Regel für den unteren Abstand am Handy hat mehr Klassen und gilt weiter. Gemessen: `docs/SMOKE.md` (2026-11-03, Nachtrag Handy-Tab).
 
+## Warum die Statusleiste an ist, obwohl das Plugin „off-by-default“ führt (2026-11-14, Welle 34)
+
+Entscheidung Johannes 2026-11-12 für alle Plugins mit Statusleisten-Eintrag (obsidian-kit `status-bar-item`, UI-STANDARD § 8): Vorgabe **an**, damit ein Update keine genutzte Anzeige abschaltet. Für Kuro heißt das eine bewusste Ausnahme vom Leitprinzip „off-by-default für alles, was eskalieren könnte“: der Eintrag „Lvl X · N XP“ ist passiv (kein Ton, keine Meldung, kein Dialog) und eskaliert nichts; die README sagt es ausdrücklich. Ein gespeicherter Wert gilt weiter (`statusBarEnabled` beim Laden), nur ein fehlender oder ungültiger wird „an“; der Schalter in den Einstellungen bleibt. Der Eintrag ist seither ein Knopf mit Tastatur (`role="button"`, Enter und Leertaste). Messung: `tests/main-status-bar.test.ts` über das echte `onload`, im GUI-Smoke die Sektion „0 · Statusleiste“.
+
 ## Herkunft: das Container-Repo vor v1.0.0
 
 Vor v1.0.0 lebte dieses Plugin in einem verschachtelten Container-Repo

@@ -15,23 +15,16 @@
  *
  * ## Zweitinstanz (der richtige Ort für diesen Lauf — eigenes Profil, eigener Port)
  *
- * Der Port ist PFLICHT (`--port <n>`, Wert dieses Rezepts: 9401); der Treiber hat keinen Default, damit ein
- * vergessener Port nie die reguläre Instanz (9222) trifft. Die reguläre Instanz wird weder genutzt noch
- * beendet. Reihenfolge laut obsidian-plugins/AGENTS.md § Staging-Vaults (a)–(c):
+ * Der Treiber startet keine Instanz und kennt kein `--launch`: er hängt sich an die laufende auf `--port` (PFLICHT, kein Default, damit ein vergessener Port nie die
+ * reguläre Instanz auf 9222 trifft). Start, Profil, `.asar`, fremdes `HOME` und Beenden der eigenen PID macht `tools/obsidian-cdp/messlauf.sh` (README dort
+ * § Messlauf in einem Aufruf); Restricted Mode und Vertrauensdialog macht `bereiteInstanzVor` im Treiber. Dieser Treiber hat kein `--setup`, der Staging-Vault wird vorher
+ * mit `npm run deploy` gefüllt, darum `OHNE_SETUP=1`. Aus dem Plugin-Ordner:
  *
  * ```bash
- * echo "$STAGING_VAULTS_DIR"                                    # muss gesetzt sein (~/.zshenv)
- * UD=/tmp/obs-test-kuro-gamification; mkdir -p "$UD"
- * lsof -nP -iTCP:9401 -sTCP:LISTEN && echo "Port belegt — anderen nehmen"
- * pgrep -f "user-data-dir=$UD" && echo "Profil belegt — $UD-w19 nehmen"
  * npm run build && OBSIDIAN_PLUGIN_DIR="$STAGING_VAULTS_DIR/kuro-gamification/.obsidian/plugins/kuro-gamification" npm run deploy
- * cp ~/Library/Application\ Support/obsidian/obsidian-<version>.asar "$UD"/        # (a) aktuelle statt gebündelter Version
- * node -e 'const p=process.env.STAGING_VAULTS_DIR+"/kuro-gamification";require("fs").writeFileSync(process.argv[1]+"/obsidian.json",JSON.stringify({vaults:{kuro15abc:{path:p,ts:Date.now(),open:true}},language:"en"}))' "$UD"
- * /Applications/Obsidian.app/Contents/MacOS/Obsidian --user-data-dir="$UD" --remote-debugging-port=9401 &
- * # PID merken: beendet wird NUR sie, nie pkill/killall. Je Messlauf ein frischer Prozess.
- * python3 ~/.claude/hooks/obsidian-cdp-lock.py acquire --label kuro-gamification --intent "GUI-Smoke Zweitinstanz :9401" --exclusive focus --port 9401 --ttl 300
- * npm run smoke:gui -- --port 9401      # (b) Restricted Mode, (c) Vertrauensdialog: macht `bereiteInstanzVor`
- * python3 ~/.claude/hooks/obsidian-cdp-lock.py release
+ * export REPO=kuro-gamification PORT=9401 OHNE_SETUP=1 \
+ *   && python3 ~/.claude/hooks/obsidian-cdp-lock.py acquire --label kuro-gamification --intent "GUI-Smoke :9401" --exclusive focus --port 9401 --ttl 900 \
+ *   && ../tools/obsidian-cdp/messlauf.sh
  * ```
  *
  * Der erste Lauf nach dem Anlegen eines Profils ist ein Aufwärmlauf und zählt nicht. `--vault` ist
@@ -61,6 +54,7 @@ import { echoText, startLlmStub } from '../../tools/obsidian-cdp/llm-stub.js';
 import { createBilanz, parseArgs, runDriver } from '../../tools/obsidian-cdp/bilanz.js';
 import { buildHerkunft, requireEigenerBuild } from '../../tools/obsidian-cdp/vault.js';
 import { boxOf, capture } from '../../tools/obsidian-cdp/shot.js';
+import { lehneLaunchAb } from "../../tools/obsidian-cdp/zweitinstanz.js";
 import { de } from '../src/i18n/de';
 import { en } from '../src/i18n/en';
 
@@ -2331,6 +2325,7 @@ let instanzHinweis = '';
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  lehneLaunchAb(args, 'kuro-gamification');
   const portRoh = args.value('port');
   PORT = Number(portRoh);
   if (portRoh === undefined || !Number.isInteger(PORT) || PORT < 1024 || PORT > 65535) {

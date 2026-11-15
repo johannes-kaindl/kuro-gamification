@@ -38,7 +38,7 @@ import { splitChatMessages } from './llm/chatRequest';
 import { EMPTY_CHAT, type ChatHistory, type ChatModelMessage } from './vendor/kit/chat-history';
 import type { ChatSendHandlers, ChatSendResult } from './vendor/kit-obsidian/chat-window';
 import { kuroConnectionOptions } from './llm/kuroConnection';
-import { createChatArchive, type ChatArchive } from './vendor/kit-obsidian/chat-archive';
+import { createChatArchive, type ChatArchive } from './vendor/kit/chat-archive-store';
 import { clampChatKeep } from './vendor/kit-obsidian/chat-archive-settings';
 import { openChatLeaf } from './vendor/kit-obsidian/chat-leaf';
 import { createLlmConnection, type LlmConnection } from './vendor/kit-obsidian/llm-connection';

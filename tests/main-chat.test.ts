@@ -50,7 +50,10 @@ function window_(p: any) {
   const panel = new KuroChatPanel(host as never, 'en', {
     app: p.app,
     // Die Modellzeile fragt die Verbindung nach der Modell-Liste (Netz, Fristen-Timer); getestet wird sie in chat-panel.test.ts.
-    llm: { models: async () => ({ models: [], reachable: true }), setModel: async () => {}, modelInUse: () => '', source: () => ({ family: null, model: '', sentModel: '' }) } as never,
+    llm: { models: async () => ({ models: [], reachable: true }), setModel: async () => {}, modelInUse: () => '', source: () => ({ family: null, model: '', sentModel: '' }),
+      // Wie chat-panel.test.ts: die Modellzeile braucht diese Methoden (ohne Manager: keine Gruppen); fehlen sie, wirft das Zeichnen und das Fenster hat keine Zeile.
+      endpoints: () => [], activeEndpointId: () => undefined, modelsOf: async () => ({ models: [], reachable: false }),
+      choice: () => ({}), setChoice: async () => {}, subscribe: () => () => {} } as never,
     archive: fakeArchive(),
     initial: EMPTY_CHAT,
     onChange: (h) => { history = h; },

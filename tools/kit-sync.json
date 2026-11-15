@@ -1,10 +1,10 @@
 {
   "sources": {
     "obsidian-kit": {
-      "ref": "0.77.0"
+      "ref": "0.92.0"
     },
     "code-kit": {
-      "ref": "0.40.0"
+      "ref": "0.73.0"
     }
   },
   "targets": [
@@ -26,18 +26,9 @@
         "model-list-cache",
         "num",
         "reasoning",
-        {
-          "name": "redact",
-          "ref": "0.60.0"
-        },
-        {
-          "name": "safe-markdown",
-          "ref": "0.68.0"
-        },
-        {
-          "name": "sampling-profiles",
-          "ref": "0.68.0"
-        },
+        "redact",
+        "safe-markdown",
+        "sampling-profiles",
         "secrets",
         "sse",
         "stream-blocks",
@@ -48,22 +39,13 @@
         "anthropic-wire",
         "chat-archive",
         "filename-template",
-        {
-          "name": "folder-scope",
-          "ref": "0.44.0"
-        },
-        {
-          "name": "fold-case",
-          "ref": "0.44.0"
-        },
-        {
-          "name": "split-list",
-          "ref": "0.63.0"
-        },
-        {
-          "name": "error-message",
-          "ref": "0.68.0"
-        }
+        "folder-scope",
+        "fold-case",
+        "split-list",
+        "error-message",
+        "chat-archive-strings",
+        "run-exclusive",
+        "chat-archive-store"
       ]
     },
     {
@@ -72,14 +54,9 @@
       "from": "src/ts/web",
       "modules": [
         "clipboard",
-        {
-          "name": "link-guard",
-          "ref": "0.68.0"
-        },
-        {
-          "name": "remote-resources",
-          "ref": "0.68.0"
-        }
+        "link-guard",
+        "remote-resources",
+        "leave-tree"
       ],
       "rewrite": [
         [
@@ -94,10 +71,7 @@
       "from": "src/pure",
       "modules": [
         "endpoint-secret-hook",
-        {
-          "name": "endpoint-source",
-          "ref": "0.89.0"
-        },
+        "endpoint-source",
         "override-guard"
       ],
       "rewrite": [
@@ -123,42 +97,21 @@
         "clock",
         "collapsible",
         "confirm",
-        {
-          "name": "dom-guard",
-          "ref": "0.88.0"
-        },
+        "dom-guard",
         "embedding-connection",
         "endpoint-list",
-        {
-          "name": "endpoint-plumbing",
-          "ref": "0.89.0"
-        },
+        "endpoint-plumbing",
         "endpoint-secrets",
         "endpoint-status-text",
-        {
-          "name": "endpoint-source",
-          "ref": "0.89.0"
-        },
+        "endpoint-source",
         "help-setting",
         "hub",
         "link-settings",
-        {
-          "name": "llm-connection",
-          "ref": "0.89.0"
-        },
-        {
-          "name": "llm-connection-strings",
-          "ref": "0.89.0"
-        },
+        "llm-connection",
+        "llm-connection-strings",
         "model-picker",
-        {
-          "name": "request-section",
-          "ref": "0.89.0"
-        },
-        {
-          "name": "status-indicator",
-          "ref": "0.89.0"
-        },
+        "request-section",
+        "status-indicator",
         "request-session",
         "secrets",
         "shortcuts-bridge",
@@ -168,36 +121,20 @@
         "anthropic-transport",
         "daily-notes",
         "moment",
-        {
-          "name": "chat-window",
-          "ref": "0.80.3"
-        },
+        "chat-window",
         "chat-window-strings",
         "chat-host",
         "chat-leaf",
-        {
-          "name": "model-bar",
-          "ref": "0.89.0"
-        },
-        {
-          "name": "model-bar-strings",
-          "ref": "0.89.0"
-        },
-        {
-          "name": "thinking-control",
-          "ref": "0.89.0"
-        },
+        "model-bar",
+        "model-bar-strings",
+        "thinking-control",
         "chat-archive-dialog",
-        "chat-archive",
-        "chat-archive-strings",
-        "run-exclusive",
         "chat-archive-settings",
         "folder-suggest",
         "chat-archive-css",
-        {
-          "name": "status-bar-item",
-          "ref": "0.89.0"
-        }
+        "status-bar-item",
+        "copy-button",
+        "setting-body-host"
       ],
       "rewrite": [
         [
@@ -219,10 +156,7 @@
       "source": "obsidian-kit",
       "from": "src/testing",
       "modules": [
-        {
-          "name": "kit-css",
-          "ref": "0.89.0"
-        },
+        "kit-css",
         "obsidian-mock",
         "window-timers"
       ]

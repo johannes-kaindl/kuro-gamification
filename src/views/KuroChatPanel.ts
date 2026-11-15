@@ -24,7 +24,7 @@ import type { Lang } from '../types';
 import { t } from '../i18n';
 import { renderDailyExtract, type DailyExtract } from '../llm/kuroContext';
 import type { ChatHistory, ChatModelMessage } from '../vendor/kit/chat-history';
-import type { ChatArchive } from '../vendor/kit-obsidian/chat-archive';
+import type { ChatArchive } from '../vendor/kit/chat-archive-store';
 import {
   buildChatWindow,
   type ChatSendHandlers,

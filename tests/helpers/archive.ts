@@ -1,5 +1,5 @@
 /* Ein Verlauf-Speicher ohne Platte für Tests, die ein Chat-Fenster bauen, aber den Verlauf nicht prüfen (Aufbewahrung 0, aus). */
-import type { ChatArchive } from '../../src/vendor/kit-obsidian/chat-archive';
+import type { ChatArchive } from '../../src/vendor/kit/chat-archive-store';
 
 export function fakeArchive(keep = 0): ChatArchive {
   return {

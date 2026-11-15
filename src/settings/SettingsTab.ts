@@ -23,7 +23,7 @@ import { copyToClipboard } from '../vendor/kit-obsidian/clipboard';
 import { githubHelpUrls, helpSettingDefinition } from '../vendor/kit-obsidian/help-setting';
 import { linkSettingDefinitions } from '../vendor/kit-obsidian/link-settings';
 import { chatArchiveSettingDefinitions } from '../vendor/kit-obsidian/chat-archive-settings';
-import { resolveChatArchiveStrings } from '../vendor/kit-obsidian/chat-archive-strings';
+import { resolveChatArchiveStrings } from '../vendor/kit/chat-archive-strings';
 import type { Lang, LogLevel } from '../types';
 import { t } from '../i18n';
 import { ExportDataModal, ImportDataModal } from '../modals/DataIoModal';

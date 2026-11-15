@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.20.1] — 2026-11-15
+
 ### Changed
 
 - **The Kit components move to obsidian-kit 0.93.0 and code-kit 0.73.0.** Visible effects: a chat title with a line break now gives a file name with a space instead of the raw character; the endpoint manager is picked up within two seconds when it is switched on or off later; the chat history reports its internal errors in English; the copy button of the chat window and the answer area now comes from one shared component (same look, same behaviour).

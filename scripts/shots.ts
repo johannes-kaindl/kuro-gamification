@@ -49,6 +49,7 @@ import { cwd, env, exit, argv as processArgv } from 'node:process';
 import {
   type Cdp,
   attachTo,
+  bereiteInstanzVor,
   closeExtraLeaves,
   openExisting,
   pollUntil,
@@ -534,6 +535,11 @@ async function main(): Promise<void> {
     );
   }
   console.log(`Verbunden auf Port ${port}.`);
+
+  // Frisches Profil: Vertrauensdialog bestätigen, Restricted Mode aufheben, Plugin laden, Aufnahmesprache setzen. Ohne den Aufruf zeigt jedes Bild
+  // den Vertrauensdialog, und das Plugin fehlt im Renderer (Brücke README § Frisches Profil vorbereiten).
+  const vor = await bereiteInstanzVor(cdp, { pluginIds: [PLUGIN_ID], nurVault: REPO_NAME, sprache: 'en' });
+  console.log(`Instanz: ${vor.hinweis}`);
 
   // Zeigen die Bilder den eigenen Stand? Dieselbe Frage wie im GUI-Smoke, hier mit
   // oeffentlicher Folge: eine README bebildert das Plugin fuer alle, die es nie

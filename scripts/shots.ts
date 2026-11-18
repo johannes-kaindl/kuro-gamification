@@ -145,7 +145,6 @@ async function spracheEnglisch(cdp: Cdp): Promise<void> {
 
 /** Die Kuro-Seitenleiste öffnen und auf einen frisch gerechneten Stand bringen. */
 async function sidebarBereit(cdp: Cdp): Promise<boolean> {
-  await cdp.send('Page.bringToFront');
   await cdp.evaluate(`
     const p = app.plugins.plugins[${JSON.stringify(PLUGIN_ID)}];
     for (const leaf of app.workspace.getLeavesOfType(${JSON.stringify(VIEW_TYPE)})) leaf.detach();
@@ -551,7 +550,6 @@ async function main(): Promise<void> {
   console.log('');
   await cdp.mitschnitt((zeile) => console.log(`      » ${zeile}`));
 
-  await cdp.send('Page.bringToFront');
   await new Promise((r) => setTimeout(r, 2500));
 
   const groesse = await setWindowSize(cdp, FENSTER.breite, FENSTER.hoehe);

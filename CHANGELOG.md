@@ -5,6 +5,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ## [Unreleased]
 
+## [1.20.2] — 2026-11-24
+
 ### Security
 
 - **A key behind word characters is now blanked before a companion chat request leaves.** A key written as `key_sk-proj-…` in a message used to stay in clear text in the request to the model; the Kit redaction (code-kit 0.87.0, fix 0.79.1) reads it now and sends a placeholder.

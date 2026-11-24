@@ -90,6 +90,23 @@ describe('Verbindung — goldene Requests (Modus companion)', () => {
   });
 });
 
+// Sicherheitsfix code-kit 0.79.1: ein Schlüssel hinter Wortzeichen (`key_sk-proj-…`) blieb im Klartext. Wirkstelle: `plugin.llm.complete` (main.ts, Companion-Chat).
+// Die IBAN-Regel (0.82.0) gehört zu `createPiiRedactor`, Opt-in und hier ungenutzt.
+describe('Verbindung — Schwärzung vor dem Senden', () => {
+  it('ein Schlüssel hinter Wortzeichen geht nicht im Klartext an das Modell (code-kit 0.79.1)', async () => {
+    const KEY = 'sk-proj-AbCdEfGhIjKlMnOpQrSt1234567890';
+    const plugin = await makePlugin();
+    const { transport, sent } = recordingTransport([sse('ok')]);
+    useTransport(plugin, transport);
+    plugin.data.settings.chatEndpoints = [{ url: 'http://lokal:1234', model: 'qwen3.6-35b-a3b' }];
+    const res = await plugin.llm.complete({ messages: [{ role: 'user', content: `Dienst key_${KEY} ist mein Zugang.` }] });
+    expect(res.ok).toBe(true);
+    const wire = JSON.stringify(sent[0].body);
+    expect(wire).not.toContain(KEY);
+    expect(wire).toMatch(/\[redacted-/);
+  });
+});
+
 describe('Verbindung — was das Plugin dazutut', () => {
   it('sendet das Modell der lokalen Liste, den Stream und den Schlüssel als Bearer', async () => {
     const plugin = await makePlugin();
